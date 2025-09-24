@@ -61,9 +61,11 @@ export function useNHomeInspectionSession(sessionId: string){
 
     const totalItems = session?.checklist_items?.length ?? 0
     const nextIndex = (session?.current_item_index ?? 0) + 1
-    // Respect DB check constraint: keep score within [1,10] when updating.
-    const safeScore = Math.max(1, Math.min(10, Number(nhomeProgress.quality_score || 0)))
-    const updates: any = { current_item_index: nextIndex, nhome_quality_score: safeScore }
+    // Respect DB check constraint and int column: clamp to [1,10] and round.
+    const rawScore = Number(nhomeProgress.quality_score || 0)
+    const clamped = Math.max(1, Math.min(10, rawScore))
+    const safeScoreInt = Math.round(clamped)
+    const updates: any = { current_item_index: nextIndex, nhome_quality_score: safeScoreInt }
 
     if (totalItems > 0 && nextIndex >= totalItems) {
       updates.status = 'completed'
