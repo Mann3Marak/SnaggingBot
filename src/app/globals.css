@@ -1,0 +1,18 @@
+﻿@import '../styles/nhome-brand.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  @apply bg-nhome-background text-nhome-foreground font-nhome antialiased;
+}
+
+a {
+  @apply text-nhome-primary hover:text-nhome-secondary;
+}
+

@@ -1,0 +1,43 @@
+{
+    "name": "app",
+    "version": "0.1.0",
+    "private": true,
+    "scripts": {
+        "dev": "next dev",
+        "build": "next build",
+        "start": "next start",
+        "lint": "eslint",
+        "brand:assets": "python scripts/generate_brand_assets.py",
+        "db:migrate": "supabase --workdir ./supabase db push --linked",
+        "db:seed": "supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
+        "db:pull": "supabase --workdir ./supabase db pull",
+        "db:diff": "supabase --workdir ./supabase db diff",
+        "db:reset": "supabase --workdir ./supabase db reset"
+    },
+    "dependencies": {
+        "@azure/msal-browser": "^3.30.0",
+        "@heroicons/react": "2.1.5",
+        "@microsoft/microsoft-graph-client": "^3.0.7",
+        "@supabase/auth-helpers-nextjs": "^0.10.0",
+        "@supabase/ssr": "^0.7.0",
+        "@supabase/supabase-js": "^2.57.4",
+        "next": "14.2.14",
+        "next-pwa": "5.6.0",
+        "react": "18.2.0",
+        "react-dom": "18.2.0",
+        "workbox-webpack-plugin": "7.1.0"
+    },
+    "devDependencies": {
+        "@eslint/eslintrc": "2.1.4",
+        "@tailwindcss/forms": "0.5.7",
+        "@types/node": "20.16.11",
+        "@types/react": "18.3.12",
+        "@types/react-dom": "18.3.7",
+        "autoprefixer": "10.4.19",
+        "eslint": "8.57.1",
+        "eslint-config-next": "14.2.14",
+        "postcss": "8.4.47",
+        "tailwindcss": "3.4.13",
+        "typescript": "5.5.4"
+    }
+}

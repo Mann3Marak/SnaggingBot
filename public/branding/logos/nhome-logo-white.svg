@@ -1,0 +1,10 @@
+﻿<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 120'>
+  <title>NHome White Logo</title>
+  <g transform='translate(28 20)'>
+    <circle cx='40' cy='40' r='40' fill='rgba(255,255,255,0.18)'/>
+    <path d='M19 46.5v-17l21-18 21 18v17h-12v-15.4l-9-7.6-9 7.6V46.5H19Z' fill='#ffffff'/>
+    <path d='M46 62v-14h12v14H46Z' fill='#ffffff' opacity='.55'/>
+    <text x='115' y='51' font-family="'Inter', 'Segoe UI', sans-serif" font-size='40' font-weight='700' fill='#ffffff'>NHome</text>
+    <text x='116' y='76' font-family="'Inter', 'Segoe UI', sans-serif" font-size='18' font-weight='500' fill='#ffffff' opacity='.7'>Inspection Pro</text>
+  </g>
+</svg>
