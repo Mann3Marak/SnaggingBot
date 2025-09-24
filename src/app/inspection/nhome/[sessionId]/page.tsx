@@ -2,6 +2,7 @@
 import { useParams } from 'next/navigation'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { NHomeVoiceInspection } from '@/components/inspection/NHomeVoiceInspection'
+import NHomeReportGenerator from '@/components/reports/NHomeReportGenerator'
 
 export default function InspectionPage(){
   const params = useParams<{ sessionId: string }>()
@@ -45,6 +46,14 @@ export default function InspectionPage(){
       <section className='rounded-xl border border-slate-200 bg-white p-0 overflow-hidden'>
         <NHomeVoiceInspection sessionId={sessionId} />
       </section>
+
+      {nhomeProgress.total > 0 && nhomeProgress.completed >= nhomeProgress.total && (
+        <section className='rounded-xl border border-emerald-200 bg-white p-4'>
+          <h2 className='text-lg font-semibold mb-2'>Professional Report</h2>
+          <p className='text-sm text-slate-600 mb-4'>Inspection complete. Generate and deliver NHome bilingual reports.</p>
+          <NHomeReportGenerator sessionId={sessionId} sessionData={session} />
+        </section>
+      )}
     </main>
   )
 }
