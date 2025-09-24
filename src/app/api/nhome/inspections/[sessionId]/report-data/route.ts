@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { getSupabase } from '@/lib/supabase'
+import { cookies } from 'next/headers'
+import { createServerClient } from '@supabase/ssr'
 
 export async function GET(
   _req: Request,
@@ -11,18 +12,32 @@ export async function GET(
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
     }
 
-    const supabase = getSupabase()
+    // Use server client with cookies so RLS sees the signed-in user
+    const cookieStore = cookies()
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set() {},
+          remove() {},
+        },
+      },
+    )
 
     // 1) Load the inspection session
     const { data: session, error: sessionError } = await supabase
       .from('inspection_sessions')
       .select('*')
       .eq('id', sessionId)
-      .single()
+      .maybeSingle()
 
     if (sessionError || !session) {
       return NextResponse.json(
-        { error: 'Session not found', detail: sessionError?.message },
+        { error: 'Session not found or not accessible', detail: sessionError?.message },
         { status: 404 },
       )
     }
@@ -32,7 +47,7 @@ export async function GET(
       .from('apartments')
       .select('*, projects(*)')
       .eq('id', session.apartment_id)
-      .single()
+      .maybeSingle()
 
     if (aptError || !apartment) {
       return NextResponse.json(
