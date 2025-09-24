@@ -374,7 +374,6 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
       if (typeof document !== 'undefined') {
         const remoteAudio = document.createElement('audio')
         remoteAudio.autoplay = true
-        remoteAudio.playsInline = true
         remoteAudio.hidden = true
         document.body.append(remoteAudio)
         remoteAudioElRef.current = remoteAudio
