@@ -58,8 +58,17 @@ export function useNHomeInspectionSession(sessionId: string){
   async function saveNHomeResult(itemId:string, status:'good'|'issue'|'critical', notes:string, priority:number=1){
     const supabase = getSupabase()
     await supabase.from('inspection_results').upsert({ session_id: sessionId, item_id: itemId, status, notes, priority_level: priority, created_at: new Date().toISOString() })
+
+    const totalItems = session?.checklist_items?.length ?? 0
     const nextIndex = (session?.current_item_index ?? 0) + 1
-    await supabase.from('inspection_sessions').update({ current_item_index: nextIndex, nhome_quality_score: nhomeProgress.quality_score }).eq('id', sessionId)
+    const updates: any = { current_item_index: nextIndex, nhome_quality_score: nhomeProgress.quality_score }
+
+    if (totalItems > 0 && nextIndex >= totalItems) {
+      updates.status = 'completed'
+      updates.completed_at = new Date().toISOString()
+    }
+
+    await supabase.from('inspection_sessions').update(updates).eq('id', sessionId)
     await load()
   }
 
