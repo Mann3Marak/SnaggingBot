@@ -197,4 +197,23 @@ export class NHomeOneDriveManager {
     }
     return link.webUrl
   }
+
+  // Generic uploader for any Blob (e.g., PDFs). Returns the OneDrive webUrl.
+  async uploadPhoto(
+    fileBlob: Blob,
+    fileName: string,
+    folderPath: string,
+    onProgress?: (progress: number) => void,
+  ): Promise<string> {
+    const cleanName = this.cleanFolderName(fileName)
+    await this.ensureFolderExists(folderPath)
+    const fullPath = `/${folderPath}/${cleanName}`
+
+    if (fileBlob.size > 4 * 1024 * 1024) {
+      return await this.resumableUpload(fileBlob, fullPath, onProgress)
+    }
+    const path = this.driveId ? `/drives/${this.driveId}/root:${fullPath}:/content` : `/me/drive/root:${fullPath}:/content`
+    const result = await this.graphClient.api(path).put(fileBlob)
+    return result.webUrl
+  }
 }

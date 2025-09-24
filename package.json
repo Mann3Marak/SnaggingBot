@@ -25,6 +25,7 @@
         "date-fns": "3.6.0",
         "next": "14.2.14",
         "next-pwa": "5.6.0",
+        "nodemailer": "6.9.15",
         "react": "18.2.0",
         "react-dom": "18.2.0",
         "workbox-webpack-plugin": "7.1.0"
@@ -33,6 +34,7 @@
         "@eslint/eslintrc": "2.1.4",
         "@tailwindcss/forms": "0.5.7",
         "@types/node": "20.16.11",
+        "@types/nodemailer": "6.4.15",
         "@types/react": "18.3.12",
         "@types/react-dom": "18.3.7",
         "autoprefixer": "10.4.19",
