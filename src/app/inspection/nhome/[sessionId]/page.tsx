@@ -2,6 +2,7 @@
 import { useParams } from 'next/navigation'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { NHomeVoiceInspection } from '@/components/inspection/NHomeVoiceInspection'
+import { SupabaseStatusBadge } from '@/components/auth/SupabaseStatusBadge'
 import NHomeReportGenerator from '@/components/reports/NHomeReportGenerator'
 
 export default function InspectionPage(){
@@ -14,13 +15,16 @@ export default function InspectionPage(){
 
   return (
     <main className='p-6 space-y-6'>
-      <header className='flex items-center justify-between'>
+      <header className='flex items-center justify-between gap-3'>
         <div>
           <h1 className='text-2xl font-semibold'>Inspection • {session?.apartment?.apartment_type} • Unit {session?.apartment?.unit_number}</h1>
           <p className='text-sm text-slate-600'>{session?.project?.name} — {session?.project?.address}</p>
         </div>
-        <div className='text-sm text-slate-600'>
-          Progress: {nhomeProgress.completed}/{nhomeProgress.total} • Issues: {nhomeProgress.issues_found} • Score: {nhomeProgress.quality_score}
+        <div className='flex items-center gap-3'>
+          <SupabaseStatusBadge />
+          <div className='text-sm text-slate-600'>
+            Progress: {nhomeProgress.completed}/{nhomeProgress.total} • Issues: {nhomeProgress.issues_found} • Score: {nhomeProgress.quality_score}
+          </div>
         </div>
       </header>
 
