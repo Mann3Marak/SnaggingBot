@@ -148,8 +148,11 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     }
   }
 
-  const canGenerate =
-    sessionData.status === 'completed' && sessionData.results && sessionData.results.length > 0
+  // Allow bypass during testing with ?showReports=1
+  const forceReports = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('showReports') === '1'
+  const hasResults = !!(sessionData?.results && sessionData.results.length > 0)
+  const canGenerateStrict = sessionData.status === 'completed' && hasResults
+  const canGenerate = canGenerateStrict || (forceReports && hasResults)
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
@@ -187,7 +190,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
         </div>
       </div>
 
-      {!canGenerate && (
+      {!canGenerateStrict && !forceReports && (
         <div className="bg-nhome-warning/10 border border-nhome-warning/20 rounded-lg p-4 mb-6">
           <div className="flex items-center space-x-2">
             <svg className="w-5 h-5 text-nhome-warning" fill="currentColor" viewBox="0 0 24 24">
@@ -417,4 +420,3 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     </div>
   )
 }
-
