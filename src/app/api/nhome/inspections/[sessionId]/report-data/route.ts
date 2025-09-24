@@ -13,10 +13,10 @@ export async function GET(
 
     const supabase = getSupabase()
 
-    // Load session with apartment and project
+    // 1) Load the inspection session
     const { data: session, error: sessionError } = await supabase
       .from('inspection_sessions')
-      .select('*, apartments(*, projects(*))')
+      .select('*')
       .eq('id', sessionId)
       .single()
 
@@ -27,7 +27,21 @@ export async function GET(
       )
     }
 
-    // Load results joined with checklist templates for item metadata
+    // 2) Load apartment + project in separate, unambiguous queries
+    const { data: apartment, error: aptError } = await supabase
+      .from('apartments')
+      .select('*, projects(*)')
+      .eq('id', session.apartment_id)
+      .single()
+
+    if (aptError || !apartment) {
+      return NextResponse.json(
+        { error: 'Apartment not found for session', detail: aptError?.message },
+        { status: 404 },
+      )
+    }
+
+    // 3) Load results joined with checklist templates for item metadata
     const { data: results, error: resultsError } = await supabase
       .from('inspection_results')
       .select('*, checklist_templates(*)')
@@ -46,9 +60,9 @@ export async function GET(
     // Shape expected by NHomeReportGenerationService
     const payload = {
       session,
-      apartment: session.apartments,
-      project: session.apartments?.projects,
-      developer: { name: session.apartments?.projects?.developer_name },
+      apartment,
+      project: apartment.projects,
+      developer: { name: apartment.projects?.developer_name },
       results: results ?? [],
       photos,
       inspector: null,
@@ -68,4 +82,3 @@ export async function GET(
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })
   }
 }
-
