@@ -1,4 +1,5 @@
 import { Client } from '@microsoft/microsoft-graph-client'
+import { ensureEnv } from '@/lib/env'
 
 // Lightweight copy of our photo metadata to avoid circular imports
 export interface NHomePhotoMetadata {
@@ -37,6 +38,11 @@ export class NHomeOneDriveManager {
   }
 
   constructor() {
+    const envCheck = ensureEnv('Microsoft Graph client', ['NEXT_PUBLIC_MS_CLIENT_ID', 'NEXT_PUBLIC_MS_TENANT_ID', 'NEXT_PUBLIC_MS_REDIRECT_URI'])
+    if (!envCheck.ok) {
+      throw new Error(envCheck.message)
+    }
+
     this.graphClient = Client.initWithMiddleware({ authProvider: new NHomeAuthProvider() })
   }
 
@@ -72,7 +78,7 @@ export class NHomeOneDriveManager {
     propertyName: string,
     apartmentUnit: string,
     inspectionDate: string,
-    inspectionType: 'initial' | 'followup' = 'initial',
+    inspectionType: 'initial' | 'follow_up' = 'initial',
   ): Promise<string> {
     const cleanClientName = this.cleanFolderName(clientName)
     const cleanPropertyName = this.cleanFolderName(propertyName)
@@ -217,3 +223,4 @@ export class NHomeOneDriveManager {
     return result.webUrl
   }
 }
+

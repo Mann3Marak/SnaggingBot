@@ -1,4 +1,5 @@
 "use client"
+import Link from 'next/link'
 import { useState, useRef, useEffect } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
@@ -207,7 +208,9 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
 
       <div className="p-4 space-y-6">
         <div className="flex items-center justify-between">
-          <div />
+          <Link href={`/inspection/nhome/${sessionId}`} className="text-sm font-semibold text-nhome-primary underline underline-offset-4">
+            Back to streamlined view
+          </Link>
           <button
             onClick={toggleMic}
             disabled={!isConnected}

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+﻿import { NextResponse } from 'next/server'
 
 export async function GET() {
   const apiKey = process.env.OPENAI_API_KEY
@@ -6,17 +6,19 @@ export async function GET() {
     return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 })
   }
 
-  // Create a GA client secret for Realtime (session wrapper required)
   const model = 'gpt-4o-realtime-preview-2024-10-01'
+  const voice = process.env.OPENAI_VOICE || 'alloy'
   const sessionConfig = {
     session: {
       type: 'realtime',
       model,
       instructions:
         "You are the NHome Inspection Assistant for property inspections in the Algarve. Use professional, concise language and reflect NHome quality standards.",
+      // Ensure the model produces an audio media track via WebRTC
+      output_modalities: ['audio'],
       audio: {
-        output: { voice: 'alloy', format: { type: 'audio/pcm', rate: 24000 } },
-        input: { format: { type: 'audio/pcm', rate: 24000 } },
+        // Request TTS output; omit input format to use WebRTC RTP input
+        output: { voice, format: { type: 'audio/pcm', rate: 24000 } },
       },
     },
   }

@@ -357,6 +357,10 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
       if (!ephemeralKey) {
         throw new Error('Token response missing client secret value.')
       }
+      // Basic sanity check: Realtime ephemeral keys start with ek_
+      if (!ephemeralKey.startsWith('ek_')) {
+        throw new Error('Invalid ephemeral key format received from token endpoint.')
+      }
     } catch (error: any) {
       setStatus('Unable to reach token endpoint.')
       logEvent(`Token error: ${error?.message ?? error}`)
@@ -432,7 +436,9 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
         method: 'POST',
         headers: {
           Authorization: `Bearer ${ephemeralKey}`,
+          'OpenAI-Beta': 'realtime=v1',
           'Content-Type': 'application/sdp',
+          Accept: 'application/sdp',
         },
         body: offer.sdp ?? '',
       })

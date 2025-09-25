@@ -1,4 +1,5 @@
 "use client"
+import Link from 'next/link'
 import { useParams } from 'next/navigation'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { NHomeVoiceInspection } from '@/components/inspection/NHomeVoiceInspection'
@@ -21,6 +22,11 @@ export default function InspectionPage(){
           <p className='text-sm text-slate-600'>{session?.project?.name} — {session?.project?.address}</p>
         </div>
         <div className='flex items-center gap-3'>
+          <Link
+            href={`/inspection/nhome-photos/${sessionId}`}
+            className='rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-nhome-primary transition hover:border-nhome-primary hover:text-nhome-primary'>
+            Photo workspace
+          </Link>
           <SupabaseStatusBadge />
           <div className='text-sm text-slate-600'>
             Progress: {nhomeProgress.completed}/{nhomeProgress.total} • Issues: {nhomeProgress.issues_found} • Score: {nhomeProgress.quality_score}

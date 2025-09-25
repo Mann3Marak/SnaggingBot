@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { NHomeLogo } from '@/components/NHomeLogo'
@@ -66,7 +66,14 @@ export function NHomeInspectionStart() {
 
       const { data, error } = await supabase
         .from('inspection_sessions')
-        .insert({ apartment_id: selectedApartment, inspector_id: inspectorId, status: 'in_progress', nhome_quality_score: null, started_at: new Date().toISOString() })
+        .insert({
+          apartment_id: selectedApartment,
+          inspector_id: inspectorId,
+          status: 'in_progress',
+          inspection_type: inspectionType,
+          nhome_quality_score: null,
+          started_at: new Date().toISOString(),
+        })
         .select('*')
         .single()
 
@@ -115,7 +122,7 @@ export function NHomeInspectionStart() {
           <NHomeLogo variant="primary" size="lg" className="mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-nhome-primary mb-2">Professional Property Inspection</h1>
           <p className="text-lg text-gray-600 mb-1">NHome Quality Standards for Algarve Properties</p>
-          <div className="text-sm text-gray-500">Founded by Natalie O'Kelly • Serving the Algarve with Excellence</div>
+          <div className="text-sm text-gray-500">Founded by Natalie O'Kelly  -  Serving the Algarve with Excellence</div>
         </div>
 
         <div className="bg-white rounded-xl shadow-xl border border-gray-200 p-8">
@@ -179,12 +186,12 @@ export function NHomeInspectionStart() {
                     <input type="number" value={newFloor} onChange={(e)=>setNewFloor(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-md border border-slate-300 p-2" />
                   </div>
                   <div>
-                    <label className="block text-xs text-slate-600 mb-1">Total Area m² (optional)</label>
+                    <label className="block text-xs text-slate-600 mb-1">Total Area (m2) (optional)</label>
                     <input type="number" step="0.1" value={newArea} onChange={(e)=>setNewArea(e.target.value === '' ? '' : Number(e.target.value))} className="w-full rounded-md border border-slate-300 p-2" />
                   </div>
                 </div>
                 <div className="mt-3 text-right">
-                  <button onClick={addApartment} disabled={adding} className="rounded-md bg-nhome-primary px-4 py-2 text-white hover:bg-nhome-primary-dark disabled:opacity-50">{adding ? 'Adding…' : 'Save apartment'}</button>
+                  <button onClick={addApartment} disabled={adding} className="rounded-md bg-nhome-primary px-4 py-2 text-white hover:bg-nhome-primary-dark disabled:opacity-50">{adding ? 'Adding...' : 'Save apartment'}</button>
                 </div>
               </div>
             )}
@@ -192,28 +199,36 @@ export function NHomeInspectionStart() {
             <select value={selectedApartment} onChange={(e) => setSelectedApartment(e.target.value)} disabled={!selectedProject} className="mt-3 w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nhome-primary focus:border-transparent disabled:bg-gray-100">
               <option value="">Choose an apartment...</option>
               {apartments.map((a) => (
-                <option key={a.id} value={a.id}>Unit {a.unit_number} - {a.apartment_type}{a.total_area ? ` (${a.total_area}m²)` : ''}{a.floor_number ? ` - Floor ${a.floor_number}` : ''}</option>
+                <option key={a.id} value={a.id}>Unit {a.unit_number} - {a.apartment_type}{a.total_area ? ` (${a.total_area} m2)` : ''}{a.floor_number ? ` - Floor ${a.floor_number}` : ''}</option>
               ))}
             </select>
 
             {selectedApartmentData && (
               <div className="mt-3 p-3 bg-nhome-primary/5 rounded-lg border border-nhome-primary/20 text-sm text-nhome-primary">
                 <strong>Apartment Type:</strong> {selectedApartmentData.apartment_type}
-                {selectedApartmentData.total_area ? (<><br /><strong>Total Area:</strong> {selectedApartmentData.total_area}m²</>) : null}
+                {selectedApartmentData.total_area ? (<><br /><strong>Total Area:</strong> {selectedApartmentData.total_area} m2</>) : null}
                 {selectedApartmentData.floor_number ? (<><br /><strong>Floor:</strong> {selectedApartmentData.floor_number}</>) : null}
               </div>
             )}
           </div>
 
           <button onClick={startInspection} disabled={!selectedApartment || loading} className="w-full bg-gradient-to-r from-nhome-primary to-nhome-secondary hover:from-nhome-primary-dark hover:to-nhome-secondary-dark disabled:from-gray-400 disabled:to-gray-400 text-white font-bold py-4 px-6 rounded-lg transition-all duration-200 transform hover:-translate-y-0.5 hover:shadow-xl disabled:transform-none disabled:shadow-none">
-            {loading ? (<div className="flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>Preparing NHome Inspection...</div>) : (<>🏠 Start Professional Inspection</>)}
+            {loading ? (<div className="flex items-center justify-center"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white mr-3"></div>Preparing NHome Inspection...</div>) : (<>Start Professional Inspection</>)}
           </button>
         </div>
 
         <div className="mt-8 text-center text-xs text-gray-500">
-          <p>© 2024 NHome Property Setup & Management<br />Professional Property Services in the Algarve • Founded by Natalie O'Kelly<br /><a href="https://www.nhomesetup.com" target="_blank" rel="noopener noreferrer" className="text-nhome-secondary hover:underline">www.nhomesetup.com</a></p>
+          <p>Copyright 2024 NHome Property Setup & Management<br />Professional Property Services in the Algarve  -  Founded by Natalie O'Kelly<br /><a href="https://www.nhomesetup.com" target="_blank" rel="noopener noreferrer" className="text-nhome-secondary hover:underline">www.nhomesetup.com</a></p>
         </div>
       </div>
     </div>
   )
 }
+
+
+
+
+
+
+
+
