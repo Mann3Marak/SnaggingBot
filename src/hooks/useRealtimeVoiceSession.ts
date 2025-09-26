@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useCallback, useRef, useState } from 'react'
 
@@ -370,7 +370,7 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
     }
 
     try {
-      const pc = new RTCPeerConnection()
+      const pc = new RTCPeerConnection()\n      // Ensure we always receive a remote audio track from the model\n      try { pc.addTransceiver('audio', { direction: 'recvonly' }) } catch { }
       pcRef.current = pc
       const localStream = localStreamRef.current!
       localStream.getTracks().forEach((track) => pc.addTrack(track, localStream))
@@ -483,3 +483,4 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
     updateSessionInstructions,
   }
 }
+
