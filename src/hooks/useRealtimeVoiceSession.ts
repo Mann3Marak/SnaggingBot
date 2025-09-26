@@ -371,7 +371,6 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
 
     try {
       const pc = new RTCPeerConnection()
-      try { pc.addTransceiver('audio', { direction: 'recvonly' }) } catch { }
       pcRef.current = pc
       const localStream = localStreamRef.current!
       localStream.getTracks().forEach((track) => pc.addTrack(track, localStream))
@@ -379,6 +378,7 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
       if (typeof document !== 'undefined') {
         const remoteAudio = document.createElement('audio')
         remoteAudio.autoplay = true
+        remoteAudio.playsInline = true
         remoteAudio.hidden = true
         document.body.append(remoteAudio)
         remoteAudioElRef.current = remoteAudio
@@ -401,8 +401,6 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
           stopSession({ keepTranscripts: true, silent: true })
         }
       })
-      pc.addEventListener('iceconnectionstatechange', () => { logEvent("ICE connection state: ") })
-      pc.addEventListener('icegatheringstatechange', () => { logEvent("ICE gathering state: ") })
 
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
@@ -439,9 +437,7 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
         method: 'POST',
         headers: {
           Authorization: `Bearer ${ephemeralKey}`,
-          'OpenAI-Beta': 'realtime=v1',
           'Content-Type': 'application/sdp',
-          Accept: 'application/sdp',
         },
         body: offer.sdp ?? '',
       })
@@ -486,6 +482,3 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
     updateSessionInstructions,
   }
 }
-
-
-
