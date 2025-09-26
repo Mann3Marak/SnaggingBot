@@ -17,7 +17,8 @@ export async function GET() {
         "You are the NHome Inspection Assistant for property inspections in the Algarve. Use professional, concise language and reflect NHome quality standards.",
       output_modalities: ['audio'],
       audio: {
-        output: { voice },
+        output: { voice, format: { type: 'audio/pcm', rate: 24000 } },
+        input: { format: { type: 'audio/pcm', rate: 24000 } },
       },
     },
   }
@@ -36,9 +37,9 @@ export async function GET() {
     if (!resp.ok) {
       try {
         const json = JSON.parse(text)
-        return NextResponse.json({ error: 'Failed to create client secret', detail: json, status: resp.status }, { status: resp.status })
+        return NextResponse.json({ error: 'Failed to create client secret', detail: json, status: resp.status }, { status: 500 })
       } catch {
-        return NextResponse.json({ error: 'Failed to create client secret', detail: text || null, status: resp.status }, { status: resp.status })
+        return NextResponse.json({ error: 'Failed to create client secret', detail: text || null, status: resp.status }, { status: 500 })
       }
     }
     const data = text ? JSON.parse(text) : {}
