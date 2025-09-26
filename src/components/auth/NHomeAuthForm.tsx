@@ -1,4 +1,4 @@
-i'use client'
+﻿'use client'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
@@ -48,7 +48,7 @@ export function NHomeAuthForm() {
             <h1 className="text-3xl font-bold text-nhome-primary mb-2">NHome Inspection Pro</h1>
             <p className="text-lg font-medium text-gray-700 mb-1">Professional Property Inspections</p>
             <p className="text-sm text-gray-500 mb-6">Your Property Setup and Management Partner in the Algarve</p>
-            <div className="text-xs text-gray-400">Founded by Natalie O'Kelly - Algarve, Portugal</div>
+            <div className="text-xs text-gray-400">Founded by Natalie O'Kelly ï¿½ Algarve, Portugal</div>
           </div>
 
           {message && (
@@ -116,7 +116,7 @@ export function NHomeAuthForm() {
 
           <div className="text-center">
             <p className="text-xs text-gray-500">
-              Copyright 2024 NHome Property Setup & Management
+              ï¿½ 2024 NHome Property Setup & Management
               <br />Professional Property Services in the Algarve
               <br />
               <a href="https://www.nhomesetup.com" target="_blank" rel="noopener noreferrer" className="text-nhome-secondary hover:underline">www.nhomesetup.com</a>
@@ -127,5 +127,4 @@ export function NHomeAuthForm() {
     </div>
   )
 }
-
 

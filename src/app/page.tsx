@@ -1,4 +1,4 @@
-import { ClipboardDocumentCheckIcon, MicrophoneIcon, SparklesIcon } from '@heroicons/react/24/outline';
+﻿import { ClipboardDocumentCheckIcon, MicrophoneIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { NHomeLogo } from '@/components/NHomeLogo';
 
 const features = [
@@ -59,7 +59,7 @@ export default function Home() {
               NHome Property Management.
             </p>
             <div className='flex flex-col gap-3 sm:flex-row sm:items-center'>
-              <a href='/dashboard' className='rounded-full bg-white px-6 py-3 text-sm font-semibold text-nhome-primary shadow-sm transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'>Open inspector dashboard</a>
+              <a href='/inspection/start' className='rounded-full bg-white px-6 py-3 text-sm font-semibold text-nhome-primary shadow-sm transition hover:bg-blue-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'>Begin inspection</a>
               <button className='rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:border-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'>
                 Watch 2-min overview
               </button>

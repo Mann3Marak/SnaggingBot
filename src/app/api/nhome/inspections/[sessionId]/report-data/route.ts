@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
-import { createClient } from '@supabase/supabase-js'
 
 export async function GET(
   _req: Request,
@@ -30,26 +29,11 @@ export async function GET(
     )
 
     // 1) Load the inspection session
-    let { data: session, error: sessionError } = await supabase
+    const { data: session, error: sessionError } = await supabase
       .from('inspection_sessions')
       .select('*')
       .eq('id', sessionId)
       .maybeSingle()
-
-    // If RLS blocks access (no auth cookies), optionally fall back to service role (server-only)
-    if ((!session || sessionError) && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const admin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      )
-      const adminRes = await admin
-        .from('inspection_sessions')
-        .select('*')
-        .eq('id', sessionId)
-        .maybeSingle()
-      session = adminRes.data as any
-      sessionError = adminRes.error as any
-    }
 
     if (sessionError || !session) {
       return NextResponse.json(
@@ -59,25 +43,11 @@ export async function GET(
     }
 
     // 2) Load apartment + project in separate, unambiguous queries
-    let { data: apartment, error: aptError } = await supabase
+    const { data: apartment, error: aptError } = await supabase
       .from('apartments')
       .select('*, projects(*)')
       .eq('id', session.apartment_id)
       .maybeSingle()
-
-    if ((!apartment || aptError) && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const admin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      )
-      const adminRes = await admin
-        .from('apartments')
-        .select('*, projects(*)')
-        .eq('id', session.apartment_id)
-        .maybeSingle()
-      apartment = adminRes.data as any
-      aptError = adminRes.error as any
-    }
 
     if (aptError || !apartment) {
       return NextResponse.json(
@@ -87,23 +57,10 @@ export async function GET(
     }
 
     // 3) Load results joined with checklist templates for item metadata
-    let { data: results, error: resultsError } = await supabase
+    const { data: results, error: resultsError } = await supabase
       .from('inspection_results')
       .select('*, checklist_templates(*)')
       .eq('session_id', sessionId)
-
-    if ((!results || resultsError) && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const admin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      )
-      const adminRes = await admin
-        .from('inspection_results')
-        .select('*, checklist_templates(*)')
-        .eq('session_id', sessionId)
-      results = adminRes.data as any
-      resultsError = adminRes.error as any
-    }
 
     if (resultsError) {
       return NextResponse.json(
@@ -112,32 +69,9 @@ export async function GET(
       )
     }
 
-    let { data: photos, error: photosError } = await supabase
-      .from('nhome_inspection_photos')
-      .select('*')
-      .eq('session_id', sessionId)
-      .order('uploaded_at', { ascending: true })
+    // Photos are currently managed client-side (IndexedDB + OneDrive); return an empty array for report generation
+    const photos: any[] = []
 
-    if ((!photos || photosError) && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      const admin = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!,
-      )
-      const adminRes = await admin
-        .from('nhome_inspection_photos')
-        .select('*')
-        .eq('session_id', sessionId)
-        .order('uploaded_at', { ascending: true })
-      photos = adminRes.data as any
-      photosError = adminRes.error as any
-    }
-
-    if (photosError) {
-      return NextResponse.json(
-        { error: 'Failed to load photos', detail: photosError.message },
-        { status: 500 },
-      )
-    }
     // Shape expected by NHomeReportGenerationService
     const payload = {
       session,
@@ -145,7 +79,7 @@ export async function GET(
       project: apartment.projects,
       developer: { name: apartment.projects?.developer_name },
       results: results ?? [],
-      photos: photos ?? [],
+      photos,
       inspector: null,
       company_info: {
         name: 'NHome Property Setup & Management',
@@ -163,4 +97,3 @@ export async function GET(
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })
   }
 }
-

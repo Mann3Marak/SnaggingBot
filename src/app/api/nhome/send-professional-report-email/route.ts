@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
-import { ensureEnv } from '@/lib/env'
 
 export async function POST(request: NextRequest) {
   try {
@@ -70,5 +69,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to send professional email' }, { status: 500 })
   }
 }
-
 

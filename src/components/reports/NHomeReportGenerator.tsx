@@ -16,8 +16,6 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
   const [error, setError] = useState<string>('')
   const [clientEmail, setClientEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)
-  const [emailSending, setEmailSending] = useState(false)
-  const [emailError, setEmailError] = useState<string | null>(null)
 
   const reportService = new NHomeReportGenerationService()
   const oneDriveManager = new NHomeOneDriveManager()
@@ -82,12 +80,12 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
       projectName,
       unitNumber,
       date,
-      (sessionData.inspection_type === 'follow_up' ? 'follow_up' : 'initial'),
+      'initial',
     )
   }
 
   const saveNHomeReportUrls = async (ptUrl: string, enUrl: string, photoPackage: string) => {
-    const response = await fetch('/api/nhome/inspections/save-reports', {
+    await fetch('/api/nhome/inspections/save-reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -99,18 +97,10 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
         generated_by: 'NHome Professional Team',
       }),
     })
-
-    if (!response.ok) {
-      const details = await response.json().catch(() => ({}))
-      throw new Error(details?.error || 'Failed to persist professional report URLs')
-    }
   }
 
   const sendProfessionalEmail = async () => {
     if (!clientEmail || !reportUrls.portuguese) return
-    setEmailError(null)
-    setEmailSent(false)
-    setEmailSending(true)
     try {
       const resp = await fetch('/api/nhome/send-professional-report-email', {
         method: 'POST',
@@ -123,15 +113,10 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
           unitNumber: sessionData.apartment.unit_number,
         }),
       })
-      if (!resp.ok) {
-        const details = await resp.json().catch(() => ({}))
-        throw new Error(details?.error || 'Failed to send professional email')
-      }
+      if (!resp.ok) throw new Error('Failed to send professional email')
       setEmailSent(true)
     } catch (e: any) {
-      setEmailError(e?.message || 'Failed to send professional email')
-    } finally {
-      setEmailSending(false)
+      setError('Failed to send email: ' + (e?.message || 'unknown_error'))
     }
   }
 
@@ -212,7 +197,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
               <path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
             </svg>
             <p className="text-nhome-warning font-medium">
-              Inspection must be completed before generating professional reports
+              ⚠️ Inspection must be completed before generating professional reports
             </p>
           </div>
         </div>
@@ -245,7 +230,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
             <svg className="w-5 h-5 text-nhome-error" fill="currentColor" viewBox="0 0 24 24">
               <path d="M13,13H11V7H13M13,17H11V15H13M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z" />
             </svg>
-            <p className="text-nhome-error font-medium">{error}</p>
+            <p className="text-nhome-error font-medium">❌ {error}</p>
           </div>
         </div>
       )}
@@ -265,7 +250,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
             <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
               <path d="M14,3V5H17.59L7.76,14.83L9.17,16.24L19,6.41V10H21V3M19,19H5V5H12V3H5C3.89,3 3,3.9 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19Z" />
             </svg>
-              Generate NHome Professional Reports
+            🏠 Generate NHome Professional Reports
           </div>
         )}
       </button>
@@ -287,8 +272,8 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                     <span className="text-white font-bold text-sm">PT</span>
                   </div>
                   <div>
-                    <span className="font-medium text-green-800">Portuguese Professional Report</span>
-                    <p className="text-sm text-green-600">For developer delivery and official records</p>
+                    <span className="font-medium text-green-800">🇵🇹 Relatório Profissional Português</span>
+                    <p className="text-sm text-green-600">Para entrega ao promotor e documentação oficial</p>
                   </div>
                 </div>
                 <div className="flex space-x-2">
@@ -296,13 +281,13 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                     onClick={() => window.open(reportUrls.portuguese, '_blank')}
                     className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
-                     View Report
+                    📄 View Report
                   </button>
                   <button
                     onClick={() => shareNHomeReport('portuguese')}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
-                     Share
+                    🔗 Share
                   </button>
                 </div>
               </div>
@@ -317,7 +302,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                     <span className="text-white font-bold text-sm">EN</span>
                   </div>
                   <div>
-                    <span className="font-medium text-blue-800">Professional English Report</span>
+                    <span className="font-medium text-blue-800">🇬🇧 Professional English Report</span>
                     <p className="text-sm text-blue-600">For international clients and NHome records</p>
                   </div>
                 </div>
@@ -326,13 +311,13 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                     onClick={() => window.open(reportUrls.english, '_blank')}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
-                     View Report
+                    📄 View Report
                   </button>
                   <button
                     onClick={() => shareNHomeReport('english')}
                     className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   >
-                     Share
+                    🔗 Share
                   </button>
                 </div>
               </div>
@@ -349,7 +334,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                     </svg>
                   </div>
                   <div>
-                    <span className="font-medium text-nhome-accent">  Professional Photo Documentation</span>
+                    <span className="font-medium text-nhome-accent">📸 Professional Photo Documentation</span>
                     <p className="text-sm text-gray-600">Organized OneDrive folder with comprehensive photos</p>
                   </div>
                 </div>
@@ -357,14 +342,14 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                   onClick={() => window.open(reportUrls.photoPackage!, '_blank')}
                   className="bg-nhome-accent hover:bg-nhome-accent-dark text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                 >
-                   Open Folder
+                  📁 Open Folder
                 </button>
               </div>
             </div>
           )}
 
           <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-lg p-4 border border-nhome-primary/10">
-            <h5 className="font-medium text-nhome-primary mb-3"> Send Professional Package to Client</h5>
+            <h5 className="font-medium text-nhome-primary mb-3">📧 Send Professional Package to Client</h5>
             <div className="flex space-x-3">
               <input
                 type="email"
@@ -375,28 +360,25 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
               />
               <button
                 onClick={sendProfessionalEmail}
-                disabled={!clientEmail || !reportUrls.portuguese || emailSent || emailSending}
-                className={`bg-nhome-primary hover:bg-nhome-primary-dark disabled:bg-gray-400 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors ${emailSending ? 'opacity-80 cursor-wait' : ''}`}
+                disabled={!clientEmail || !reportUrls.portuguese || emailSent}
+                className="bg-nhome-primary hover:bg-nhome-primary-dark disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
               >
-                {emailSending ? 'Sending...' : emailSent ? 'Sent' : 'Send Professional Package'}
+                {emailSent ? '✅ Sent' : '📧 Send Professional Package'}
               </button>
             </div>
-            {emailError && (
-              <p className="mt-2 text-sm text-red-600">{emailError}</p>
-            )}
-            {emailSent && !emailError && (
-              <p className="mt-2 text-sm text-emerald-600">Professional package sent to {clientEmail}</p>
+            {emailSent && (
+              <p className="text-sm text-green-600 mt-2">✅ Professional package sent successfully to {clientEmail}</p>
             )}
           </div>
 
           <div className="pt-4 border-t border-gray-200">
-            <h5 className="font-medium mb-3"> Quick Actions</h5>
+            <h5 className="font-medium mb-3">🚀 Quick Actions</h5>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
                 onClick={sendProfessionalEmail}
                 className="bg-nhome-secondary hover:bg-nhome-secondary-dark text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors"
               >
-                 Email to Developer
+                📧 Email to Developer
               </button>
               <button
                 onClick={() => {
@@ -406,13 +388,13 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
                 }}
                 className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors"
               >
-                 Copy All Links
+                📋 Copy All Links
               </button>
               <button
                 onClick={() => window.open('https://www.nhomesetup.com', '_blank')}
                 className="bg-nhome-accent hover:bg-nhome-accent-dark text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors"
               >
-                 NHome Website
+                🌐 NHome Website
               </button>
             </div>
           </div>
@@ -423,7 +405,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
         <p className="text-xs text-gray-500">
           Professional Reports Generated by NHome Property Setup & Management
           <br />
-          Serving the Algarve with Excellence Since 2018 - Founded by Natalie O'Kelly
+          Serving the Algarve with Excellence Since 2018 • Founded by Natalie O'Kelly
           <br />
           <a
             href="https://www.nhomesetup.com"
@@ -438,6 +420,3 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     </div>
   )
 }
-
-
-
