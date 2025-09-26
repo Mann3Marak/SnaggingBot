@@ -370,8 +370,7 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
     }
 
     try {
-      const pc = new RTCPeerConnection()
-      try { pc.addTransceiver('audio', { direction: 'recvonly' }) } catch { }
+      const pc = new RTCPeerConnection()\n      // Ensure we always receive a remote audio track from the model\n      try { pc.addTransceiver('audio', { direction: 'recvonly' }) } catch { }
       pcRef.current = pc
       const localStream = localStreamRef.current!
       localStream.getTracks().forEach((track) => pc.addTrack(track, localStream))
@@ -401,8 +400,6 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
           stopSession({ keepTranscripts: true, silent: true })
         }
       })
-      pc.addEventListener('iceconnectionstatechange', () => { logEvent(ICE connection state: ) })
-      pc.addEventListener('icegatheringstatechange', () => { logEvent(ICE gathering state: ) })
 
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
@@ -486,5 +483,4 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
     updateSessionInstructions,
   }
 }
-
 
