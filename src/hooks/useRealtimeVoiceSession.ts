@@ -401,8 +401,8 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
           stopSession({ keepTranscripts: true, silent: true })
         }
       })
-      pc.addEventListener('iceconnectionstatechange', () => { logEvent(ICE connection state: ) })
-      pc.addEventListener('icegatheringstatechange', () => { logEvent(ICE gathering state: ) })
+      pc.addEventListener('iceconnectionstatechange', () => { logEvent("ICE connection state: ") })
+      pc.addEventListener('icegatheringstatechange', () => { logEvent("ICE gathering state: ") })
 
       const dc = pc.createDataChannel('oai-events')
       dcRef.current = dc
@@ -486,5 +486,6 @@ export function useRealtimeVoiceSession(options: UseRealtimeVoiceSessionOptions 
     updateSessionInstructions,
   }
 }
+
 
 
