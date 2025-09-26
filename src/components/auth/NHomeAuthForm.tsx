@@ -1,4 +1,4 @@
-'use client'
+i'use client'
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
