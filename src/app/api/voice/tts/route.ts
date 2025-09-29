@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import OpenAI from "openai";
 import { getOpenAIConfig } from "@/lib/env";
 
 const { apiKey, baseUrl } = getOpenAIConfig();
-const openai = new OpenAI({ apiKey, baseURL: baseUrl });
 
 export async function POST(req: Request) {
   try {
@@ -12,13 +10,26 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing text input" }, { status: 400 });
     }
 
-    const response = await openai.audio.speech.create({
-      model: "gpt-4o-mini-tts",
-      voice,
-      input: text,
+    const resp = await fetch(`${baseUrl}/v1/audio/speech`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-4o-mini-tts",
+        voice,
+        input: text,
+      }),
     });
 
-    const arrayBuffer = await response.arrayBuffer();
+    if (!resp.ok) {
+      const err = await resp.text();
+      console.error("TTS API error:", err);
+      return NextResponse.json({ error: "Failed to generate speech" }, { status: 500 });
+    }
+
+    const arrayBuffer = await resp.arrayBuffer();
     return new NextResponse(arrayBuffer, {
       headers: { "Content-Type": "audio/mpeg" },
     });

@@ -22,11 +22,12 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
   // Realtime voice session removed. Placeholder state for STT/TTS integration.
   const [userTurns, setUserTurns] = useLocalState<string[]>([])
   const [assistantMessages, setAssistantMessages] = useLocalState<string[]>([])
-  const [isActive, setIsActive] = useLocalState(false)
-  const [isConnecting, setIsConnecting] = useLocalState(false)
-  const status = isActive ? "Voice session active" : "Idle"
+  const [isRecording, setIsRecording] = useLocalState(false)
+  const status = isRecording ? "Recording..." : "Idle"
   const [liveUserTranscript, setLiveUserTranscript] = useLocalState<string>("")
   const [logs, setLogs] = useLocalState<string[]>([])
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
   const sendTextMessage = async (message: string, role: string = "user", addToTurns = false) => {
     if (addToTurns) {
@@ -51,16 +52,54 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
     setAssistantMessages(prev => [...prev, message])
   }
 
-  const startSession = async () => {
-    setIsConnecting(true)
-    setTimeout(() => {
-      setIsActive(true)
-      setIsConnecting(false)
-    }, 500)
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        const formData = new FormData()
+        formData.append("file", audioBlob, "input.webm")
+
+        try {
+          const resp = await fetch("/api/voice/stt", {
+            method: "POST",
+            body: formData,
+          })
+          if (resp.ok) {
+            const data = await resp.json()
+            const transcript = data.text
+            setLiveUserTranscript(transcript)
+            setUserTurns(prev => [...prev, transcript])
+          } else {
+            console.error("STT request failed")
+          }
+        } catch (err) {
+          console.error("STT error", err)
+        }
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error("Mic access denied or error:", err)
+    }
   }
 
-  const stopSession = () => {
-    setIsActive(false)
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop()
+      setIsRecording(false)
+    }
   }
 
   const resetTranscripts = () => {
@@ -92,9 +131,11 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
 
   useEffect(() => {
     return () => {
-      stopSession()
+      if (isRecording) {
+        stopRecording()
+      }
     }
-  }, [stopSession])
+  }, [isRecording])
 
   const enhanceNHomeDescription = useCallback(async (userInput: string, item = currentItem) => {
     const trimmed = userInput.trim()
@@ -224,7 +265,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
   }, [currentItem, session])
 
   useEffect(() => {
-    if (!isActive) {
+    if (!isRecording) {
       return
     }
     if (inspectionInstructions) {
@@ -234,25 +275,29 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     if (currentItem) {
       if (lastAnnouncedItemRef.current !== currentItem.id) {
         lastAnnouncedItemRef.current = currentItem.id
-        sendTextMessage(
-          `We are now assessing ${currentItem.room_type}: ${currentItem.item_description}. ${currentItem.nhome_standard_notes ? `Reference note: ${currentItem.nhome_standard_notes}.` : ''} Prompt the inspector to provide their assessment following NHome professional standards.`,
-          'user',
-          true
-        )
+        // Only announce the first item once, do not auto-chain further prompts
+        if (!lastAnnouncedItemRef.current) {
+          sendTextMessage(
+            `We are now assessing ${currentItem.room_type}: ${currentItem.item_description}. ${currentItem.nhome_standard_notes ? `Reference note: ${currentItem.nhome_standard_notes}.` : ''} Prompt the inspector to provide their assessment following NHome professional standards.`,
+            'user',
+            true
+          )
+        }
       }
     } else if (session && lastAnnouncedItemRef.current !== 'completed') {
       lastAnnouncedItemRef.current = 'completed'
+      // Keep the final wrap-up, but only once
       sendTextMessage(
         'All inspection items are complete. Offer a concise professional wrap-up and suggest preparing the final report for the client.',
         'user',
         true
       )
     }
-  }, [currentItem, inspectionInstructions, isActive, sendTextMessage, session, updateSessionInstructions])
+  }, [currentItem, inspectionInstructions, isRecording, sendTextMessage, session, updateSessionInstructions])
 
   const handleToggleAssistant = useCallback(async () => {
-    if (isActive || isConnecting) {
-      stopSession()
+    if (isRecording) {
+      stopRecording()
       return
     }
     try {
@@ -261,19 +306,17 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       lastAnnouncedItemRef.current = null
       setLastResponse('')
       resetTranscripts()
-      await startSession()
+      await startRecording()
     } catch (error) {
-      console.error('Failed to start realtime session:', error)
+      console.error('Failed to start recording session:', error)
     }
-  }, [isActive, isConnecting, resetTranscripts, startSession, stopSession])
+  }, [isRecording, resetTranscripts, startRecording, stopRecording])
 
   const activeStatus = processing
     ? 'Processing the latest NHome assessment...'
-    : isActive
-      ? 'NHome Assistant is live. Describe the condition when ready.'
-      : isConnecting
-        ? 'Connecting to the NHome voice assistant...'
-        : 'Tap to start the NHome voice assistant.'
+    : isRecording
+      ? 'NHome Assistant is listening. Speak now.'
+      : 'Tap to start recording your input.'
 
   const userTranscriptSegments = useMemo(() => {
     const segments = [...userTurns]
@@ -361,17 +404,17 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             <button
               onClick={handleToggleAssistant}
               className={`w-24 h-24 rounded-full font-bold text-white transition-all duration-200 transform ${
-                isActive
+                isRecording
                   ? 'bg-nhome-error animate-pulse scale-110 shadow-xl'
                   : 'bg-nhome-success hover:scale-105 shadow-lg hover:shadow-xl'
-              } ${isConnecting ? 'animate-pulse bg-amber-500' : ''}`}
+              }`}
             >
-              {isActive ? (
+              {isRecording ? (
                 <div className="space-y-1">
                   <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                   </svg>
-                  <div className="text-xs">LISTENING</div>
+                  <div className="text-xs">STOP</div>
                 </div>
               ) : (
                 <div className="space-y-1">
