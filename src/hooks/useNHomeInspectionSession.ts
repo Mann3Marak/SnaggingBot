@@ -55,13 +55,28 @@ export function useNHomeInspectionSession(sessionId: string){
     return Math.max(1, Math.round((base-penalty)*10)/10)
   }
 
-  async function saveNHomeResult(itemId:string, status:'good'|'issue'|'critical', notes:string, priority:number=1){
+  async function saveNHomeResult(
+    itemId: string,
+    status: 'good' | 'issue' | 'critical',
+    notes: string,
+    priority: number = 1,
+    photos: string[] = []
+  ) {
     const supabase = getSupabase()
-    await supabase.from('inspection_results').upsert({ session_id: sessionId, item_id: itemId, status, notes, priority_level: priority, created_at: new Date().toISOString() })
+    // Upsert the inspection result incrementally
+    await supabase.from('inspection_results').upsert({
+      session_id: sessionId,
+      item_id: itemId,
+      status,
+      notes,
+      priority_level: priority,
+      photo_urls: photos.length > 0 ? photos : undefined,
+      created_at: new Date().toISOString(),
+    })
 
+    // Update session progress incrementally
     const totalItems = session?.checklist_items?.length ?? 0
     const nextIndex = (session?.current_item_index ?? 0) + 1
-    // Respect DB check constraint and int column: clamp to [1,10] and round.
     const rawScore = Number(nhomeProgress.quality_score || 0)
     const clamped = Math.max(1, Math.min(10, rawScore))
     const safeScoreInt = Math.round(clamped)

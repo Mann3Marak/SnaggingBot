@@ -41,15 +41,15 @@ interface NHomeReportLanguage {
 }
 
 const PT: NHomeReportLanguage = {
-  title: 'RELATÓRIO PROFISSIONAL DE VISTORIA',
+  title: 'RELATÓRIO PROFISSIONAL DE INSPEÇÃO',
   company_title: 'NHome Property Setup & Management',
   client: 'Cliente',
-  property: 'Propriedade',
-  apartment: 'Apartamento',
+  property: 'Imóvel',
+  apartment: 'Fraçāo',
   date: 'Data',
   inspector: 'Inspetor',
   summary: 'RESUMO EXECUTIVO',
-  defects: 'QUESTÕES IDENTIFICADAS',
+  defects: 'ANOMALIAS IDENTIFICADAS',
   recommendations: 'RECOMENDAÇÕES',
   quality_assessment: 'AVALIAÇÃO DE QUALIDADE',
   page: 'Página',
@@ -127,6 +127,33 @@ export class NHomeReportGenerationService {
     return p === 3 ? 'High' : p === 2 ? 'Medium' : p === 1 ? 'Low' : 'N/A'
   }
 
+  private translateItem(desc?: string): string {
+    if (!desc) return ''
+    const dict: Record<string, string> = {
+      'Lights': 'Luzes',
+      'Ceiling': 'Teto',
+      'Walls / wood panels': 'Paredes / painéis de madeira',
+      'Door': 'Porta',
+      'Floor & skirting': 'Pavimento e rodapés',
+      'Window': 'Janela',
+      'Kitchen': 'Cozinha',
+      'Bathroom': 'Casa de banho',
+      'Hall': 'Corredor',
+    }
+    return dict[desc] || desc
+  }
+
+  private translateNote(note?: string): string {
+    if (!note) return ''
+    const dict: Record<string, string> = {
+      'Meets NHome standards': 'Cumpre os padrões NHome',
+      'lights hanging out': 'luzes penduradas',
+      'lights hannign out': 'luzes penduradas',
+      'door is cracked': 'porta rachada',
+    }
+    return dict[note] || note
+  }
+
   createNHomeReport(data: NHomeInspectionData, language: 'pt' | 'en') {
     const L = language === 'pt' ? PT : EN
     const locale = language === 'pt' ? pt : enGB
@@ -157,43 +184,39 @@ export class NHomeReportGenerationService {
           <Text style={styles.h2}>{L.summary}</Text>
           <Text style={styles.text}>{this.execSummary(data, language, qs)}</Text>
 
-          {critical.length > 0 && (
-            <>
-              <Text style={styles.h2}>CRITICAL</Text>
-              {critical.map((it, i) => {
+          <Text style={styles.h2}>{language === 'pt' ? 'TODAS AS ÁREAS' : 'ALL AREAS'}</Text>
+          {Object.entries(
+            data.results.reduce((acc: Record<string, any[]>, it: any) => {
+              const room = it.checklist_templates?.room_type || "General"
+              if (!acc[room]) acc[room] = []
+              acc[room].push(it)
+              return acc
+            }, {} as Record<string, any[]>)
+          ).map(([room, items], ri) => (
+            <View key={`room-${ri}`} style={{ marginBottom: 12 }}>
+              <Text style={[styles.h2, { marginTop: 12 }]}>{room}</Text>
+              {(items as any[]).map((it, i) => {
                 const ph = data.photos.filter((p) => p.item_id === it.item_id).slice(0, 2)
                 return (
-                  <View key={`c-${i}`} style={styles.item}>
-                    <Text style={styles.text}>🚨 {i + 1}. {it.checklist_templates?.item_description} ({this.priorityText(it.priority_level, language)})</Text>
+                  <View key={`all-${ri}-${i}`} style={styles.item}>
+                    <Text style={styles.text}>
+                      {it.status === 'good' ? '✔' : it.status === 'issue' ? '⚠️' : '🚨'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description) : it.checklist_templates?.item_description} ({this.priorityText(it.priority_level, language)})
+                    </Text>
                     {ph.length > 0 && (
                       <View style={styles.row}>
                         {ph.map((p: any, j: number) => <Image key={j} style={styles.photo} src={p.onedrive_url} />)}
                       </View>
                     )}
-                  </View>
-                )
-              })}
-            </>
-          )}
-
-          {defects.length > 0 && (
-            <>
-              <Text style={styles.h2}>{L.defects}</Text>
-              {defects.map((it, i) => {
-                const ph = data.photos.filter((p) => p.item_id === it.item_id).slice(0, 2)
-                return (
-                  <View key={`d-${i}`} style={styles.item}>
-                    <Text style={styles.text}>{i + 1}. {it.checklist_templates?.item_description} ({this.priorityText(it.priority_level, language)})</Text>
-                    {ph.length > 0 && (
-                      <View style={styles.row}>
-                        {ph.map((p: any, j: number) => <Image key={j} style={styles.photo} src={p.onedrive_url} />)}
-                      </View>
+                    {it.notes && (
+                      <Text style={styles.text}>
+                        {language === 'pt' ? 'Notas' : 'Notes'}: {language === 'pt' ? this.translateNote(it.enhanced_notes || it.notes) : it.notes}
+                      </Text>
                     )}
                   </View>
                 )
               })}
-            </>
-          )}
+            </View>
+          ))}
 
           <View style={styles.footer}>
             <Text style={styles.text}>{this.companyInfo.name} • {this.companyInfo.email}</Text>

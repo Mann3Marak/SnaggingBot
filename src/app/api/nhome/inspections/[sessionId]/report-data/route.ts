@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
+import { createClient } from '@supabase/supabase-js'
 
 export async function GET(
   _req: Request,
@@ -12,21 +11,18 @@ export async function GET(
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
     }
 
-    // Use server client with cookies so RLS sees the signed-in user
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-          set() {},
-          remove() {},
-        },
-      },
-    )
+    // Use service role client to bypass RLS for report generation
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !serviceKey) {
+      return NextResponse.json(
+        { error: "Supabase service role key or URL not configured" },
+        { status: 500 }
+      )
+    }
+
+    const supabase = createClient(supabaseUrl, serviceKey)
 
     // 1) Load the inspection session
     const { data: session, error: sessionError } = await supabase
@@ -59,7 +55,7 @@ export async function GET(
     // 3) Load results joined with checklist templates for item metadata
     const { data: results, error: resultsError } = await supabase
       .from('inspection_results')
-      .select('*, checklist_templates(*)')
+      .select('*, checklist_templates:checklist_templates(*)')
       .eq('session_id', sessionId)
 
     if (resultsError) {
@@ -69,8 +65,18 @@ export async function GET(
       )
     }
 
-    // Photos are currently managed client-side (IndexedDB + OneDrive); return an empty array for report generation
-    const photos: any[] = []
+    // 4) Load photos linked to this session
+    const { data: photos, error: photosError } = await supabase
+      .from('nhome_inspection_photos')
+      .select('*')
+      .eq('session_id', sessionId)
+
+    if (photosError) {
+      return NextResponse.json(
+        { error: 'Failed to load photos', detail: photosError.message },
+        { status: 500 },
+      )
+    }
 
     // Shape expected by NHomeReportGenerationService
     const payload = {

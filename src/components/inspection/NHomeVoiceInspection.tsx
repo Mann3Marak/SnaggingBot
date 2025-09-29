@@ -181,6 +181,7 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
     if (isCriticalIssue) {
       return 'critical'
     }
+    // Default to issue if not good or critical
     return 'issue'
   }, [])
 
@@ -244,13 +245,45 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     if (!isProcessingTurnRef.current) {
       isProcessingTurnRef.current = true
       ;(async () => {
-        await handleNHomeVoiceResponse(latestTurn)
-        // Clear turns after processing to avoid re-trigger
-        setUserTurns([])
-        isProcessingTurnRef.current = false
+        try {
+          // Instead of front-end deciding, delegate to backend agent
+          const resp = await fetch("/api/nhome/agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              instructions: inspectionInstructions,
+              messages: [
+                { role: "user", content: latestTurn }
+              ],
+              sessionId,
+              currentItem,
+              nhomeProgress
+            })
+          })
+          if (resp.ok) {
+            const data = await resp.json()
+            const reply = data.reply || "I heard you."
+            setLastResponse(reply)
+            await sendTextMessage(reply, "assistant", true)
+
+            // Detect special action phrase from agent
+            if (reply.includes("Moving to the next item")) {
+              // Advance to next item in the inspection session
+              if (currentItem) {
+                // Default to "good" if agent said item is good
+                await saveNHomeResult(currentItem.id, "good", "Meets NHome standards")
+              }
+            }
+          } else {
+            await sendTextMessage("Agent could not process input.", "assistant", true)
+          }
+        } finally {
+          setUserTurns([])
+          isProcessingTurnRef.current = false
+        }
       })()
     }
-  }, [handleNHomeVoiceResponse, userTurns, setUserTurns])
+  }, [inspectionInstructions, sessionId, currentItem, nhomeProgress, userTurns, sendTextMessage])
 
 
   useEffect(() => {

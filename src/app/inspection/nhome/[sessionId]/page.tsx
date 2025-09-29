@@ -1,14 +1,19 @@
 "use client"
 import { useParams } from 'next/navigation'
+import { useState } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { NHomeVoiceInspection } from '@/components/inspection/NHomeVoiceInspection'
 import { SupabaseStatusBadge } from '@/components/auth/SupabaseStatusBadge'
 import NHomeReportGenerator from '@/components/reports/NHomeReportGenerator'
+import { NHomeReportPreview } from '@/components/reports/NHomeReportPreview'
 
 export default function InspectionPage(){
   const params = useParams<{ sessionId: string }>()
   const sessionId = params.sessionId
   const { session, currentItem, loading, nhomeProgress, saveNHomeResult } = useNHomeInspectionSession(sessionId)
+
+  const [showNotes, setShowNotes] = useState<null | 'issue' | 'critical'>(null)
+  const [notes, setNotes] = useState('')
 
   if (loading) return <main className='p-6'>Loading NHome inspection…</main>
   if (!session) return <main className='p-6'>Session not found.</main>
@@ -31,16 +36,72 @@ export default function InspectionPage(){
       <section className='rounded-xl border border-slate-200 bg-white p-4'>
         {currentItem ? (
           <div>
+            {/* Local state for notes */}
+            {/*
+              We add state hooks here for notes and showNotes
+            */}
             <p className='text-xs uppercase tracking-wide text-slate-500'>{currentItem.room_type}</p>
             <h2 className='mt-1 text-lg font-semibold'>{currentItem.item_description}</h2>
             {currentItem.item_description_pt && (
               <p className='text-sm text-slate-600'>PT: {currentItem.item_description_pt}</p>
             )}
             <div className='mt-4 flex gap-3'>
-              <button onClick={() => saveNHomeResult(currentItem.id, 'good', '')} className='rounded-lg bg-emerald-600 px-4 py-2 text-white'>Good</button>
-              <button onClick={() => saveNHomeResult(currentItem.id, 'issue', '')} className='rounded-lg bg-amber-500 px-4 py-2 text-white'>Issue</button>
-              <button onClick={() => saveNHomeResult(currentItem.id, 'critical', '')} className='rounded-lg bg-red-600 px-4 py-2 text-white'>Critical</button>
+              <button
+                onClick={() => saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards')}
+                className='rounded-lg bg-emerald-600 px-4 py-2 text-white'
+              >
+                Good
+              </button>
+              <button
+                onClick={() => setShowNotes('issue')}
+                className='rounded-lg bg-amber-500 px-4 py-2 text-white'
+              >
+                Issue
+              </button>
+              <button
+                onClick={() => setShowNotes('critical')}
+                className='rounded-lg bg-red-600 px-4 py-2 text-white'
+              >
+                Critical
+              </button>
             </div>
+
+            {showNotes && (
+              <div className="mt-4 space-y-3">
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Describe the issue..."
+                  className="w-full rounded-lg border border-slate-300 p-2"
+                />
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      saveNHomeResult(
+                        currentItem.id,
+                        showNotes,
+                        notes,
+                        showNotes === 'critical' ? 3 : 2
+                      )
+                      setNotes('')
+                      setShowNotes(null)
+                    }}
+                    className="rounded-lg bg-nhome-primary px-4 py-2 text-white"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setNotes('')
+                      setShowNotes(null)
+                    }}
+                    className="rounded-lg bg-gray-300 px-4 py-2 text-slate-700"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <p>All items completed. Great job.</p>
@@ -49,6 +110,20 @@ export default function InspectionPage(){
       {/* NHome Professional Voice Inspection */}
       <section className='rounded-xl border border-slate-200 bg-white p-0 overflow-hidden'>
         <NHomeVoiceInspection sessionId={sessionId} />
+      </section>
+
+      {/* Live Report Preview */}
+      <section className='rounded-xl border border-slate-200 bg-white p-4 space-y-8'>
+        <div>
+          <h2 className='text-lg font-semibold mb-2'>Live Report Preview (English)</h2>
+          <p className='text-sm text-slate-600 mb-4'>This report updates automatically as you progress through the inspection.</p>
+          <NHomeReportPreview sessionId={sessionId} language="en" />
+        </div>
+        <div>
+          <h2 className='text-lg font-semibold mb-2'>Pré-visualização do Relatório (Português)</h2>
+          <p className='text-sm text-slate-600 mb-4'>Este relatório é atualizado automaticamente à medida que avança na inspeção.</p>
+          <NHomeReportPreview sessionId={sessionId} language="pt" />
+        </div>
       </section>
 
       {nhomeProgress.total > 0 && nhomeProgress.completed >= nhomeProgress.total && (

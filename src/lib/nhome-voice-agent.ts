@@ -56,22 +56,23 @@ export class NHomeVoiceAgent {
   private connected = false;
   private additionalInstructions: string | null = null;
   private messages: ConversationMessage[] = [];
-  private recognition: SpeechRecognition | null = null;
   private listening = false;
   private pendingRequest: Promise<void> | null = null;
   private abortController: AbortController | null = null;
+
+  private mediaStream: MediaStream | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
+  private audioChunks: Blob[] = [];
+  private audioContext: AudioContext | null = null;
+  private ttsAudio: HTMLAudioElement | null = null;
 
   public onAssistantText?: AssistantCallback;
 
   async connect() {
     this.connected = true;
-    const SpeechRecognitionCtor = getSpeechRecognition();
-    if (SpeechRecognitionCtor) {
-      this.recognition = new SpeechRecognitionCtor();
-      this.recognition.continuous = false;
-      this.recognition.interimResults = false;
-      this.recognition.maxAlternatives = 1;
-      this.recognition.lang = "en-US";
+    // Prepare audio context for TTS playback
+    if (typeof window !== "undefined") {
+      this.audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     }
   }
 
@@ -90,40 +91,37 @@ export class NHomeVoiceAgent {
 
   async startListening(options: StartListeningOptions) {
     if (!this.connected) throw new Error("Voice agent is not connected");
-    if (!this.recognition) throw new Error("Speech recognition is not supported in this browser");
     if (this.listening) return;
 
     this.listening = true;
+    this.audioChunks = [];
 
-    this.recognition.onresult = (event: NHomeSpeechRecognitionEvent) => {
-      const { results } = event;
-      const lastIndex = results.length - 1;
-      if (lastIndex < 0) return;
-      const result = results[lastIndex];
-      if (!result || !result.isFinal) return;
-      const transcript = result[0]?.transcript?.trim();
-      if (transcript) {
-        options.onTranscript(transcript);
-      }
-    };
-
-    this.recognition.onerror = () => {
+    try {
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaRecorder = new MediaRecorder(this.mediaStream);
+      this.mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          this.audioChunks.push(event.data);
+        }
+      };
+      this.mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(this.audioChunks, { type: "audio/webm" });
+        await this.sendToSTT(audioBlob, options.onTranscript);
+      };
+      this.mediaRecorder.start();
+    } catch (err) {
+      console.error("Failed to start microphone", err);
       this.listening = false;
-    };
-
-    this.recognition.onend = () => {
-      this.listening = false;
-    };
-
-    this.recognition.start();
+    }
   }
 
   stopListening() {
-    if (!this.recognition || !this.listening) return;
+    if (!this.listening) return;
     try {
-      this.recognition.stop();
+      this.mediaRecorder?.stop();
+      this.mediaStream?.getTracks().forEach(t => t.stop());
     } catch (error) {
-      console.warn("Failed to stop speech recognition", error);
+      console.warn("Failed to stop recording", error);
     }
     this.listening = false;
   }
@@ -176,10 +174,50 @@ export class NHomeVoiceAgent {
       if (reply) {
         this.messages.push({ role: "assistant", content: reply });
         this.onAssistantText?.(reply);
+        await this.speakWithTTS(reply);
       }
     } catch (error) {
       console.error("Failed to fetch assistant response", error);
       this.onAssistantText?.("There was an issue contacting the assistant. Please try again.");
+    }
+  }
+
+  private async sendToSTT(audioBlob: Blob, onTranscript: (t: string) => void) {
+    try {
+      const formData = new FormData();
+      formData.append("file", audioBlob, "speech.webm");
+      const response = await fetch("/api/nhome/stt", {
+        method: "POST",
+        body: formData,
+      });
+      if (!response.ok) throw new Error("STT request failed");
+      const data = await response.json();
+      if (data.transcript) {
+        onTranscript(data.transcript);
+      }
+    } catch (err) {
+      console.error("STT error", err);
+    }
+  }
+
+  private async speakWithTTS(text: string) {
+    try {
+      const response = await fetch("/api/nhome/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      if (!response.ok) throw new Error("TTS request failed");
+      const arrayBuffer = await response.arrayBuffer();
+      const blob = new Blob([arrayBuffer], { type: "audio/mpeg" });
+      const url = URL.createObjectURL(blob);
+      if (this.ttsAudio) {
+        this.ttsAudio.pause();
+      }
+      this.ttsAudio = new Audio(url);
+      this.ttsAudio.play();
+    } catch (err) {
+      console.error("TTS error", err);
     }
   }
 }

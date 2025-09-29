@@ -22,7 +22,26 @@ export class NHomePhotoUploadService {
       await new Promise((r) => setTimeout(r, 100))
       if (onProgress) onProgress(100)
       const safeName = encodeURIComponent(fileName || 'photo.jpg')
-      return { success: true, onedrive_url: `https://onedrive.example/${sessionId}/${itemId}/${safeName}` }
+      const onedrive_url = `https://onedrive.example/${sessionId}/${itemId}/${safeName}`
+
+      // Persist photo record in Supabase via API
+      const resp = await fetch(`/api/nhome/inspections/${sessionId}/photos`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item_id: itemId,
+          file_name: fileName,
+          onedrive_url,
+          metadata,
+          folder_path: `/${sessionId}/${itemId}`,
+        }),
+      });
+
+      if (!resp.ok) {
+        console.error("Failed to persist photo in DB");
+      }
+
+      return { success: true, onedrive_url }
     } catch (e: any) {
       if (onProgress) onProgress(0)
       return { success: false, error: e?.message || 'upload_failed' }

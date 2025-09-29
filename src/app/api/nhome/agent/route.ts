@@ -24,8 +24,9 @@ const normalizedBaseUrl = baseUrl
 
 const openai = new OpenAI({ apiKey, baseURL: normalizedBaseUrl });
 
-const BASE_SYSTEM_PROMPT =
-  "You are the NHome voice assistant. Respond conversationally and professionally to the inspector's input. Keep responses concise and relevant.";
+import { NHOME_WORKFLOW_PROMPT } from "@/lib/nhome-workflow-prompt";
+
+const BASE_SYSTEM_PROMPT = NHOME_WORKFLOW_PROMPT;
 
 export async function POST(req: Request) {
   try {

@@ -1,9 +1,9 @@
 # NHome Flow Gaps
 
 ## Inspector Journey
-- [ ] Landing CTA now routes to /dashboard so inspectors pass through the guided view instead of jumping directly to /inspection/start (src/app/page.tsx:62, middleware.ts:10).
-- [ ] Dashboard now surfaces quick actions and a zero-state CTA so inspectors can launch work instead of landing on an empty grid (src/app/dashboard/page.tsx:12, src/app/dashboard/page.tsx:44).
-- [ ] Inspection type selection is now stored on each session and reused downstream (new column + insert/update in src/components/inspection/NHomeInspectionStart.tsx, supabase/migrations/20250924223000_add_inspection_type_to_sessions.sql).
+- [x] Landing CTA now routes to /dashboard so inspectors pass through the guided view instead of jumping directly to /inspection/start (src/app/page.tsx:62, middleware.ts:10).
+- [x] Dashboard now surfaces quick actions and a zero-state CTA so inspectors can launch work instead of landing on an empty grid (src/app/dashboard/page.tsx:12, src/app/dashboard/page.tsx:44).
+- [x] Inspection type selection is now stored on each session and reused downstream (new column + insert/update in src/components/inspection/NHomeInspectionStart.tsx, supabase/migrations/20250924223000_add_inspection_type_to_sessions.sql).
 - [ ] Voice/photo workflows now offer in-app links to switch between modes so inspectors know where to capture extended media (`src/app/inspection/nhome/[sessionId]/page.tsx`, `src/components/inspection/NHomeVoiceInspectionWithPhotos.tsx`).
 - [ ] Photo uploads now stream to Supabase storage + metadata tables, reports persist via `/api/nhome/inspections/save-reports`, and report data includes stored photos (`src/services/nhomePhotoUploadService.ts`, `src/app/api/nhome/photos/upload/route.ts`, `src/app/api/nhome/inspections/save-reports/route.ts`, `src/app/api/nhome/inspections/[sessionId]/report-data/route.ts`, `supabase/migrations/20250924224500_create_photo_bucket.sql`, `supabase/migrations/20250924224800_add_inspection_reports.sql`).
 
@@ -24,6 +24,3 @@
 - [ ] Sign-up flow now boots a Supabase `users` row via a service API so admin dashboards get data immediately (`src/app/api/auth/nhome-bootstrap-profile/route.ts:1`, `src/components/auth/NHomeAuthForm.tsx:29`).
 - [ ] `/reports` now lists the latest generated packages with quick links to reports, photos, and share history (`src/app/reports/page.tsx:1`, `src/app/api/nhome/reports/route.ts:1`).
 - [ ] Cleaned corrupted glyphs so inspector and report UIs read professionally again (`src/components/inspection/NHomeInspectionStart.tsx:120`, `src/components/reports/NHomeReportGenerator.tsx:268`, `src/components/auth/NHomeAuthForm.tsx:44`).
-
-
-

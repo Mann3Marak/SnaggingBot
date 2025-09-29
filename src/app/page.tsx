@@ -1,5 +1,6 @@
 ﻿import { ClipboardDocumentCheckIcon, MicrophoneIcon, SparklesIcon } from '@heroicons/react/24/outline';
 import { NHomeLogo } from '@/components/NHomeLogo';
+import { AuthStatus } from '@/components/auth/AuthStatus';
 
 const features = [
   {
@@ -63,9 +64,10 @@ export default function Home() {
               <button className='rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:border-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'>
                 Watch 2-min overview
               </button>
-              <a href='/auth/signin' className='rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:border-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'>
-                Sign in
-              </a>
+              <div className='rounded-full border border-white/60 px-6 py-3 text-sm font-semibold text-white transition hover:border-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'>
+                {/* Show Sign In or Sign Out depending on auth state */}
+                <AuthStatus />
+              </div>
             </div>
             <div className='grid gap-3 text-sm text-white/80 sm:grid-cols-3'>
               {['Offline ready', 'iOS & Android optimised', 'NHome-branded reports'].map((item) => (
@@ -154,6 +156,3 @@ export default function Home() {
     </main>
   );
 }
-
-
-
