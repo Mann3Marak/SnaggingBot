@@ -1,6 +1,6 @@
 ﻿"use client"
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { useRealtimeVoiceSession } from '@/hooks/useRealtimeVoiceSession'
+import { useState as useLocalState } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { NHomeLogo } from '@/components/NHomeLogo'
 import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
@@ -19,20 +19,58 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
 
-  const {
-    status,
-    isActive,
-    isConnecting,
-    userTurns,
-    liveUserTranscript,
-    assistantMessages,
-    logs,
-    startSession,
-    stopSession,
-    resetTranscripts,
-    sendTextMessage,
-    updateSessionInstructions,
-  } = useRealtimeVoiceSession()
+  // Realtime voice session removed. Placeholder state for STT/TTS integration.
+  const [userTurns, setUserTurns] = useLocalState<string[]>([])
+  const [assistantMessages, setAssistantMessages] = useLocalState<string[]>([])
+  const [isActive, setIsActive] = useLocalState(false)
+  const [isConnecting, setIsConnecting] = useLocalState(false)
+  const status = isActive ? "Voice session active" : "Idle"
+  const [liveUserTranscript, setLiveUserTranscript] = useLocalState<string>("")
+  const [logs, setLogs] = useLocalState<string[]>([])
+
+  const sendTextMessage = async (message: string, role: string = "user", addToTurns = false) => {
+    if (addToTurns) {
+      setUserTurns(prev => [...prev, message])
+    }
+    // Call TTS API to play assistant response
+    try {
+      const resp = await fetch("/api/voice/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: message })
+      })
+      if (resp.ok) {
+        const audioBlob = await resp.blob()
+        const url = URL.createObjectURL(audioBlob)
+        const audio = new Audio(url)
+        audio.play()
+      }
+    } catch (e) {
+      console.error("TTS playback failed", e)
+    }
+    setAssistantMessages(prev => [...prev, message])
+  }
+
+  const startSession = async () => {
+    setIsConnecting(true)
+    setTimeout(() => {
+      setIsActive(true)
+      setIsConnecting(false)
+    }, 500)
+  }
+
+  const stopSession = () => {
+    setIsActive(false)
+  }
+
+  const resetTranscripts = () => {
+    setUserTurns([])
+    setAssistantMessages([])
+  }
+
+  const updateSessionInstructions = (_: string) => {
+    // no-op for now
+  }
 
   const processedTurnsRef = useRef(0)
   const processingChainRef = useRef(Promise.resolve())
@@ -54,7 +92,7 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
 
   useEffect(() => {
     return () => {
-      stopSession({ silent: true })
+      stopSession()
     }
   }, [stopSession])
 
@@ -214,7 +252,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
 
   const handleToggleAssistant = useCallback(async () => {
     if (isActive || isConnecting) {
-      stopSession({ keepTranscripts: true })
+      stopSession()
       return
     }
     try {
@@ -392,7 +430,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               <details className="bg-white border border-gray-200 rounded-lg">
                 <summary className="cursor-pointer px-4 py-2 text-sm text-gray-600">Session diagnostics</summary>
                 <div className="px-4 py-3 text-xs text-gray-500 space-y-1">
-                  {logs.slice(-8).map((entry, index) => (
+                  {logs.slice(-8).map((entry: string, index: number) => (
                     <div key={`${entry}-${index}`}>{entry}</div>
                   ))}
                 </div>
