@@ -184,44 +184,6 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
     return 'issue'
   }, [])
 
-  const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
-    setProcessing(true)
-    try {
-      // Call a backend agent endpoint to generate a dynamic response
-      const resp = await fetch("/api/nhome/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ input: userInput, sessionId })
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        const reply = data.reply || "I heard you."
-        setLastResponse(reply)
-        sendTextMessage(reply, "assistant", true)
-      } else {
-        console.error("Agent request failed")
-        setLastResponse("Agent request failed")
-      }
-    } catch (error) {
-      console.error("Error processing NHome voice response:", error)
-      setLastResponse("Unable to process your request.")
-    } finally {
-      setProcessing(false)
-    }
-  }, [sessionId, sendTextMessage])
-
-  useEffect(() => {
-    if (userTurns.length === 0) return
-    const latestTurn = userTurns[userTurns.length - 1]
-
-    // Prevent duplicate processing
-    if (isProcessingTurnRef.current) return
-    isProcessingTurnRef.current = true
-
-    handleNHomeVoiceResponse(latestTurn).finally(() => {
-      isProcessingTurnRef.current = false
-    })
-  }, [handleNHomeVoiceResponse, userTurns])
 
   const inspectionInstructions = useMemo(() => {
     if (!session) {
@@ -241,6 +203,55 @@ Unit: ${unitNumber} (${apartmentType})
 Current focus: ${currentRoom} – ${currentDescription}
 Maintain Natalie O'Kelly's professional standards, reference Algarve-specific considerations, and keep guidance concise, actionable, and thorough.`
   }, [currentItem, session])
+
+  const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
+    setProcessing(true)
+    try {
+      // Call a backend agent endpoint to generate a dynamic response
+      const resp = await fetch("/api/nhome/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          instructions: inspectionInstructions,
+          messages: [
+            { role: "user", content: userInput }
+          ],
+          sessionId
+        })
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        const reply = data.reply || "I heard you."
+        setLastResponse(reply)
+        sendTextMessage(reply, "assistant", true)
+      } else {
+        console.error("Agent request failed")
+        setLastResponse("Agent request failed")
+      }
+    } catch (error) {
+      console.error("Error processing NHome voice response:", error)
+      setLastResponse("Unable to process your request.")
+    } finally {
+      setProcessing(false)
+    }
+  }, [sessionId, sendTextMessage, inspectionInstructions])
+
+  useEffect(() => {
+    if (userTurns.length === 0) return
+    const latestTurn = userTurns[userTurns.length - 1]
+
+    // Only process if not already processing
+    if (!isProcessingTurnRef.current) {
+      isProcessingTurnRef.current = true
+      ;(async () => {
+        await handleNHomeVoiceResponse(latestTurn)
+        // Clear turns after processing to avoid re-trigger
+        setUserTurns([])
+        isProcessingTurnRef.current = false
+      })()
+    }
+  }, [handleNHomeVoiceResponse, userTurns, setUserTurns])
+
 
   useEffect(() => {
     if (!isRecording) {

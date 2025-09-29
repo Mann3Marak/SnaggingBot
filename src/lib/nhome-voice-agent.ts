@@ -159,7 +159,10 @@ export class NHomeVoiceAgent {
         signal,
         body: JSON.stringify({
           instructions: this.additionalInstructions ?? undefined,
-          messages: this.messages,
+          messages: this.messages.map(m => ({
+            role: m.role,
+            content: m.content
+          })),
           sessionId,
         }),
       });
