@@ -111,9 +111,8 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
     // no-op for now
   }
 
-  const processedTurnsRef = useRef(0)
-  const processingChainRef = useRef(Promise.resolve())
-  const lastAnnouncedItemRef = useRef<string | null>(null)
+  const isProcessingTurnRef = useRef(false)
+  
 
   const {
     isCameraOpen,
@@ -186,63 +185,42 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
   }, [])
 
   const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
-    const itemSnapshot = currentItem
-    if (!itemSnapshot) {
-      return
-    }
-
     setProcessing(true)
-    const outcome = categorizeAssessment(userInput)
-
     try {
-      if (outcome === 'good') {
-        await saveNHomeResult(itemSnapshot.id, 'good', 'Meets NHome professional standards')
-        setLastResponse('Marked as good – meets NHome professional standards.')
-        sendTextMessage(
-          `Inspector confirms that ${itemSnapshot.room_type}: ${itemSnapshot.item_description} meets NHome quality standards. Acknowledge and prepare the next inspection step.`,
-          'user',
-          true
-        )
+      // Call a backend agent endpoint to generate a dynamic response
+      const resp = await fetch("/api/nhome/agent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ input: userInput, sessionId })
+      })
+      if (resp.ok) {
+        const data = await resp.json()
+        const reply = data.reply || "I heard you."
+        setLastResponse(reply)
+        sendTextMessage(reply, "assistant", true)
       } else {
-        const enhancedDescription = await enhanceNHomeDescription(userInput, itemSnapshot)
-        const priority = outcome === 'critical' ? 3 : /\b(minor|small|cosmetic)\b/i.test(userInput.toLowerCase()) ? 1 : 2
-        await saveNHomeResult(
-          itemSnapshot.id,
-          outcome === 'critical' ? 'critical' : 'issue',
-          enhancedDescription,
-          priority
-        )
-        const summary = outcome === 'critical'
-          ? 'Logged a critical NHome issue – immediate developer attention required.'
-          : 'Logged an inspection issue according to NHome standards.'
-        setLastResponse(summary)
-        sendTextMessage(
-          `Inspector reports a ${outcome} finding for ${itemSnapshot.room_type}: ${itemSnapshot.item_description}. Details: ${enhancedDescription}. Provide professional guidance, next steps, and prompt for supporting photos if appropriate.`,
-          'user',
-          true
-        )
+        console.error("Agent request failed")
+        setLastResponse("Agent request failed")
       }
     } catch (error) {
-      console.error('Error processing NHome voice response:', error)
-      setLastResponse('Unable to log the result. Please retry or use manual controls.')
-      sendTextMessage(
-        `I encountered an issue saving the inspector update for ${itemSnapshot.item_description}. Offer a brief apology and ask for a quick restatement or confirmation.`,
-        'user',
-        true
-      )
+      console.error("Error processing NHome voice response:", error)
+      setLastResponse("Unable to process your request.")
     } finally {
       setProcessing(false)
     }
-  }, [categorizeAssessment, currentItem, enhanceNHomeDescription, saveNHomeResult, sendTextMessage])
+  }, [sessionId, sendTextMessage])
 
   useEffect(() => {
-    if (userTurns.length > processedTurnsRef.current) {
-      const newTurns = userTurns.slice(processedTurnsRef.current)
-      processedTurnsRef.current = userTurns.length
-      newTurns.forEach((turn) => {
-        processingChainRef.current = processingChainRef.current.then(() => handleNHomeVoiceResponse(turn))
-      })
-    }
+    if (userTurns.length === 0) return
+    const latestTurn = userTurns[userTurns.length - 1]
+
+    // Prevent duplicate processing
+    if (isProcessingTurnRef.current) return
+    isProcessingTurnRef.current = true
+
+    handleNHomeVoiceResponse(latestTurn).finally(() => {
+      isProcessingTurnRef.current = false
+    })
   }, [handleNHomeVoiceResponse, userTurns])
 
   const inspectionInstructions = useMemo(() => {
@@ -272,27 +250,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       updateSessionInstructions(inspectionInstructions)
     }
 
-    if (currentItem) {
-      if (lastAnnouncedItemRef.current !== currentItem.id) {
-        lastAnnouncedItemRef.current = currentItem.id
-        // Only announce the first item once, do not auto-chain further prompts
-        if (!lastAnnouncedItemRef.current) {
-          sendTextMessage(
-            `We are now assessing ${currentItem.room_type}: ${currentItem.item_description}. ${currentItem.nhome_standard_notes ? `Reference note: ${currentItem.nhome_standard_notes}.` : ''} Prompt the inspector to provide their assessment following NHome professional standards.`,
-            'user',
-            true
-          )
-        }
-      }
-    } else if (session && lastAnnouncedItemRef.current !== 'completed') {
-      lastAnnouncedItemRef.current = 'completed'
-      // Keep the final wrap-up, but only once
-      sendTextMessage(
-        'All inspection items are complete. Offer a concise professional wrap-up and suggest preparing the final report for the client.',
-        'user',
-        true
-      )
-    }
   }, [currentItem, inspectionInstructions, isRecording, sendTextMessage, session, updateSessionInstructions])
 
   const handleToggleAssistant = useCallback(async () => {
@@ -301,9 +258,8 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       return
     }
     try {
-      processedTurnsRef.current = 0
-      processingChainRef.current = Promise.resolve()
-      lastAnnouncedItemRef.current = null
+      setLastResponse('')
+      resetTranscripts()
       setLastResponse('')
       resetTranscripts()
       await startRecording()

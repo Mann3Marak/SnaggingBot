@@ -3,7 +3,15 @@ import OpenAI from "openai";
 import { getOpenAIConfig } from "@/lib/env";
 
 const { apiKey, baseUrl } = getOpenAIConfig();
-const openai = new OpenAI({ apiKey, baseURL: baseUrl });
+
+const normalizedBaseUrl = baseUrl
+  ? (() => {
+      const trimmedBaseUrl = baseUrl.replace(/\/+$/, "");
+      return trimmedBaseUrl.endsWith("/v1") ? trimmedBaseUrl : `${trimmedBaseUrl}/v1`;
+    })()
+  : undefined;
+
+const openai = new OpenAI({ apiKey, baseURL: normalizedBaseUrl });
 
 export async function POST(req: Request) {
   try {
@@ -14,22 +22,32 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing audio file" }, { status: 400 });
     }
 
-    // Convert File to a Node.js readable stream for OpenAI
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    const MAX_FILE_BYTES = 25 * 1024 * 1024;
+    let uploadable: File;
 
-    // Enforce 25MB limit (OpenAI API restriction)
-    if (buffer.length > 25 * 1024 * 1024) {
-      return NextResponse.json({ error: "Audio file too large (max 25MB)" }, { status: 413 });
+    if (typeof file.size === "number" && !Number.isNaN(file.size)) {
+      if (file.size > MAX_FILE_BYTES) {
+        return NextResponse.json(
+          { error: "Audio file too large (max 25MB)" },
+          { status: 413 }
+        );
+      }
+      uploadable = file;
+    } else {
+      const arrayBuffer = await file.arrayBuffer();
+      if (arrayBuffer.byteLength > MAX_FILE_BYTES) {
+        return NextResponse.json(
+          { error: "Audio file too large (max 25MB)" },
+          { status: 413 }
+        );
+      }
+      uploadable = new File([arrayBuffer], file.name || "audio.webm", {
+        type: file.type || "audio/webm"
+      });
     }
 
-    // Use a Uint8Array with filename (per OpenAI Node SDK spec for Uploadable)
     const transcription = await openai.audio.transcriptions.create({
-      file: {
-        name: file.name || "audio.webm",
-        type: file.type || "audio/webm",
-        arrayBuffer: async () => arrayBuffer
-      } as any,
+      file: uploadable,
       model: "gpt-4o-transcribe",
       response_format: "json"
     });
