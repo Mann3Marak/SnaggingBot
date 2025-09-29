@@ -20,7 +20,7 @@
 - [ ] Client portal now lives at /inspection/share/[token], showing reports, photo packages, and visit tracking pulled from Supabase share logs (src/app/inspection/share/[token]/page.tsx:1).
 
 ## Cross-Cutting
-- [ ] Critical integrations now validate env upfront via a shared helper so OpenAI voice, Microsoft Graph, and SMTP fail fast with clear errors (src/lib/env.ts:1, src/app/api/voice/token/route.ts:1, src/lib/nhome-onedrive-manager.ts:1, src/app/api/nhome/send-professional-report-email/route.ts:1).
-- [ ] Sign-up flow now boots a Supabase `users` row via a service API so admin dashboards get data immediately (`src/app/api/auth/nhome-bootstrap-profile/route.ts:1`, `src/components/auth/NHomeAuthForm.tsx:29`).
-- [ ] `/reports` now lists the latest generated packages with quick links to reports, photos, and share history (`src/app/reports/page.tsx:1`, `src/app/api/nhome/reports/route.ts:1`).
-- [ ] Cleaned corrupted glyphs so inspector and report UIs read professionally again (`src/components/inspection/NHomeInspectionStart.tsx:120`, `src/components/reports/NHomeReportGenerator.tsx:268`, `src/components/auth/NHomeAuthForm.tsx:44`).
+- [x] Critical integrations now validate env upfront via a shared helper so OpenAI voice, Microsoft Graph, and SMTP fail fast with clear errors (src/lib/env.ts:1, src/app/api/voice/token/route.ts:1, src/lib/nhome-onedrive-manager.ts:1, src/app/api/nhome/send-professional-report-email/route.ts:1).
+- [x] Sign-up flow now boots a Supabase `users` row via a service API so admin dashboards get data immediately (`src/app/api/auth/nhome-bootstrap-profile/route.ts:1`, `src/components/auth/NHomeAuthForm.tsx:29`).
+- [x] `/reports` now lists the latest generated packages with quick links to reports, photos, and share history (`src/app/reports/page.tsx:1`, `src/app/api/nhome/reports/route.ts:1`).
+- [x] Cleaned corrupted glyphs so inspector and report UIs read professionally again (`src/components/inspection/NHomeInspectionStart.tsx:120`, `src/components/reports/NHomeReportGenerator.tsx:268`, `src/components/auth/NHomeAuthForm.tsx:44`).

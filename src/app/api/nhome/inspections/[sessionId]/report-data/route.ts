@@ -55,8 +55,9 @@ export async function GET(
     // 3) Load results joined with checklist templates for item metadata
     const { data: results, error: resultsError } = await supabase
       .from('inspection_results')
-      .select('*, checklist_templates:checklist_templates(*)')
+      .select('*, checklist_templates:item_id(*)')
       .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
 
     if (resultsError) {
       return NextResponse.json(
@@ -78,13 +79,25 @@ export async function GET(
       )
     }
 
+    // Merge photo_urls from results with nhome_inspection_photos
+    const resultsWithPhotos = (results ?? []).map(r => {
+      const linked = photos.filter(p => p.item_id === r.item_id)
+      if (linked.length > 0) {
+        return { ...r, preview_photos: linked.map(p => ({ url: p.onedrive_url })) }
+      }
+      if (r.photo_urls && r.photo_urls.length > 0) {
+        return { ...r, preview_photos: r.photo_urls.map((u: string) => ({ url: u })) }
+      }
+      return { ...r, preview_photos: [] }
+    })
+
     // Shape expected by NHomeReportGenerationService
     const payload = {
       session,
       apartment,
       project: apartment.projects,
       developer: { name: apartment.projects?.developer_name },
-      results: results ?? [],
+      results: resultsWithPhotos,
       photos,
       inspector: null,
       company_info: {

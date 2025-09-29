@@ -9,16 +9,15 @@ interface NHomeReportPreviewProps {
 }
 
 export function NHomeReportPreview({ sessionId, language = "en" }: NHomeReportPreviewProps) {
-  const [ReportComponent, setReportComponent] = useState<React.ComponentType | null>(null)
+  const [reportData, setReportData] = useState<any>(null)
 
   useEffect(() => {
     const service = new NHomeReportGenerationService()
 
     async function fetchData() {
       try {
-        const data = await (service as any).fetchNHomeInspectionData(sessionId)
-        const Report = service.createNHomeReport(data, language)
-        setReportComponent(() => Report)
+        const data = await service.loadInspectionData(sessionId)
+        setReportData(data)
       } catch (err) {
         console.error("Failed to fetch report data", err)
       }
@@ -29,14 +28,17 @@ export function NHomeReportPreview({ sessionId, language = "en" }: NHomeReportPr
     return () => clearInterval(interval)
   }, [sessionId, language])
 
-  if (!ReportComponent) {
+  if (!reportData) {
     return <div className="text-gray-500">Loading live report preview...</div>
   }
+
+  const service = new NHomeReportGenerationService()
+  const Report = service.createNHomeReport(reportData, language)
 
   return (
     <div className="w-full h-[80vh] border rounded-lg shadow">
       <PDFViewer width="100%" height="100%">
-        <ReportComponent />
+        <Report />
       </PDFViewer>
     </div>
   )

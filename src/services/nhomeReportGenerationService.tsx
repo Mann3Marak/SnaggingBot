@@ -1,5 +1,5 @@
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, Link } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { pt, enGB } from 'date-fns/locale'
 
@@ -187,7 +187,7 @@ export class NHomeReportGenerationService {
           <Text style={styles.h2}>{language === 'pt' ? 'TODAS AS ÁREAS' : 'ALL AREAS'}</Text>
           {Object.entries(
             data.results.reduce((acc: Record<string, any[]>, it: any) => {
-              const room = it.checklist_templates?.room_type || "General"
+              const room = it.checklist_templates?.room_type || "Uncategorized"
               if (!acc[room]) acc[room] = []
               acc[room].push(it)
               return acc
@@ -196,15 +196,23 @@ export class NHomeReportGenerationService {
             <View key={`room-${ri}`} style={{ marginBottom: 12 }}>
               <Text style={[styles.h2, { marginTop: 12 }]}>{room}</Text>
               {(items as any[]).map((it, i) => {
-                const ph = data.photos.filter((p) => p.item_id === it.item_id).slice(0, 2)
+                const ph = it.preview_photos?.slice(0, 2) || []
                 return (
                   <View key={`all-${ri}-${i}`} style={styles.item}>
                     <Text style={styles.text}>
-                      {it.status === 'good' ? '✔' : it.status === 'issue' ? '⚠️' : '🚨'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description) : it.checklist_templates?.item_description} ({this.priorityText(it.priority_level, language)})
+                      {it.status === 'good' ? '✔' : it.status === 'issue' ? '⚠️' : '🚨'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`) : (it.checklist_templates?.item_description || `Item ${it.item_id}`)} ({this.priorityText(it.priority_level, language)})
                     </Text>
                     {ph.length > 0 && (
                       <View style={styles.row}>
-                        {ph.map((p: any, j: number) => <Image key={j} style={styles.photo} src={p.onedrive_url} />)}
+                        {ph.map((p: any, j: number) =>
+                          p.url ? (
+                            p.url.includes("http") ? (
+                              <Image key={j} style={styles.photo} src={p.url} />
+                            ) : (
+                              <Link key={j} src={p.url} style={styles.text}>{p.url}</Link>
+                            )
+                          ) : null
+                        )}
                       </View>
                     )}
                     {it.notes && (
@@ -230,7 +238,7 @@ export class NHomeReportGenerationService {
   }
 
   async generateNHomeBilingualReports(sessionId: string): Promise<{ portuguese: Blob; english: Blob }> {
-    const data = await this.fetchNHomeInspectionData(sessionId)
+    const data = await this.loadInspectionData(sessionId)
     const PTReport = this.createNHomeReport(data, 'pt')
     const ENReport = this.createNHomeReport(data, 'en')
     const portuguese = await this.renderNHomePDF(PTReport)
@@ -238,8 +246,8 @@ export class NHomeReportGenerationService {
     return { portuguese, english }
   }
 
-  private async fetchNHomeInspectionData(sessionId: string): Promise<NHomeInspectionData> {
-    const res = await fetch(`/api/nhome/inspections/${sessionId}/report-data`)
+  public async loadInspectionData(sessionId: string): Promise<NHomeInspectionData> {
+    const res = await fetch(`/api/nhome/inspections/${sessionId}/report-data?t=${Date.now()}`, { cache: 'no-store' })
     if (!res.ok) throw new Error('Failed to fetch NHome inspection data')
     return (await res.json()) as NHomeInspectionData
   }
@@ -258,7 +266,7 @@ export class NHomeReportGenerationService {
     const reports = await this.generateNHomeBilingualReports(sessionId)
     const photoUploadService = new (await import('@/services/nhomePhotoUploadService')).NHomePhotoUploadService()
     const photoPackage = await photoUploadService.shareInspectionWithClient(sessionId)
-    const data = await this.fetchNHomeInspectionData(sessionId)
+    const data = await this.loadInspectionData(sessionId)
     const documentationSummary = `NHome Professional Inspection Summary: ${data.project.name} - ${data.apartment.unit_number}`
     return { reports, photoPackage, documentationSummary }
   }
