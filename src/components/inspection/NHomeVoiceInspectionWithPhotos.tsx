@@ -312,7 +312,7 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
                     src={photo.url}
                     alt="NHome professional documentation"
                     className="w-full h-24 object-cover rounded-lg border border-gray-200 shadow-sm"
-import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
+                  />
                   <div className="mt-1 px-1">
                     <div className="text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
                       {generateNHomeFileName(photo.metadata)}
@@ -329,6 +329,8 @@ import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
                       </a>
                     )}
                   </div>
+                  {!photo.uploaded && uploadProgress[photo.id] !== undefined && (
+                    <div className="absolute inset-0 bg-black/40 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                       <div className="text-white text-xs">{uploadProgress[photo.id]}%</div>
                     </div>
                   )}
@@ -344,7 +346,6 @@ import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
             </div>
           </div>
         )}
-
         <div className="grid grid-cols-2 gap-4">
           <button 
             onClick={() => openNHomeCamera(currentItem.id)}
