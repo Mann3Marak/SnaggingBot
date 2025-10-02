@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image, Link } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { pt, enGB } from 'date-fns/locale'
@@ -41,18 +41,18 @@ interface NHomeReportLanguage {
 }
 
 const PT: NHomeReportLanguage = {
-  title: 'RELATÓRIO PROFISSIONAL DE INSPEÇÃO',
+  title: 'RELAT??RIO PROFISSIONAL DE INSPE????O',
   company_title: 'NHome Property Setup & Management',
   client: 'Cliente',
-  property: 'Imóvel',
-  apartment: 'Fraçāo',
+  property: 'Im??vel',
+  apartment: 'Fra????o',
   date: 'Data',
   inspector: 'Inspetor',
   summary: 'RESUMO EXECUTIVO',
   defects: 'ANOMALIAS IDENTIFICADAS',
-  recommendations: 'RECOMENDAÇÕES',
-  quality_assessment: 'AVALIAÇÃO DE QUALIDADE',
-  page: 'Página',
+  recommendations: 'RECOMENDA????ES',
+  quality_assessment: 'AVALIA????O DE QUALIDADE',
+  page: 'P??gina',
   of: 'de',
 }
 
@@ -117,13 +117,13 @@ export class NHomeReportGenerationService {
     const issues = data.results.filter((r) => r.status !== 'good').length
     const date = format(new Date(data.session.started_at), 'PPP', { locale: lang === 'pt' ? pt : enGB })
     if (lang === 'pt') {
-      return `Vistoria profissional ao ${apt} - Unidade ${data.apartment.unit_number} no projecto ${data.project.name} em ${date}. Foram avaliados ${total} pontos de qualidade, com ${issues} questões identificadas. Pontuação de qualidade NHome: ${qs}/10.`
+      return `Vistoria profissional ao ${apt} - Unidade ${data.apartment.unit_number} no projecto ${data.project.name} em ${date}. Foram avaliados ${total} pontos de qualidade, com ${issues} quest??es identificadas. Pontua????o de qualidade NHome: ${qs}/10.`
     }
     return `Professional inspection of ${apt} - Unit ${data.apartment.unit_number} at ${data.project.name} on ${date}. Assessed ${total} quality points, with ${issues} issues identified. NHome quality score: ${qs}/10.`
   }
 
   private priorityText(p: number, lang: 'pt' | 'en'): string {
-    if (lang === 'pt') return p === 3 ? 'Alta' : p === 2 ? 'Média' : p === 1 ? 'Baixa' : 'N/A'
+    if (lang === 'pt') return p === 3 ? 'Alta' : p === 2 ? 'M??dia' : p === 1 ? 'Baixa' : 'N/A'
     return p === 3 ? 'High' : p === 2 ? 'Medium' : p === 1 ? 'Low' : 'N/A'
   }
 
@@ -132,9 +132,9 @@ export class NHomeReportGenerationService {
     const dict: Record<string, string> = {
       'Lights': 'Luzes',
       'Ceiling': 'Teto',
-      'Walls / wood panels': 'Paredes / painéis de madeira',
+      'Walls / wood panels': 'Paredes / pain??is de madeira',
       'Door': 'Porta',
-      'Floor & skirting': 'Pavimento e rodapés',
+      'Floor & skirting': 'Pavimento e rodap??s',
       'Window': 'Janela',
       'Kitchen': 'Cozinha',
       'Bathroom': 'Casa de banho',
@@ -146,7 +146,7 @@ export class NHomeReportGenerationService {
   private translateNote(note?: string): string {
     if (!note) return ''
     const dict: Record<string, string> = {
-      'Meets NHome standards': 'Cumpre os padrões NHome',
+      'Meets NHome standards': 'Cumpre os padr??es NHome',
       'lights hanging out': 'luzes penduradas',
       'lights hannign out': 'luzes penduradas',
       'door is cracked': 'porta rachada',
@@ -173,18 +173,18 @@ export class NHomeReportGenerationService {
           <View style={styles.grid}>
             <View style={styles.cell}><Text style={styles.label}>{L.client}:</Text><Text style={styles.value}>{data.project.developer_name}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.property}:</Text><Text style={styles.value}>{data.project.name}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.apartment_type} • {data.apartment.unit_number}</Text></View>
+            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.apartment_type} ??? {data.apartment.unit_number}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.date}:</Text><Text style={styles.value}>{format(new Date(data.session.started_at), 'PPP', { locale })}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.inspector}:</Text><Text style={styles.value}>NHome Professional Team</Text></View>
           </View>
 
           <Text style={styles.h2}>{L.quality_assessment}</Text>
-          <Text style={styles.text}>{qs}/10 • {good.length} good • {defects.length + critical.length} issues</Text>
+          <Text style={styles.text}>{qs}/10 ??? {good.length} good ??? {defects.length + critical.length} issues</Text>
 
           <Text style={styles.h2}>{L.summary}</Text>
           <Text style={styles.text}>{this.execSummary(data, language, qs)}</Text>
 
-          <Text style={styles.h2}>{language === 'pt' ? 'TODAS AS ÁREAS' : 'ALL AREAS'}</Text>
+          <Text style={styles.h2}>{language === 'pt' ? 'TODAS AS ??REAS' : 'ALL AREAS'}</Text>
           {Object.entries(
             data.results.reduce((acc: Record<string, any[]>, it: any) => {
               const room = it.checklist_templates?.room_type || "Uncategorized"
@@ -200,7 +200,7 @@ export class NHomeReportGenerationService {
                 return (
                   <View key={`all-${ri}-${i}`} style={styles.item}>
                     <Text style={styles.text}>
-                      {it.status === 'good' ? '✔' : it.status === 'issue' ? '⚠️' : '🚨'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`) : (it.checklist_templates?.item_description || `Item ${it.item_id}`)} ({this.priorityText(it.priority_level, language)})
+                      {it.status === 'good' ? '???' : it.status === 'issue' ? '??????' : '????'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`) : (it.checklist_templates?.item_description || `Item ${it.item_id}`)} ({this.priorityText(it.priority_level, language)})
                     </Text>
                     {ph.length > 0 && (
                       <View style={styles.row}>
@@ -227,7 +227,7 @@ export class NHomeReportGenerationService {
           ))}
 
           <View style={styles.footer}>
-            <Text style={styles.text}>{this.companyInfo.name} • {this.companyInfo.email}</Text>
+            <Text style={styles.text}>{this.companyInfo.name} ??? {this.companyInfo.email}</Text>
             <Text style={styles.text}>{L.page} 1 {L.of} 1</Text>
           </View>
         </Page>
@@ -263,11 +263,13 @@ export class NHomeReportGenerationService {
     photoPackage: string
     documentationSummary: string
   }> {
+    const data = await this.loadInspectionData(sessionId)
     const reports = await this.generateNHomeBilingualReports(sessionId)
     const photoUploadService = new (await import('@/services/nhomePhotoUploadService')).NHomePhotoUploadService()
-    const photoPackage = await photoUploadService.shareInspectionWithClient(sessionId)
-    const data = await this.loadInspectionData(sessionId)
+    const photoPackage = await photoUploadService.shareInspectionWithClient(sessionId, data.session)
     const documentationSummary = `NHome Professional Inspection Summary: ${data.project.name} - ${data.apartment.unit_number}`
     return { reports, photoPackage, documentationSummary }
   }
 }
+
+

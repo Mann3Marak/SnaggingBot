@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useEffect, useState } from 'react'
 import type { NHomePhoto, NHomePhotoMetadata } from '@/types/nhome-photo'
 
@@ -165,4 +165,5 @@ export function useNHomePhotoCapture() {
     generateNHomeFileName
   }
 }
+
 

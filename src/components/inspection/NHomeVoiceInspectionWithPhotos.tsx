@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useState, useRef, useEffect } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
@@ -135,7 +135,8 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
         sessionId,
         currentItem.id,
         fileName,
-        (progress) => updateUploadProgress(photo.id, progress)
+        session,
+        (progress) => updateUploadProgress(photo.id, progress),
       )
 
       if (result.success) {
@@ -195,7 +196,7 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
             <NHomeLogo variant="white" size="md" />
             <div>
               <h1 className="font-bold text-lg">Professional Voice Inspection</h1>
-              <p className="text-sm opacity-90">{session.project.name} • Unit {session.apartment.unit_number}</p>
+              <p className="text-sm opacity-90">{session.project.name} ??? Unit {session.apartment.unit_number}</p>
             </div>
           </div>
           <div className="text-right text-sm">
@@ -311,9 +312,23 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
                     src={photo.url}
                     alt="NHome professional documentation"
                     className="w-full h-24 object-cover rounded-lg border border-gray-200 shadow-sm"
-                  />
-                  {uploadProgress[photo.id] !== undefined && uploadProgress[photo.id] < 100 && (
-                    <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center">
+import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
+                  <div className="mt-1 px-1">
+                    <div className="text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
+                      {generateNHomeFileName(photo.metadata)}
+                    </div>
+                    {photo.uploaded && photo.onedrive_url && (
+                      <a
+                        href={photo.onedrive_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block text-[10px] text-nhome-primary hover:underline truncate"
+                        title={photo.onedrive_url}
+                      >
+                        {photo.onedrive_url}
+                      </a>
+                    )}
+                  </div>
                       <div className="text-white text-xs">{uploadProgress[photo.id]}%</div>
                     </div>
                   )}
@@ -375,3 +390,6 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
     </div>
   )
 }
+
+
+

@@ -1,0 +1,27 @@
+bcd7f6d 2025-09-24 feat: add realtime voice integration and fix audio format settings
+5994ce0 2025-09-24 fix: remove invalid playsInline on audio (TS build error on Vercel)
+b677773 2025-09-24 feat: add NHome report generation service and photo upload stub; add @react-pdf/renderer + date-fns
+e1684e3 2025-09-24 feat: add NHomeReportGenerator UI, email API (nodemailer), and OneDrive uploadPhoto helper
+50e5986 2025-09-24 feat: show NHomeReportGenerator on inspection completion (/inspection/nhome/[sessionId])
+76d8dd9 2025-09-24 fix: mark inspection session completed and set completed_at when last item is saved
+04e5d40 2025-09-24 chore: allow report generation bypass with ?showReports=1 and hide warning when forced
+039a8a8 2025-09-24 fix: clamp nhome_quality_score to [1,10] on session update to satisfy DB check constraint
+e7c9a32 2025-09-24 fix: send nhome_quality_score as integer (rounded 1..10) to avoid 22P02 invalid integer syntax
+30084e0 2025-09-24 feat: add /api/nhome/inspections/[sessionId]/report-data endpoint for report generator data
+ad82def 2025-09-24 fix: avoid single() coercion error by fetching session, apartment, project separately in report-data endpoint
+d9ded8b 2025-09-24 fix(api): use Supabase SSR client with cookies and maybeSingle() to satisfy RLS and avoid coercion error
+7ef8912 2025-09-24 feat: add SupabaseStatusBadge to inspection page for RLS awareness
+07a399e 2025-09-25 
+8ff7ec6 2025-09-26 fix(realtime): restore input audio format (audio/pcm @24k) and improve token route error passthrough; ensure model/voice from env
+629bcd2 2025-09-26 fix(realtime): add recvonly audio transceiver, SDP Accept header, and ICE diagnostics for more reliable remote audio track negotiation
+7c77217 2025-09-26 fix(realtime): remove stray \n literals and add ICE state logs after connectionstatechange
+8dd90f4 2025-09-26 fix(realtime): correct ICE state log template strings
+e94b57c 2025-09-26 refactor(realtime): align token session payload and client handshake with reference example
+60ab701 2025-09-26 fix(auth): correct directive to 'use client' in NHomeAuthForm to restore production build
+7dc87e7 2025-09-26 Revert "refactor(realtime): align token session payload and client handshake with reference example"
+fa03a10 2025-09-26 Revert "fix(realtime): correct ICE state log template strings"
+7d8b99f 2025-09-26 Revert "fix(realtime): remove stray \n literals and add ICE state logs after connectionstatechange"
+408fefb 2025-09-26 Revert "fix(realtime): add recvonly audio transceiver, SDP Accept header, and ICE diagnostics for more reliable remote audio track negotiation"
+14efcb9 2025-09-26 Revert "fix(auth): correct directive to 'use client' in NHomeAuthForm to restore production build"
+16b5182 2025-09-26 Revert "fix(realtime): restore input audio format (audio/pcm @24k) and improve token route error passthrough; ensure model/voice from env"
+158c5b6 2025-09-26 Revert ""

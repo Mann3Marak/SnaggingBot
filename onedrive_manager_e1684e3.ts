@@ -1,4 +1,4 @@
-﻿import { Client } from '@microsoft/microsoft-graph-client'
+import { Client } from '@microsoft/microsoft-graph-client'
 
 // Lightweight copy of our photo metadata to avoid circular imports
 export interface NHomePhotoMetadata {
@@ -44,39 +44,25 @@ export class NHomeOneDriveManager {
     return name.replace(/[<>:"/\\|?*]/g, '_').trim()
   }
 
-    private async ensureFolderExists(folderPath: string) {
+  private async ensureFolderExists(folderPath: string) {
     try {
       const base = this.driveId ? `/drives/${this.driveId}/root:/${folderPath}` : `/me/drive/root:/${folderPath}`
       await this.graphClient.api(base).get()
-      return
     } catch (error: any) {
-      const code = error?.code || error?.body?.error?.code
-      const status = error?.statusCode || error?.status
-      const isNotFound = code === 'itemNotFound' || status === 404 || (typeof error?.message === 'string' && error.message.includes('itemNotFound'))
-      if (!isNotFound) throw error
-
-      const parts = folderPath.split('/')
-      const folderName = parts.pop() as string
-      const parentPath = parts.join('/')
-
-      // Ensure parent exists recursively
-      if (parentPath) {
-        await this.ensureFolderExists(parentPath)
-      }
-
-      const createPath = this.driveId
-        ? (parentPath ? `/drives/${this.driveId}/root:/${parentPath}:/children` : `/drives/${this.driveId}/root/children`)
-        : (parentPath ? `/me/drive/root:/${parentPath}:/children` : '/me/drive/root/children')
-      try {
+      if (error?.code === 'itemNotFound') {
+        const parts = folderPath.split('/')
+        const folderName = parts.pop()
+        const parentPath = parts.join('/')
+        const createPath = this.driveId
+          ? (parentPath ? `/drives/${this.driveId}/root:/${parentPath}:/children` : `/drives/${this.driveId}/root/children`)
+          : (parentPath ? `/me/drive/root:/${parentPath}:/children` : '/me/drive/root/children')
         await this.graphClient.api(createPath).post({
           name: folderName,
           folder: {},
           '@microsoft.graph.conflictBehavior': 'replace',
         })
-      } catch (e: any) {
-        // Ignore if someone else created it in the meantime
-        const c = e?.code || e?.body?.error?.code
-        if (c !== 'nameAlreadyExists') throw e
+      } else {
+        throw error
       }
     }
   }
@@ -231,4 +217,3 @@ export class NHomeOneDriveManager {
     return result.webUrl
   }
 }
-

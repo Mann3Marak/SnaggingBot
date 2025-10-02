@@ -201,7 +201,7 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
 Project: ${projectName}
 Developer: ${developer}
 Unit: ${unitNumber} (${apartmentType})
-Current focus: ${currentRoom} – ${currentDescription}
+Current focus: ${currentRoom} - ${currentDescription}
 Maintain Natalie O'Kelly's professional standards, reference Algarve-specific considerations, and keep guidance concise, actionable, and thorough.`
   }, [currentItem, session])
 
@@ -302,8 +302,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       return
     }
     try {
-      setLastResponse('')
-      resetTranscripts()
       setLastResponse('')
       resetTranscripts()
       await startRecording()
@@ -451,7 +449,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">Awaiting inspector input…</p>
+                <p className="text-sm text-gray-500">Awaiting inspector input...</p>
               )}
             </div>
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-left">
@@ -526,7 +524,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   </div>
                   <button
                     onClick={() => removeNHomePhoto(photo.id)}
-                    className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    type="button" className="absolute top-1 right-1 bg-black/60 z-10 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove photo"
                   >
                     Remove
@@ -543,16 +541,18 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                             sessionId,
                             photo.itemId || currentItem.id,
                             fileName,
-                            (p) => updateUploadProgress(photo.id, p)
+                            session,
+                            (p) => updateUploadProgress(photo.id, p),
                           )
                           if (res.success && res.onedrive_url) {
                             markPhotoUploaded(photo.id, res.onedrive_url)
                           }
                         } catch (e) {
+                          console.error('NHome photo upload failed', e)
                           updateUploadProgress(photo.id, 0)
                         }
                       }}
-                      className="absolute bottom-1 right-1 bg-nhome-secondary hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
+                      type="button" className="absolute bottom-1 right-1 bg-nhome-secondary z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
                       title="Upload to OneDrive"
                     >
                       Upload
@@ -560,6 +560,17 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   )}
                   <div className="p-2 text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
                     {generateNHomeFileName(photo.metadata)}
+                    {photo.uploaded && photo.onedrive_url && (
+                      <a
+                        href={photo.onedrive_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
+                        title={photo.onedrive_url}
+                      >
+                        {photo.onedrive_url}
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}

@@ -206,7 +206,7 @@ export function NHomeCameraCapture({
       minute: '2-digit'
     })
     context.fillText(`${sessionData?.project_name || 'Property'} - Unit ${sessionData?.apartment_unit || 'TBD'}`, 20, height - 30)
-    context.fillText(`${inspectionItem?.room_type || 'General'} • ${timestamp} • Algarve, Portugal`, 20, height - 15)
+    context.fillText(`${inspectionItem?.room_type || 'General'} ??? ${timestamp} ??? Algarve, Portugal`, 20, height - 15)
     context.font = 'bold 10px Inter, sans-serif'
     context.fillText('PROFESSIONAL INSPECTION DOCUMENTATION', width - 250, height - 15)
     context.restore()
@@ -238,6 +238,16 @@ export function NHomeCameraCapture({
       setDebugInfo(null)
     }
   }, [isOpen, stopNHomeCamera, stream])
+
+  useEffect(() => {
+    if (!isOpen) return
+    if (stream) return
+    if (typeof window === 'undefined' || typeof navigator === 'undefined') return
+    const ua = navigator.userAgent || ''
+    const isIOS = /iP(ad|hone|od)/i.test(ua) || (ua.includes('Mac') && 'ontouchend' in window)
+    if (isIOS) return
+    startNHomeCamera().catch(() => undefined)
+  }, [isOpen, stream, startNHomeCamera])
 
   useEffect(() => {
     if (!stream) return
@@ -283,7 +293,7 @@ export function NHomeCameraCapture({
 
       {sessionData && (
         <div className="bg-nhome-primary/90 text-white px-4 py-2 text-sm">
-          📍 {sessionData.project_name} • Unit {sessionData.apartment_unit} ({sessionData.apartment_type}) • Professional Inspection
+          ???? {sessionData.project_name} ??? Unit {sessionData.apartment_unit} ({sessionData.apartment_type}) ??? Professional Inspection
         </div>
       )}
 
@@ -322,7 +332,7 @@ export function NHomeCameraCapture({
               >
                 Allow Camera Access
               </button>
-              <p className="text-xs text-gray-400 mt-3">iPhone: In Safari, tap the “aA” icon → Website Settings → Camera → Allow. Ensure you’re on HTTPS.</p>
+              <p className="text-xs text-gray-400 mt-3">iPhone: In Safari, tap the ???aA??? icon ??? Website Settings ??? Camera ??? Allow. Ensure you???re on HTTPS.</p>
             </div>
           </div>
         ) : (
@@ -341,7 +351,7 @@ export function NHomeCameraCapture({
             )}
             {debugInfo && (
               <div className="absolute top-2 right-2 text-[10px] text-white bg-black/50 rounded px-2 py-1">
-                {debugInfo.width}x{debugInfo.height} · {debugInfo.readyState}
+                {debugInfo.width}x{debugInfo.height} ?? {debugInfo.readyState}
               </div>
             )}
             
@@ -407,7 +417,7 @@ export function NHomeCameraCapture({
               
               <div className="text-center mt-4">
                 <p className="text-white text-sm opacity-90">
-                  📷 Professional documentation for NHome quality standards
+                  ???? Professional documentation for NHome quality standards
                 </p>
                 <p className="text-white text-xs opacity-75">
                   Photo will include professional watermark and metadata
@@ -433,3 +443,7 @@ export function NHomeCameraCapture({
     </div>
   )
 }
+
+
+
+
