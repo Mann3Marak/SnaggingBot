@@ -1,30 +1,32 @@
 'use client'
-import { useEffect, useState } from 'react'
-import { getSupabase } from '@/lib/supabase'
+import Link from 'next/link'
+import { useAuthUser } from '@/hooks/useAuthUser'
 import { SignOutButton } from './SignOutButton'
-import { NHomeAuthForm } from './NHomeAuthForm'
+
+const pillClasses = 'inline-flex items-center justify-center rounded-full border border-white/60 bg-white/10 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:border-white hover:bg-white/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white'
 
 export function AuthStatus() {
-  const [loading, setLoading] = useState(true)
-  const [user, setUser] = useState<any>(null)
+  const { user, loading } = useAuthUser()
 
-  useEffect(() => {
-    const supabase = getSupabase()
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data?.user ?? null)
-      setLoading(false)
-    })
+  if (loading) {
+    return (
+      <span className={`${pillClasses} cursor-default text-white/70 hover:border-white/60 hover:bg-white/10`}>
+        Checking access...
+      </span>
+    )
+  }
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null)
-    })
+  if (user) {
+    return (
+      <SignOutButton className={`${pillClasses} hover:text-white`}>
+        Sign out
+      </SignOutButton>
+    )
+  }
 
-    return () => {
-      listener.subscription.unsubscribe()
-    }
-  }, [])
-
-  if (loading) return null
-
-  return user ? <SignOutButton /> : <NHomeAuthForm />
+  return (
+    <Link href='/auth/signin' className={pillClasses}>
+      Sign in to NHome
+    </Link>
+  )
 }
