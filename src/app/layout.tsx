@@ -1,6 +1,8 @@
 ﻿import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { NHomeHeader } from '@/components/layout/NHomeHeader';
+import { NHomeFooter } from '@/components/layout/NHomeFooter';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -40,7 +42,13 @@ export default function RootLayout({
 
   return (
     <html lang='en' className='bg-nhome-background'>
-      <body className={bodyClass}>{children}</body>
+      <body className={bodyClass}>
+        <NHomeHeader />
+        <main className='flex-1'>
+          {children}
+        </main>
+        <NHomeFooter />
+      </body>
     </html>
   );
 }
