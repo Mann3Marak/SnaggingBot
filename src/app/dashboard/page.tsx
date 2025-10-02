@@ -1,7 +1,6 @@
-﻿import { cookies } from 'next/headers'
+import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import { SignOutButton } from '@/components/auth/SignOutButton'
 
 export const dynamic = 'force-dynamic'
 
@@ -87,15 +86,12 @@ export default async function DashboardPage() {
           <p className='mt-1 text-slate-600'>Your Algarve inspections at a glance.</p>
         </div>
         <div className='text-right'>
-          {me ? (
+          {me && (
             <div className='text-sm'>
               <p className='font-medium text-nhome-foreground'>{me.full_name ?? me.email}</p>
               <p className='text-slate-500 capitalize'>{me.role}</p>
             </div>
-          ) : null}
-          <div className='mt-2'>
-            <SignOutButton />
-          </div>
+          )}
         </div>
       </header>
 
@@ -124,7 +120,7 @@ export default async function DashboardPage() {
                   {proj?.name}
                 </h3>
                 <p className='text-sm text-slate-700 mt-1'>
-                  Unit {apt?.unit_number} • {apt?.apartment_type}
+                  Unit {apt?.unit_number} - {apt?.apartment_type}
                 </p>
                 <p className='text-xs text-slate-500 mt-2'>
                   Started {new Date(s.started_at).toLocaleString()}

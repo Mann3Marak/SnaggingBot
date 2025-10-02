@@ -46,7 +46,7 @@ export class NHomeOneDriveManager {
 
     private async ensureFolderExists(folderPath: string) {
     try {
-      const base = this.driveId ? `/drives/${this.driveId}/root:/${folderPath}` : `/me/drive/root:/${folderPath}`
+      const base = this.driveId ? `/drives/${this.driveId}/root:/${folderPath}:/` : `/me/drive/root:/${folderPath}:/`
       await this.graphClient.api(base).get()
       return
     } catch (error: any) {

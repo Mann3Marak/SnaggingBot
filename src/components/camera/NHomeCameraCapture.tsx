@@ -339,23 +339,23 @@ export function NHomeCameraCapture({
           <>
             <video
               ref={videoRef}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover z-0"
               autoPlay
               playsInline
               muted
             />
             {previewIssue && (
-              <div className="absolute top-2 left-2 right-2 text-[11px] text-amber-200 bg-black/60 rounded px-2 py-1">
+              <div className="absolute top-2 left-2 right-2 z-20 text-[11px] text-amber-200 bg-black/60 rounded px-2 py-1">
                 {previewIssue}
               </div>
             )}
             {debugInfo && (
-              <div className="absolute top-2 right-2 text-[10px] text-white bg-black/50 rounded px-2 py-1">
+              <div className="absolute top-2 right-2 z-20 text-[10px] text-white bg-black/50 rounded px-2 py-1">
                 {debugInfo.width}x{debugInfo.height} ?? {debugInfo.readyState}
               </div>
             )}
             
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-6">
+            <div className="absolute bottom-0 left-0 right-0 z-30 bg-gradient-to-t from-black/80 to-transparent p-6">
               <div className="flex items-center justify-center space-x-6">
                 <button
                   onClick={restartCamera}
