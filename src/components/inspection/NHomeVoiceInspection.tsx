@@ -17,8 +17,7 @@ interface NHomeVoiceInspectionProps {
 // type VoiceAssessment = 'good' | 'issue' | 'critical'
 
 export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
-  const { session, currentItem, nhomeProgress, saveNHomeResult, goToNext, goToPrevious } = useNHomeInspectionSession(sessionId)
-  const currentIndex = nhomeProgress?.completed ?? 0
+  const { session, currentItem, currentIndex, totalItems, nhomeProgress, saveNHomeResult, goToNext, goToPrevious } = useNHomeInspectionSession(sessionId)
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
 
