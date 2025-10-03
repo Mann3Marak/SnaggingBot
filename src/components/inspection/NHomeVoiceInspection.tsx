@@ -17,7 +17,7 @@ interface NHomeVoiceInspectionProps {
 // type VoiceAssessment = 'good' | 'issue' | 'critical'
 
 export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
-  const { session, currentItem, nhomeProgress, saveNHomeResult } = useNHomeInspectionSession(sessionId)
+  const { session, currentItem, currentIndex, totalItems, nhomeProgress, saveNHomeResult, goToNext, goToPrevious } = useNHomeInspectionSession(sessionId)
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
 
@@ -29,6 +29,10 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   const [liveUserTranscript, setLiveUserTranscript] = useLocalState<string>("")
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
+
+  // Local state for notes section when selecting Issue or Critical
+  const [showNotes, setShowNotes] = useState<null | { type: 'issue' | 'critical' }>(null)
+  const [notesText, setNotesText] = useState('')
 
   const sendTextMessage = async (message: string, role: string = "user", addToTurns = false) => {
     if (addToTurns) {
@@ -416,17 +420,84 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 <strong>NHome Standards:</strong> {currentItem.nhome_standard_notes}
               </div>
             )}
+
+            <div className="mt-4 flex flex-col items-center gap-3">
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={async () => {
+                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards', 1, [], { advanceToNext: true })
+                    onRefreshReport?.()
+                  }}
+                  className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm font-medium shadow"
+                >
+                  Good
+                </button>
+                <button
+                  onClick={() => setShowNotes({ type: 'issue' })}
+                  className="px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 text-sm font-medium shadow"
+                >
+                  Issue
+                </button>
+                <button
+                  onClick={() => setShowNotes({ type: 'critical' })}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-medium shadow"
+                >
+                  Critical
+                </button>
+              </div>
+
+              {showNotes && (
+                <div className="w-full max-w-md mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <textarea
+                    value={notesText}
+                    onChange={(e) => setNotesText(e.target.value)}
+                    placeholder="Describe the issue..."
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-nhome-primary"
+                    rows={3}
+                  />
+                  <div className="flex justify-end gap-2 mt-3">
+                    <button
+                      onClick={async () => {
+                        await saveNHomeResult(
+                          currentItem.id,
+                          showNotes.type,
+                          notesText || 'No additional notes provided',
+                          showNotes.type === 'critical' ? 3 : 2,
+                          [],
+                          { advanceToNext: true }
+                        )
+                        setShowNotes(null)
+                        setNotesText('')
+                        onRefreshReport?.()
+                      }}
+                      className="px-4 py-1.5 rounded-md bg-nhome-primary text-white text-sm hover:bg-nhome-secondary"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowNotes(null)
+                        setNotesText('')
+                      }}
+                      className="px-4 py-1.5 rounded-md bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mb-6">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
               <span>Inspection Progress</span>
-              <span>{nhomeProgress.completed} of {nhomeProgress.total} items</span>
+              <span>{currentIndex + 1} of {nhomeProgress.total} items</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
                 className="bg-gradient-to-r from-nhome-primary to-nhome-secondary h-3 rounded-full transition-all duration-500"
-                style={{ width: `${(nhomeProgress.completed / nhomeProgress.total) * 100}%` }}
+                style={{ width: `${((currentIndex + 1) / (nhomeProgress.total || 1)) * 100}%` }}
               />
             </div>
 
@@ -437,30 +508,50 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           </div>
 
           <div className="text-center space-y-4">
-            <button
-              onClick={handleToggleAssistant}
-              className={`w-24 h-24 rounded-full font-bold text-white transition-all duration-200 transform ${
-                isRecording
-                  ? 'bg-nhome-error animate-pulse scale-110 shadow-xl'
-                  : 'bg-nhome-success hover:scale-105 shadow-lg hover:shadow-xl'
-              }`}
-            >
-              {isRecording ? (
-                <div className="space-y-1">
-                  <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                  </svg>
-                  <div className="text-xs">STOP</div>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-                  </svg>
-                  <div className="text-xs">START</div>
-                </div>
-              )}
-            </button>
+            <div className="flex justify-center gap-4">
+              <button
+                onClick={async () => {
+                  if (currentItem) {
+                    // Save current state before moving back
+                    await saveNHomeResult(currentItem.id, "good", "Updated before going back", 1, [], { advanceToNext: false })
+                  }
+                  goToPrevious()
+                }}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-medium shadow"
+              >
+                ← Previous Item
+              </button>
+              <button
+                onClick={handleToggleAssistant}
+                className={`w-24 h-24 rounded-full font-bold text-white transition-all duration-200 transform ${
+                  isRecording
+                    ? 'bg-nhome-error animate-pulse scale-110 shadow-xl'
+                    : 'bg-nhome-success hover:scale-105 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {isRecording ? (
+                  <div className="space-y-1">
+                    <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                    </svg>
+                    <div className="text-xs">STOP</div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+                    </svg>
+                    <div className="text-xs">START</div>
+                  </div>
+                )}
+              </button>
+              <button
+                onClick={goToNext}
+                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-medium shadow"
+              >
+                Next Item →
+              </button>
+            </div>
 
             <div className="space-y-2">
               <p className="text-lg font-medium text-gray-900">{activeStatus}</p>
@@ -651,6 +742,3 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     </div>
   )
 }
-
-
-
