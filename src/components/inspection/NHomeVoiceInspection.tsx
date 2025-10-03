@@ -67,13 +67,26 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
       }
 
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" })
+        const chunks = [...audioChunksRef.current]
+        audioChunksRef.current = []
+
+        if (chunks.length === 0) {
+          console.warn('STT skipped: no audio chunks captured')
+          return
+        }
+
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' })
+        if (audioBlob.size < 2048) {
+          console.warn('STT skipped: audio too short to transcribe')
+          return
+        }
+
         const formData = new FormData()
-        formData.append("file", audioBlob, "input.webm")
+        formData.append('file', audioBlob, 'input.webm')
 
         try {
-          const resp = await fetch("/api/voice/stt", {
-            method: "POST",
+          const resp = await fetch('/api/voice/stt', {
+            method: 'POST',
             body: formData,
           })
           if (resp.ok) {
@@ -82,10 +95,11 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
             setLiveUserTranscript(transcript)
             setUserTurns(prev => [...prev, transcript])
           } else {
-            console.error("STT request failed")
+            const errorBody = await resp.json().catch(() => undefined)
+            console.error('STT request failed', errorBody)
           }
         } catch (err) {
-          console.error("STT error", err)
+          console.error('STT error', err)
         }
       }
 
@@ -154,7 +168,7 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
         stopRecording()
       }
     }
-  }, [isRecording, stopRecording])
+  }, [])
 
   const enhanceNHomeDescription = useCallback(async (userInput: string, item = currentItem) => {
     const trimmed = userInput.trim()
@@ -637,5 +651,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     </div>
   )
 }
+
 
 
