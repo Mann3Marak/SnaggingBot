@@ -3,9 +3,10 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import '@/styles/VapiWidget.css'; // Import VapiWidget CSS
 import '@/styles/joWidget.css'; // Import Jo Widget CSS
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import VapiWidget from '@/components/VapiWidget'; // Import VapiWidget component
+//// Temporarily disable broken imports until components exist
+// import Navbar from '@/components/Navbar';
+// import Footer from '@/components/Footer';
+// import VapiWidget from '@/components/VapiWidget'; // Import VapiWidget component
 import Script from 'next/script'; // Needed for client-side scripts
 
 const inter = Inter({ subsets: ['latin'] });
@@ -126,9 +127,9 @@ export default function RootLayout({
         {/* Vapi SDK script removed from here, will be added using next/script below */}
       </head>
       <body className={inter.className}>
-        <Navbar />
+        {/* Navbar removed until component exists */}
         {children}
-        <Footer />
+        {/* Footer removed until component exists */}
         {/* <VapiWidget />  Removed to prevent duplicate widget */}
         {/* Add script to initialize Jo agent */}
         <Script id="jo-agent-init" strategy="afterInteractive">
