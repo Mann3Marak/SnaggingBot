@@ -6,10 +6,12 @@ import { NHomeReportGenerationService } from "@/services/nhomeReportGenerationSe
 interface NHomeReportPreviewProps {
   sessionId: string
   language?: "pt" | "en"
+  refreshToken?: number
 }
 
-export function NHomeReportPreview({ sessionId, language = "en" }: NHomeReportPreviewProps) {
+export function NHomeReportPreview({ sessionId, language = "en", refreshToken = 0 }: NHomeReportPreviewProps) {
   const [reportData, setReportData] = useState<any>(null)
+  const [version, setVersion] = useState(0)
 
   useEffect(() => {
     const service = new NHomeReportGenerationService()
@@ -18,15 +20,16 @@ export function NHomeReportPreview({ sessionId, language = "en" }: NHomeReportPr
       try {
         const data = await service.loadInspectionData(sessionId)
         setReportData(data)
+        setVersion(prev => prev + 1)
       } catch (err) {
         console.error("Failed to fetch report data", err)
       }
     }
 
     fetchData()
-    const interval = setInterval(fetchData, 30000) // refresh every 30s
+    const interval = setInterval(fetchData, 30000)
     return () => clearInterval(interval)
-  }, [sessionId, language])
+  }, [sessionId, language, refreshToken])
 
   if (!reportData) {
     return <div className="text-gray-500">Loading live report preview...</div>
@@ -37,7 +40,7 @@ export function NHomeReportPreview({ sessionId, language = "en" }: NHomeReportPr
 
   return (
     <div className="w-full h-[80vh] border rounded-lg shadow">
-      <PDFViewer width="100%" height="100%">
+      <PDFViewer key={`${version}-${language}`} width="100%" height="100%">
         <Report />
       </PDFViewer>
     </div>

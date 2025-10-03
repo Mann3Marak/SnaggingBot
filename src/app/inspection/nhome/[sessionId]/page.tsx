@@ -14,6 +14,7 @@ export default function InspectionPage(){
 
   const [showNotes, setShowNotes] = useState<null | 'issue' | 'critical'>(null)
   const [notes, setNotes] = useState('')
+  const [reportRefreshToken, setReportRefreshToken] = useState(0)
 
   if (loading) return <main className='p-6'>Loading NHome inspection…</main>
   if (!session) return <main className='p-6'>Session not found.</main>
@@ -47,7 +48,10 @@ export default function InspectionPage(){
             )}
             <div className='mt-4 flex gap-3'>
               <button
-                onClick={() => saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards')}
+                onClick={async () => {
+                  await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards')
+                  setReportRefreshToken((prev) => prev + 1)
+                }}
                 className='rounded-lg bg-emerald-600 px-4 py-2 text-white'
               >
                 Good
@@ -76,13 +80,14 @@ export default function InspectionPage(){
                 />
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      saveNHomeResult(
+                    onClick={async () => {
+                      await saveNHomeResult(
                         currentItem.id,
                         showNotes,
                         notes,
                         showNotes === 'critical' ? 3 : 2
                       )
+                      setReportRefreshToken((prev) => prev + 1)
                       setNotes('')
                       setShowNotes(null)
                     }}
@@ -109,7 +114,10 @@ export default function InspectionPage(){
       </section>
       {/* NHome Professional Voice Inspection */}
       <section className='rounded-xl border border-slate-200 bg-white p-0 overflow-hidden'>
-        <NHomeVoiceInspection sessionId={sessionId} />
+        <NHomeVoiceInspection
+          sessionId={sessionId}
+          onRefreshReport={() => setReportRefreshToken((prev) => prev + 1)}
+        />
       </section>
 
       {/* Live Report Preview */}
@@ -117,12 +125,12 @@ export default function InspectionPage(){
         <div>
           <h2 className='text-lg font-semibold mb-2'>Live Report Preview (English)</h2>
           <p className='text-sm text-slate-600 mb-4'>This report updates automatically as you progress through the inspection.</p>
-          <NHomeReportPreview sessionId={sessionId} language="en" />
+          <NHomeReportPreview sessionId={sessionId} language="en" refreshToken={reportRefreshToken} />
         </div>
         <div>
           <h2 className='text-lg font-semibold mb-2'>Pré-visualização do Relatório (Português)</h2>
           <p className='text-sm text-slate-600 mb-4'>Este relatório é atualizado automaticamente à medida que avança na inspeção.</p>
-          <NHomeReportPreview sessionId={sessionId} language="pt" />
+          <NHomeReportPreview sessionId={sessionId} language="pt" refreshToken={reportRefreshToken} />
         </div>
       </section>
 

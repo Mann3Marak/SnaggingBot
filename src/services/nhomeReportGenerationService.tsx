@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import { Document, Page, Text, View, StyleSheet, Image, Link } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { pt, enGB } from 'date-fns/locale'
@@ -74,14 +74,14 @@ const EN: NHomeReportLanguage = {
 
 const styles = StyleSheet.create({
   page: { padding: 40, fontFamily: 'Helvetica' },
-  header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: '#2563EB', paddingBottom: 10 },
-  title: { fontSize: 20, color: '#2563EB', textAlign: 'center' },
+  header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: '#d29d54', paddingBottom: 10 },
+  title: { fontSize: 20, color: '#8f8552', textAlign: 'center' },
   sub: { fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 16 },
   cell: { width: '48%', marginBottom: 8 },
-  label: { fontSize: 10, color: '#2563EB' },
+  label: { fontSize: 10, color: '#a59a5e' },
   value: { fontSize: 11, color: '#0f172a' },
-  h2: { fontSize: 14, color: '#2563EB', marginTop: 18, marginBottom: 8 },
+  h2: { fontSize: 14, color: '#8f8552', marginTop: 18, marginBottom: 8 },
   text: { fontSize: 11, color: '#0f172a', lineHeight: 1.5 },
   item: { marginTop: 8, padding: 8, borderLeftWidth: 3, borderLeftColor: '#e5e7eb', backgroundColor: '#f8fafc' },
   photo: { width: '48%', height: 110, marginTop: 6, borderWidth: 1, borderColor: '#e5e7eb' },
@@ -204,15 +204,20 @@ export class NHomeReportGenerationService {
                     </Text>
                     {ph.length > 0 && (
                       <View style={styles.row}>
-                        {ph.map((p: any, j: number) =>
-                          p.url ? (
-                            p.url.includes("http") ? (
-                              <Image key={j} style={styles.photo} src={p.url} />
-                            ) : (
-                              <Link key={j} src={p.url} style={styles.text}>{p.url}</Link>
+                        {ph.map((p: any, j: number) => {
+                          const rawUrl = typeof p.url === 'string' ? p.url : ''
+                          if (!rawUrl) return null
+                          const decodedUrl = decodeURI(rawUrl)
+                          const isSharepoint = /sharepoint\.com|onedrive\.live\.com/i.test(rawUrl)
+                          if (isSharepoint) {
+                            return (
+                              <Link key={j} src={rawUrl} style={styles.text}>
+                                {decodedUrl}
+                              </Link>
                             )
-                          ) : null
-                        )}
+                          }
+                          return <Image key={j} style={styles.photo} src={rawUrl} />
+                        })}
                       </View>
                     )}
                     {it.notes && (
@@ -271,5 +276,6 @@ export class NHomeReportGenerationService {
     return { reports, photoPackage, documentationSummary }
   }
 }
+
 
 

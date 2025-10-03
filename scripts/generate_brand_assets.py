@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 from pathlib import Path
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 
@@ -8,9 +8,9 @@ LOGO_DIR = ROOT / 'public' / 'branding' / 'logos'
 LOGO_DIR.mkdir(parents=True, exist_ok=True)
 ICONS_DIR.mkdir(parents=True, exist_ok=True)
 
-PRIMARY_BLUE = '#2563EB'
-DARK_BLUE = '#1D4ED8'
-PALE_BLUE = '#BFDBFE'
+PRIMARY_TONE = '#bcae69'
+DEEP_TONE = '#8f8552'
+PALE_TONE = '#e6d9a8'
 WHITE = '#FFFFFF'
 TRANSPARENT = (0, 0, 0, 0)
 
@@ -24,7 +24,7 @@ def path_for(size: int) -> Path:
 def create_icon(size: int) -> None:
     img = Image.new('RGBA', (size, size), TRANSPARENT)
     draw = ImageDraw.Draw(img)
-    draw.ellipse((0, 0, size, size), fill=PRIMARY_BLUE)
+    draw.ellipse((0, 0, size, size), fill=PRIMARY_TONE)
 
     center = size / 2
     roof_height = size * 0.36
@@ -50,7 +50,7 @@ def create_icon(size: int) -> None:
     draw.rounded_rectangle(
         (door_left, door_top, door_left + door_width, door_top + door_height),
         radius=max(1, int(size * 0.04)),
-        fill=PALE_BLUE,
+        fill=PALE_TONE,
     )
 
     img.save(path_for(size), format='PNG')
@@ -84,8 +84,8 @@ def create_logo_png(file_name: str, background: str | None, invert: bool = False
     img.paste(base_icon, (60, (height - icon_size) // 2), mask=base_icon)
 
     heading_font, sub_font, _ = _load_fonts()
-    text_color = ImageColor.getrgb(WHITE if invert else PRIMARY_BLUE)
-    sub_color = ImageColor.getrgb(WHITE if invert else DARK_BLUE)
+    text_color = ImageColor.getrgb(WHITE if invert else PRIMARY_TONE)
+    sub_color = ImageColor.getrgb(WHITE if invert else DEEP_TONE)
     if invert:
         sub_color = (*sub_color[:3], 205)
 
@@ -106,7 +106,7 @@ def create_wordmark_png() -> None:
     text_height = bbox[3] - bbox[1]
     x = (width - text_width) / 2
     y = (height - text_height) / 2 - 20
-    draw.text((x, y), text, font=wordmark_font, fill=ImageColor.getrgb(PRIMARY_BLUE))
+    draw.text((x, y), text, font=wordmark_font, fill=ImageColor.getrgb(PRIMARY_TONE))
     sub_font_size = max(36, int(wordmark_font.size * 0.32))
     try:
         sub_font = ImageFont.truetype('arial.ttf', sub_font_size)
@@ -116,7 +116,7 @@ def create_wordmark_png() -> None:
     sub_bbox = draw.textbbox((0, 0), sub_text, font=sub_font)
     sub_width = sub_bbox[2] - sub_bbox[0]
     sub_height = sub_bbox[3] - sub_bbox[1]
-    draw.text(( (width - sub_width) / 2, y + text_height + 10), sub_text, font=sub_font, fill=ImageColor.getrgb(DARK_BLUE))
+    draw.text(( (width - sub_width) / 2, y + text_height + 10), sub_text, font=sub_font, fill=ImageColor.getrgb(DEEP_TONE))
     img.save(LOGO_DIR / 'nhome-wordmark.png', format='PNG')
 
 
@@ -124,7 +124,7 @@ def create_apple_touch_icon() -> None:
     size = 180
     img = Image.new('RGBA', (size, size), TRANSPARENT)
     draw = ImageDraw.Draw(img)
-    draw.rounded_rectangle((0, 0, size, size), radius=int(size * 0.23), fill=PRIMARY_BLUE)
+    draw.rounded_rectangle((0, 0, size, size), radius=int(size * 0.23), fill=PRIMARY_TONE)
 
     padding = size * 0.18
     left = padding
@@ -143,7 +143,7 @@ def create_apple_touch_icon() -> None:
     draw.rounded_rectangle(
         (door_left, door_top, door_left + door_width, bottom),
         radius=int(size * 0.05),
-        fill=PALE_BLUE,
+        fill=PALE_TONE,
     )
 
     img.save(ICONS_DIR / 'apple-touch-icon.png', format='PNG')
@@ -163,3 +163,4 @@ if __name__ == '__main__':
     create_wordmark_png()
     create_apple_touch_icon()
     create_favicon()
+

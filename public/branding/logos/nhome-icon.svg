@@ -1,6 +1,7 @@
-﻿<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'>
   <title>NHome Icon</title>
-  <circle cx='40' cy='40' r='40' fill='#2563EB'/>
+  <circle cx='40' cy='40' r='40' fill='#bcae69'/>
   <path d='M18 47v-16l22-18 22 18v16H48V31.5L40 25l-8 6.5V47H18Z' fill='#ffffff'/>
-  <rect x='36' y='44' width='8' height='12' rx='1.5' fill='#BFDBFE'/>
+  <rect x='36' y='44' width='8' height='12' rx='1.5' fill='#e6d9a8'/>
 </svg>
+

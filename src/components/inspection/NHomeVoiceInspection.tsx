@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useState as useLocalState } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
@@ -10,11 +10,13 @@ import { ConnectOneDrive } from '@/components/onedrive/ConnectOneDrive'
 
 interface NHomeVoiceInspectionProps {
   sessionId: string
+  onRefreshReport?: () => void
 }
 
-type VoiceAssessment = 'good' | 'issue' | 'critical'
+// Legacy classification retained for reference; no current references.
+// type VoiceAssessment = 'good' | 'issue' | 'critical'
 
-export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
+export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
   const { session, currentItem, nhomeProgress, saveNHomeResult } = useNHomeInspectionSession(sessionId)
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
@@ -25,7 +27,6 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
   const [isRecording, setIsRecording] = useLocalState(false)
   const status = isRecording ? "Recording..." : "Idle"
   const [liveUserTranscript, setLiveUserTranscript] = useLocalState<string>("")
-  const [logs, setLogs] = useLocalState<string[]>([])
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
 
@@ -95,12 +96,31 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
     }
   }
 
-  const stopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop()
-      setIsRecording(false)
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current
+    if (!recorder) {
+      return
     }
-  }
+
+    try {
+      if (recorder.state !== 'inactive') {
+        recorder.stop()
+      }
+    } catch (error) {
+      console.error('Failed to stop recording cleanly:', error)
+    }
+
+    try {
+      recorder.stream?.getTracks().forEach(track => {
+        track.stop()
+      })
+    } catch (error) {
+      console.error('Failed to release audio stream:', error)
+    }
+
+    mediaRecorderRef.current = null
+    setIsRecording(false)
+  }, [])
 
   const resetTranscripts = () => {
     setUserTurns([])
@@ -130,11 +150,11 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
 
   useEffect(() => {
     return () => {
-      if (isRecording) {
+      if (isRecording || mediaRecorderRef.current) {
         stopRecording()
       }
     }
-  }, [isRecording])
+  }, [isRecording, stopRecording])
 
   const enhanceNHomeDescription = useCallback(async (userInput: string, item = currentItem) => {
     const trimmed = userInput.trim()
@@ -170,20 +190,22 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
       return trimmed
     }
   }, [currentItem, session])
-
-  const categorizeAssessment = useCallback((input: string): VoiceAssessment => {
-    const normalized = input.trim().toLowerCase()
-    const isGoodCondition = /^(good|fine|ok|okay|perfect|excellent|no issues?|meets standards?|nhome standard)$/i.test(normalized)
-    if (isGoodCondition) {
-      return 'good'
-    }
-    const isCriticalIssue = /(critical|urgent|major|serious|dangerous|immediate|safety|structural|flood|gas)/i.test(normalized)
-    if (isCriticalIssue) {
-      return 'critical'
-    }
-    // Default to issue if not good or critical
-    return 'issue'
-  }, [])
+  /*
+   Legacy assessor retained for reference - replaced by server-side agent.
+   const categorizeAssessment = useCallback((input: string): VoiceAssessment => {
+     const normalized = input.trim().toLowerCase()
+     const isGoodCondition = /^(good|fine|ok|okay|perfect|excellent|no issues?|meets standards?|nhome standard)$/i.test(normalized)
+     if (isGoodCondition) {
+       return 'good'
+     }
+     const isCriticalIssue = /(critical|urgent|major|serious|dangerous|immediate|safety|structural|flood|gas)/i.test(normalized)
+     if (isCriticalIssue) {
+       return 'critical'
+     }
+     // Default to issue if not good or critical
+     return 'issue'
+   }, [])
+  */
 
 
   const inspectionInstructions = useMemo(() => {
@@ -205,37 +227,38 @@ Current focus: ${currentRoom} - ${currentDescription}
 Maintain Natalie O'Kelly's professional standards, reference Algarve-specific considerations, and keep guidance concise, actionable, and thorough.`
   }, [currentItem, session])
 
-  const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
-    setProcessing(true)
-    try {
-      // Call a backend agent endpoint to generate a dynamic response
-      const resp = await fetch("/api/nhome/agent", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          instructions: inspectionInstructions,
-          messages: [
-            { role: "user", content: userInput }
-          ],
-          sessionId
-        })
-      })
-      if (resp.ok) {
-        const data = await resp.json()
-        const reply = data.reply || "I heard you."
-        setLastResponse(reply)
-        sendTextMessage(reply, "assistant", true)
-      } else {
-        console.error("Agent request failed")
-        setLastResponse("Agent request failed")
-      }
-    } catch (error) {
-      console.error("Error processing NHome voice response:", error)
-      setLastResponse("Unable to process your request.")
-    } finally {
-      setProcessing(false)
-    }
-  }, [sessionId, sendTextMessage, inspectionInstructions])
+  // Legacy front-end handler retained for reference; backend agent handles turns now.
+//   const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
+//     setProcessing(true)
+//     try {
+//       // Call a backend agent endpoint to generate a dynamic response
+//       const resp = await fetch("/api/nhome/agent", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           instructions: inspectionInstructions,
+//           messages: [
+//             { role: "user", content: userInput }
+//           ],
+//           sessionId
+//         })
+//       })
+//       if (resp.ok) {
+//         const data = await resp.json()
+//         const reply = data.reply || "I heard you."
+//         setLastResponse(reply)
+//         sendTextMessage(reply, "assistant", true)
+//       } else {
+//         console.error("Agent request failed")
+//         setLastResponse("Agent request failed")
+//       }
+//     } catch (error) {
+//       console.error("Error processing NHome voice response:", error)
+//       setLastResponse("Unable to process your request.")
+//     } finally {
+//       setProcessing(false)
+//     }
+//   }, [sessionId, sendTextMessage, inspectionInstructions])
 
   useEffect(() => {
     if (userTurns.length === 0) return
@@ -272,6 +295,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               if (currentItem) {
                 // Default to "good" if agent said item is good
                 await saveNHomeResult(currentItem.id, "good", "Meets NHome standards")
+                onRefreshReport?.()
               }
             }
           } else {
@@ -466,18 +490,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             </div>
           </div>
 
-          {logs.length > 0 && (
-            <div className="mt-4 text-left">
-              <details className="bg-white border border-gray-200 rounded-lg">
-                <summary className="cursor-pointer px-4 py-2 text-sm text-gray-600">Session diagnostics</summary>
-                <div className="px-4 py-3 text-xs text-gray-500 space-y-1">
-                  {logs.slice(-8).map((entry: string, index: number) => (
-                    <div key={`${entry}-${index}`}>{entry}</div>
-                  ))}
-                </div>
-              </details>
-            </div>
-          )}
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -497,7 +509,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           </button>
 
           <button
-            onClick={() => currentItem && openNHomeCamera(currentItem.id)}
+            onClick={handleToggleAssistant}
             className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-secondary transition-all"
           >
             <div className="text-center">
@@ -625,3 +637,5 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     </div>
   )
 }
+
+

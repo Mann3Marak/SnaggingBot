@@ -9,9 +9,10 @@ import { NHomeVoiceAgent } from '@/lib/nhome-voice-agent'
 
 interface NHomeVoiceInspectionWithPhotosProps {
   sessionId: string
+  onRefreshReport?: () => void
 }
 
-export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspectionWithPhotosProps) {
+export function NHomeVoiceInspectionWithPhotos({ sessionId, onRefreshReport }: NHomeVoiceInspectionWithPhotosProps) {
   const { session, currentItem, nhomeProgress, saveNHomeResult } = useNHomeInspectionSession(sessionId)
   const { 
     isCameraOpen, 
@@ -76,6 +77,7 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
 
       if (isGoodCondition) {
         await saveNHomeResult(currentItem.id, 'good', 'Meets NHome professional quality standards')
+        onRefreshReport?.()
         setLastVoiceResponse('Excellent. This meets NHome\'s professional standards. Moving to the next inspection point.')
         await moveToNextNHomeItem()
       } else {
@@ -84,6 +86,7 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
         
         setCurrentAssessment(enhancedDescription)
         await saveNHomeResult(currentItem.id, isCriticalIssue ? 'critical' : 'issue', enhancedDescription, priority)
+        onRefreshReport?.()
         
         if (isCriticalIssue) {
           setLastVoiceResponse('Critical issue documented. Professional photo documentation is required for developer and safety records. Please capture photo now.')
@@ -141,6 +144,7 @@ export function NHomeVoiceInspectionWithPhotos({ sessionId }: NHomeVoiceInspecti
 
       if (result.success) {
         markPhotoUploaded(photo.id, result.onedrive_url!)
+        onRefreshReport?.()
         setLastVoiceResponse('Professional documentation complete. Photo uploaded to NHome client folder. Moving to next inspection item.')
         setTimeout(() => moveToNextNHomeItem(), 2000)
       } else {

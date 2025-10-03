@@ -1,3 +1,5 @@
+/*
+Legacy dev-only voice test component retained for reference.
 "use client"
 import { useEffect, useState } from "react"
 import { NHomeVoiceAgent } from "@/lib/nhome-voice-agent"
@@ -127,3 +129,5 @@ export function NHomeVoiceTest() {
     </div>
   )
 }
+
+*/
