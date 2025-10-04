@@ -21,7 +21,7 @@ export default function InspectionPage(){
 
   return (
     <main className='p-6 space-y-6'>
-      <header className='flex items-center justify-between gap-3'>
+      {/* <header className='flex items-center justify-between gap-3'>
         <div>
           <h1 className='text-2xl font-semibold'>Inspection • {session?.apartment?.apartment_type} • Unit {session?.apartment?.unit_number}</h1>
           <p className='text-sm text-slate-600'>{session?.project?.name} — {session?.project?.address}</p>
@@ -32,86 +32,9 @@ export default function InspectionPage(){
             Progress: {nhomeProgress.completed}/{nhomeProgress.total} • Issues: {nhomeProgress.issues_found} • Score: {nhomeProgress.quality_score}
           </div>
         </div>
-      </header>
+      </header> */}
 
-      <section className='rounded-xl border border-slate-200 bg-white p-4'>
-        {currentItem ? (
-          <div>
-            {/* Local state for notes */}
-            {/*
-              We add state hooks here for notes and showNotes
-            */}
-            <p className='text-xs uppercase tracking-wide text-slate-500'>{currentItem.room_type}</p>
-            <h2 className='mt-1 text-lg font-semibold'>{currentItem.item_description}</h2>
-            {currentItem.item_description_pt && (
-              <p className='text-sm text-slate-600'>PT: {currentItem.item_description_pt}</p>
-            )}
-            <div className='mt-4 flex gap-3'>
-              <button
-                onClick={async () => {
-                  await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards')
-                  setReportRefreshToken((prev) => prev + 1)
-                }}
-                className='rounded-lg bg-emerald-600 px-4 py-2 text-white'
-              >
-                Good
-              </button>
-              <button
-                onClick={() => setShowNotes('issue')}
-                className='rounded-lg bg-amber-500 px-4 py-2 text-white'
-              >
-                Issue
-              </button>
-              <button
-                onClick={() => setShowNotes('critical')}
-                className='rounded-lg bg-red-600 px-4 py-2 text-white'
-              >
-                Critical
-              </button>
-            </div>
-
-            {showNotes && (
-              <div className="mt-4 space-y-3">
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Describe the issue..."
-                  className="w-full rounded-lg border border-slate-300 p-2"
-                />
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => {
-                      await saveNHomeResult(
-                        currentItem.id,
-                        showNotes,
-                        notes,
-                        showNotes === 'critical' ? 3 : 2
-                      )
-                      setReportRefreshToken((prev) => prev + 1)
-                      setNotes('')
-                      setShowNotes(null)
-                    }}
-                    className="rounded-lg bg-nhome-primary px-4 py-2 text-white"
-                  >
-                    Save
-                  </button>
-                  <button
-                    onClick={() => {
-                      setNotes('')
-                      setShowNotes(null)
-                    }}
-                    className="rounded-lg bg-gray-300 px-4 py-2 text-slate-700"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p>All items completed. Great job.</p>
-        )}
-      </section>
+      {/* Removed top-level Good/Issue/Critical section — now handled inside NHomeVoiceInspection */}
       {/* NHome Professional Voice Inspection */}
       <section className='rounded-xl border border-slate-200 bg-white p-0 overflow-hidden'>
         <NHomeVoiceInspection
