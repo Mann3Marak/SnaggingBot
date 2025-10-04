@@ -395,7 +395,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#f9fafb] via-white to-[#f3f4f6] text-gray-900">
       <div className="bg-gradient-to-r from-nhome-primary to-nhome-secondary text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -417,7 +417,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           <div />
           <ConnectOneDrive />
         </div>
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-10 text-center">
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-gradient-to-br from-nhome-primary to-nhome-secondary rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -438,33 +438,33 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               </div>
             )}
 
-            <div className="mt-4 flex flex-col items-center gap-3">
-              <div className="flex justify-center gap-3">
+            <div className="mt-4 flex flex-col items-center gap-4">
+              <div className="flex justify-center gap-4">
                 <button
                   onClick={async () => {
                     await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards')
                     onRefreshReport?.()
                   }}
-                  className="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 text-sm font-medium shadow"
+                  className="px-6 py-2 rounded-full bg-green-500 text-white hover:bg-green-600 text-sm font-semibold shadow-md transition-all"
                 >
                   Good
                 </button>
                 <button
                   onClick={() => setShowNotes({ type: 'issue' })}
-                  className="px-4 py-2 rounded-lg bg-yellow-500 text-white hover:bg-yellow-600 text-sm font-medium shadow"
+                  className="px-6 py-2 rounded-full bg-yellow-400 text-white hover:bg-yellow-500 text-sm font-semibold shadow-md transition-all"
                 >
                   Issue
                 </button>
                 <button
                   onClick={() => setShowNotes({ type: 'critical' })}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 text-sm font-medium shadow"
+                  className="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 text-sm font-semibold shadow-md transition-all"
                 >
                   Critical
                 </button>
               </div>
 
               {showNotes && (
-                <div className="w-full max-w-md mt-4 bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
+                <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
                   <textarea
                     value={notesText}
                     onChange={(e) => setNotesText(e.target.value)}
@@ -521,41 +521,33 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             </div>
           </div>
 
-          <div className="text-center space-y-4">
-            <div className="flex justify-center gap-4">
+          <div className="text-center space-y-2 mt-6">
+            <div className="flex justify-center items-center gap-6">
               <button
                 onClick={goToPrevious}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-medium shadow"
+                className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
               >
                 ← Previous Item
               </button>
               <button
                 onClick={handleToggleAssistant}
-                className={`w-24 h-24 rounded-full font-bold text-white transition-all duration-200 transform ${
+                className={`w-16 h-16 flex items-center justify-center rounded-full text-white font-semibold shadow-md transition-all duration-200 ${
                   isRecording
-                    ? 'bg-nhome-error animate-pulse scale-110 shadow-xl'
-                    : 'bg-nhome-success hover:scale-105 shadow-lg hover:shadow-xl'
+                    ? 'bg-red-500 hover:bg-red-600 scale-105 animate-pulse'
+                    : 'bg-green-500 hover:bg-green-600 scale-105'
                 }`}
               >
-                {isRecording ? (
-                  <div className="space-y-1">
-                    <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                    </svg>
-                    <div className="text-xs">STOP</div>
-                  </div>
-                ) : (
-                  <div className="space-y-1">
-                    <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-                    </svg>
-                    <div className="text-xs">START</div>
-                  </div>
-                )}
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  {isRecording ? (
+                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                  ) : (
+                    <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
+                  )}
+                </svg>
               </button>
               <button
                 onClick={goToNext}
-                className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 text-sm font-medium shadow"
+                className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
               >
                 Next Item →
               </button>
@@ -605,7 +597,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
 
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="mt-8 flex flex-wrap justify-center gap-6">
           <button
             onClick={() => currentItem && openNHomeCamera(currentItem.id)}
             className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-accent transition-all"
