@@ -76,16 +76,8 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
 
   const startRecording = async () => {
     try {
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
-      const mimeType = isIOS ? 'audio/mp4' : 'audio/webm'
-
-      if (typeof MediaRecorder === 'undefined') {
-        alert('Voice recording is not supported on this device. Please update iOS or use Chrome.')
-        return
-      }
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      const mediaRecorder = new MediaRecorder(stream, { mimeType })
+      const mediaRecorder = new MediaRecorder(stream)
       mediaRecorderRef.current = mediaRecorder
       audioChunksRef.current = []
 
@@ -104,7 +96,7 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
           return
         }
 
-        const audioBlob = new Blob(chunks, { type: mimeType })
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' })
         if (audioBlob.size < 2048) {
           console.warn('STT skipped: audio too short to transcribe')
           return
@@ -638,7 +630,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
         </div>
 
         {currentItem && (
-          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4 mb-4">
+          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
             <h3 className="font-semibold text-gray-900 mb-3">Photos for this item</h3>
             <div className="grid grid-cols-3 gap-3">
               {getNHomePhotosForItem(currentItem.id).map(photo => (
@@ -686,13 +678,15 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   <div className="p-2 text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
                     {generateNHomeFileName(photo.metadata)}
                     {photo.uploaded && photo.onedrive_url && (
-                      <div className="mt-2">
-                        <img
-                          src={photo.onedrive_url}
-                          alt="Uploaded evidence"
-                          className="w-full h-32 object-cover rounded-md border border-gray-200 shadow-sm"
-                        />
-                      </div>
+                      <a
+                        href={photo.onedrive_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
+                        title={photo.onedrive_url}
+                      >
+                        {photo.onedrive_url}
+                      </a>
                     )}
                   </div>
                 </div>
@@ -709,6 +703,22 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           </div>
         )}
 
+        <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-xl p-4 border border-nhome-primary/10">
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-nhome-primary rounded-full flex items-center justify-center">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <h4 className="font-semibold text-nhome-primary">NHome Professional Excellence</h4>
+              <p className="text-sm text-gray-600">
+                Maintaining Natalie O'Kelly's standards of excellence for Algarve properties.
+                Every assessment contributes to our reputation for thorough, professional service.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
       <NHomeCameraCapture
         isOpen={isCameraOpen}

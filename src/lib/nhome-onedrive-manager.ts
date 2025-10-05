@@ -15,25 +15,14 @@ export interface NHomePhotoMetadata {
 
 class NHomeAuthProvider {
   async getAccessToken(): Promise<string> {
-    // Ensure absolute URL for server-side execution
-    const baseUrl =
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      process.env.VERCEL_URL ||
-      "http://localhost:3000";
-    const tokenUrl = `${baseUrl.replace(/\/$/, "")}/api/auth/nhome-microsoft-token`;
-
-    const response = await fetch(tokenUrl, {
-      method: "GET",
-      credentials: "include",
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to get Microsoft access token for NHome (${response.status})`);
-    }
-
-    const { access_token } = await response.json();
-    if (!access_token) throw new Error("Missing Microsoft access token");
-    return access_token as string;
+    const response = await fetch('/api/auth/nhome-microsoft-token', {
+      method: 'GET',
+      credentials: 'include',
+    })
+    if (!response.ok) throw new Error('Failed to get Microsoft access token for NHome')
+    const { access_token } = await response.json()
+    if (!access_token) throw new Error('Missing Microsoft access token')
+    return access_token as string
   }
 }
 
@@ -242,3 +231,4 @@ export class NHomeOneDriveManager {
     return result.webUrl
   }
 }
+

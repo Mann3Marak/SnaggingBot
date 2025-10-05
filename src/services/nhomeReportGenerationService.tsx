@@ -210,29 +210,11 @@ export class NHomeReportGenerationService {
                           const decodedUrl = decodeURI(rawUrl)
                           const isSharepoint = /sharepoint\.com|onedrive\.live\.com/i.test(rawUrl)
                           if (isSharepoint) {
-                            try {
-                              const [dataUri, setDataUri] = React.useState<string | null>(null)
-                              React.useEffect(() => {
-                                fetch(`/api/nhome/fetch-image?url=${encodeURIComponent(rawUrl)}`)
-                                  .then(res => res.json())
-                                  .then(json => setDataUri(json.dataUri))
-                                  .catch(() => setDataUri(null))
-                              }, [rawUrl])
-                              if (!dataUri) {
-                                return (
-                                  <Text key={j} style={styles.text}>
-                                    (Image unavailable)
-                                  </Text>
-                                )
-                              }
-                              return <Image key={j} style={styles.photo} src={dataUri} />
-                            } catch {
-                              return (
-                                <Text key={j} style={styles.text}>
-                                  (Image load error)
-                                </Text>
-                              )
-                            }
+                            return (
+                              <Link key={j} src={rawUrl} style={styles.text}>
+                                {decodedUrl}
+                              </Link>
+                            )
                           }
                           return <Image key={j} style={styles.photo} src={rawUrl} />
                         })}
@@ -272,67 +254,7 @@ export class NHomeReportGenerationService {
   public async loadInspectionData(sessionId: string): Promise<NHomeInspectionData> {
     const res = await fetch(`/api/nhome/inspections/${sessionId}/report-data?t=${Date.now()}`, { cache: 'no-store' })
     if (!res.ok) throw new Error('Failed to fetch NHome inspection data')
-    const data = (await res.json()) as NHomeInspectionData
-
-    // Prefetch and embed SharePoint/OneDrive images as base64
-    const convertToBase64 = async (url: string): Promise<string | null> => {
-      try {
-        const response = await fetch(url)
-        const blob = await response.blob()
-        const reader = new FileReader()
-        return await new Promise((resolve) => {
-          reader.onloadend = () => resolve(reader.result as string)
-          reader.readAsDataURL(blob)
-        })
-      } catch {
-        return null
-      }
-    }
-
-    for (const result of data.results) {
-      if (result.preview_photos && Array.isArray(result.preview_photos)) {
-        for (const photo of result.preview_photos) {
-          const rawUrl = photo.url
-          if (typeof rawUrl === 'string' && /sharepoint\.com|onedrive\.live\.com/i.test(rawUrl)) {
-            // Fetch image securely via Microsoft Graph API using NHomeOneDriveManager
-            try {
-              const { NHomeOneDriveManager } = await import("@/lib/nhome-onedrive-manager");
-              const manager = new NHomeOneDriveManager();
-              const graphClient = (manager as any).graphClient;
-
-              // Extract relative path from SharePoint URL
-              const match = rawUrl.match(/\/Shared Documents\/(.*)$/i);
-              const relativePath = match ? decodeURIComponent(match[1]) : null;
-
-              if (relativePath) {
-                const path = manager["driveId"]
-                  ? `/drives/${manager["driveId"]}/root:/Shared Documents/${relativePath}:/content`
-                  : `/me/drive/root:/Shared Documents/${relativePath}:/content`;
-
-                const response = await graphClient.api(path).get();
-                if (response && response.body) {
-                  const arrayBuffer = await response.arrayBuffer();
-                  const base64 = Buffer.from(arrayBuffer).toString("base64");
-                  const mimeType =
-                    rawUrl.toLowerCase().endsWith(".png")
-                      ? "image/png"
-                      : rawUrl.toLowerCase().endsWith(".gif")
-                      ? "image/gif"
-                      : "image/jpeg";
-                  photo.url = `data:${mimeType};base64,${base64}`;
-                }
-              } else {
-                console.warn("Could not parse relative path from SharePoint URL:", rawUrl);
-              }
-            } catch (err) {
-              console.warn("Graph API image fetch error:", err);
-            }
-          }
-        }
-      }
-    }
-
-    return data
+    return (await res.json()) as NHomeInspectionData
   }
 
   private async renderNHomePDF(ReportComponent: React.ComponentType): Promise<Blob> {
@@ -354,3 +276,6 @@ export class NHomeReportGenerationService {
     return { reports, photoPackage, documentationSummary }
   }
 }
+
+
+
