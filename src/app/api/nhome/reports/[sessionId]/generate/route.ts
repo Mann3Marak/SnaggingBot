@@ -1,3 +1,4 @@
+import React from 'react'
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { renderToStream } from '@react-pdf/renderer'
@@ -101,7 +102,10 @@ export async function GET(
     const finalPayload = { ...payload, results: resultsWithEmbeddedImages }
 
     // Render PDF
-const pdfStream = await renderToStream(NHomeReportDocument({ data: finalPayload }))
+const { Document } = await import("@react-pdf/renderer")
+const pdfStream = await renderToStream(
+  React.createElement(Document, null, React.createElement(NHomeReportDocument, { data: finalPayload }))
+)
     const response = new NextResponse(pdfStream as any, {
       headers: {
         'Content-Type': 'application/pdf',
