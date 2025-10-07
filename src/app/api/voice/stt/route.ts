@@ -32,10 +32,22 @@ async function createUploadableFile(file: File, maxBytes: number) {
     throw new Error(`Audio file too large (max ${(maxBytes / (1024 * 1024)).toFixed(1)}MB)`);
   }
 
-  const filename = file.name && file.name !== "" ? file.name : "audio.webm";
-  const mimeType = file.type && file.type !== "" ? file.type : "audio/webm";
-  const buffer = Buffer.from(arrayBuffer);
+  let mimeType = file.type && file.type !== "" ? file.type : "audio/webm";
+  let filename = file.name && file.name !== "" ? file.name : "audio.webm";
 
+  // Normalize iPhone/Safari audio formats
+  if (mimeType === "audio/mp4" || mimeType === "audio/m4a" || mimeType === "audio/aac") {
+    filename = filename.endsWith(".m4a") ? filename : "audio.m4a";
+  } else if (mimeType === "audio/webm" || mimeType === "audio/wav" || mimeType === "audio/ogg") {
+    // supported formats
+  } else {
+    console.warn("Unsupported audio MIME type:", mimeType);
+    throw new Error(`Unsupported audio format: ${mimeType}`);
+  }
+
+  console.log("Uploading audio file:", { filename, mimeType, size });
+
+  const buffer = Buffer.from(arrayBuffer);
   return toFile(buffer, filename, { type: mimeType });
 }
 
