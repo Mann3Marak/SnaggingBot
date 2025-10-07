@@ -43,24 +43,31 @@ export default function InspectionPage(){
         />
       </section>
 
-      {/* Live Report Preview */}
-      <section className='rounded-xl border border-slate-200 bg-white p-4 space-y-8'>
-        <div>
-          <h2 className='text-lg font-semibold mb-2'>Live Report Preview (English)</h2>
-          <p className='text-sm text-slate-600 mb-4'>This report updates automatically as you progress through the inspection.</p>
-          <NHomeReportPreview sessionId={sessionId} language="en" refreshToken={reportRefreshToken} />
-        </div>
-        <div>
-          <h2 className='text-lg font-semibold mb-2'>Pré-visualização do Relatório (Português)</h2>
-          <p className='text-sm text-slate-600 mb-4'>Este relatório é atualizado automaticamente à medida que avança na inspeção.</p>
-          <NHomeReportPreview sessionId={sessionId} language="pt" refreshToken={reportRefreshToken} />
-        </div>
-      </section>
+      {/* Live Report Preview temporarily disabled */}
+      {false && (
+        <section className='rounded-xl border border-slate-200 bg-white p-4 space-y-8'>
+          <div>
+            <h2 className='text-lg font-semibold mb-2'>Live Report Preview (English)</h2>
+            <p className='text-sm text-slate-600 mb-4'>This report updates automatically as you progress through the inspection.</p>
+            <NHomeReportPreview sessionId={sessionId} language="en" refreshToken={reportRefreshToken} />
+          </div>
+          <div>
+            <h2 className='text-lg font-semibold mb-2'>Pré-visualização do Relatório (Português)</h2>
+            <p className='text-sm text-slate-600 mb-4'>Este relatório é atualizado automaticamente à medida que avança na inspeção.</p>
+            <NHomeReportPreview sessionId={sessionId} language="pt" refreshToken={reportRefreshToken} />
+          </div>
+        </section>
+      )}
 
-      {nhomeProgress.total > 0 && nhomeProgress.completed >= nhomeProgress.total && (
+      {/* Always show Professional Report section, even if incomplete */}
+      {nhomeProgress.total > 0 && (
         <section className='rounded-xl border border-emerald-200 bg-white p-4'>
           <h2 className='text-lg font-semibold mb-2'>Professional Report</h2>
-          <p className='text-sm text-slate-600 mb-4'>Inspection complete. Generate and deliver NHome bilingual reports.</p>
+          <p className='text-sm text-slate-600 mb-4'>
+            {nhomeProgress.completed >= nhomeProgress.total
+              ? 'Inspection complete. Generate and deliver NHome bilingual reports.'
+              : 'Inspection in progress. You can still generate a partial professional report at any time.'}
+          </p>
           <NHomeReportGenerator sessionId={sessionId} sessionData={session} />
         </section>
       )}

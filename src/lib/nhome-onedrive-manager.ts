@@ -50,14 +50,36 @@ export class NHomeOneDriveManager {
       await this.graphClient.api(base).get()
       return
     } catch (error: any) {
+      // Automatically create root folder if missing
+      const isRootMissing = folderPath === "NHome_Professional_Inspections" || folderPath === "/NHome_Professional_Inspections";
+      if (isRootMissing) {
+        const rootCreatePath = this.driveId
+          ? `/drives/${this.driveId}/root/children`
+          : `/me/drive/root/children`;
+        try {
+          await this.graphClient.api(rootCreatePath).post({
+            name: "NHome_Professional_Inspections",
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "rename",
+          });
+          return;
+        } catch (rootError) {
+          console.warn("Failed to auto-create root folder:", rootError);
+        }
+      }
       const code = error?.code || error?.body?.error?.code
       const status = error?.statusCode || error?.status
       const isNotFound = code === 'itemNotFound' || status === 404 || (typeof error?.message === 'string' && error.message.includes('itemNotFound'))
       if (!isNotFound) throw error
 
       const parts = folderPath.split('/')
-      const folderName = parts.pop() as string
+      let folderName = parts.pop() as string
       const parentPath = parts.join('/')
+
+      // Fallback for missing or invalid folder names
+      if (!folderName || folderName.trim() === '') {
+        folderName = 'Unnamed_Folder'
+      }
 
       // Ensure parent exists recursively
       if (parentPath) {
@@ -67,16 +89,27 @@ export class NHomeOneDriveManager {
       const createPath = this.driveId
         ? (parentPath ? `/drives/${this.driveId}/root:/${parentPath}:/children` : `/drives/${this.driveId}/root/children`)
         : (parentPath ? `/me/drive/root:/${parentPath}:/children` : '/me/drive/root/children')
+
       try {
+        // If root folder doesn't exist, create it directly
+        if (!parentPath) {
+          await this.graphClient.api(createPath).post({
+            name: folderName || "NHome_Professional_Inspections",
+            folder: {},
+            "@microsoft.graph.conflictBehavior": "rename",
+          });
+          return;
+        }
+
         await this.graphClient.api(createPath).post({
           name: folderName,
           folder: {},
-          '@microsoft.graph.conflictBehavior': 'replace',
-        })
+          "@microsoft.graph.conflictBehavior": "replace",
+        });
       } catch (e: any) {
         // Ignore if someone else created it in the meantime
-        const c = e?.code || e?.body?.error?.code
-        if (c !== 'nameAlreadyExists') throw e
+        const c = e?.code || e?.body?.error?.code;
+        if (c !== "nameAlreadyExists") throw e;
       }
     }
   }
@@ -221,14 +254,47 @@ export class NHomeOneDriveManager {
   ): Promise<string> {
     const cleanName = this.cleanFolderName(fileName)
     await this.ensureFolderExists(folderPath)
-    const fullPath = `/${folderPath}/${cleanName}`
+    let fullPath = `/${folderPath}/${cleanName}`
 
-    if (fileBlob.size > 4 * 1024 * 1024) {
-      return await this.resumableUpload(fileBlob, fullPath, onProgress)
+    // Normalize path to remove duplicate slashes
+    fullPath = fullPath.replace(/\/{2,}/g, "/")
+
+    console.log("📤 Uploading file to OneDrive:", {
+      folderPath,
+      fileName: cleanName,
+      size: fileBlob?.size,
+      driveId: this.driveId || "default",
+      fullPath,
+    });
+
+    if (!fileBlob || fileBlob.size === 0) {
+      throw new Error(`Invalid or empty file blob for ${fileName}`);
     }
-    const path = this.driveId ? `/drives/${this.driveId}/root:${fullPath}:/content` : `/me/drive/root:${fullPath}:/content`
-    const result = await this.graphClient.api(path).put(fileBlob)
-    return result.webUrl
+
+    try {
+      if (fileBlob.size > 4 * 1024 * 1024) {
+        console.log("Using resumable upload for large file:", cleanName);
+        const url = await this.resumableUpload(fileBlob, fullPath, onProgress);
+        console.log("✅ Resumable upload complete:", url);
+        return url;
+      }
+
+      const path = this.driveId
+        ? `/drives/${this.driveId}/root:${fullPath}:/content`
+        : `/me/drive/root:${fullPath}:/content`;
+
+      console.log("Uploading via direct PUT:", path);
+      const result = await this.graphClient.api(path).put(fileBlob);
+      console.log("✅ Upload successful:", result.webUrl);
+      return result.webUrl;
+    } catch (uploadError: any) {
+      console.error("❌ OneDrive upload failed:", {
+        message: uploadError?.message,
+        code: uploadError?.code,
+        body: uploadError?.body,
+        stack: uploadError?.stack,
+      });
+      throw uploadError;
+    }
   }
 }
-
