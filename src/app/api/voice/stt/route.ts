@@ -47,9 +47,18 @@ async function createUploadableFile(file: File, maxBytes: number) {
     throw new Error(`Unsupported audio format: ${mimeType}`);
   }
 
-  console.log("Uploading audio file:", { filename, mimeType, size });
-
   const buffer = Buffer.from(arrayBuffer);
+
+  // Detect AAC/MP4 magic numbers and correct MIME type if needed
+  const header = buffer.subarray(0, 12).toString("hex");
+  if (header.includes("66747970") && !mimeType.includes("m4a")) {
+    console.log("Detected MP4/M4A header, correcting MIME type to audio/m4a");
+    mimeType = "audio/m4a";
+    filename = filename.endsWith(".m4a") ? filename : "audio.m4a";
+  }
+
+  console.log("Uploading audio file:", { filename, mimeType, size, header: header.slice(0, 16) });
+
   return toFile(buffer, filename, { type: mimeType });
 }
 
