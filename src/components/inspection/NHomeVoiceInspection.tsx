@@ -653,7 +653,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                           updateUploadProgress(photo.id, 1)
                           const fileName = generateNHomeFileName(photo.metadata)
                           const res = await uploader.uploadNHomeInspectionPhoto(
-                            photo.blob,
+                            photo.blob as Blob,
                             photo.metadata,
                             sessionId,
                             photo.itemId || currentItem.id,
@@ -661,8 +661,8 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                             session,
                             (p) => updateUploadProgress(photo.id, p),
                           )
-                          if (res.success && res.onedrive_url) {
-                            markPhotoUploaded(photo.id, res.onedrive_url)
+                          if (res.success && res.supabase_url) {
+                            markPhotoUploaded(photo.id, res.supabase_url)
                           }
                         } catch (e) {
                           console.error('NHome photo upload failed', e)

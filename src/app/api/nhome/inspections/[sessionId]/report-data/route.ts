@@ -83,10 +83,26 @@ export async function GET(
     const resultsWithPhotos = (results ?? []).map(r => {
       const linked = photos.filter(p => p.item_id === r.item_id)
       if (linked.length > 0) {
-        return { ...r, preview_photos: linked.map(p => ({ url: p.onedrive_url })) }
+        return {
+          ...r,
+          preview_photos: linked.map(p => ({
+            url: p.supabase_url || p.onedrive_url || p.photo_url || '',
+            metadata: {
+              file_name: p.file_name,
+              created_at: p.created_at,
+              inspector: p.inspector_name || 'NHome Inspector'
+            }
+          }))
+        }
       }
       if (r.photo_urls && r.photo_urls.length > 0) {
-        return { ...r, preview_photos: r.photo_urls.map((u: string) => ({ url: u })) }
+        return {
+          ...r,
+          preview_photos: r.photo_urls.map((u: string) => ({
+            url: u,
+            metadata: { file_name: 'legacy', created_at: r.created_at }
+          }))
+        }
       }
       return { ...r, preview_photos: [] }
     })
