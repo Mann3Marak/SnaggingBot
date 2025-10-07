@@ -271,11 +271,8 @@ export class NHomeReportGenerationService {
     const data = await this.loadInspectionData(sessionId)
     const reports = await this.generateNHomeBilingualReports(sessionId)
     const photoUploadService = new (await import('@/services/nhomePhotoUploadService')).NHomePhotoUploadService()
-    const photoPackage = await photoUploadService.shareInspectionWithClient(sessionId, data.session)
+    const { package_url: photoPackageUrl } = await photoUploadService.shareInspectionWithClient(sessionId, data.session)
     const documentationSummary = `NHome Professional Inspection Summary: ${data.project.name} - ${data.apartment.unit_number}`
-    return { reports, photoPackage, documentationSummary }
+    return { reports, photoPackage: photoPackageUrl ?? '', documentationSummary }
   }
 }
-
-
-

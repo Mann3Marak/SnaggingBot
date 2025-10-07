@@ -64,4 +64,30 @@ export class NHomePhotoUploadService {
       return { success: false, error: e?.message || 'upload_failed' }
     }
   }
+
+  async shareInspectionWithClient(sessionId: string, session?: NHomeSessionContext): Promise<{ success: boolean; package_url?: string; error?: string }> {
+    try {
+      const supabase = getSupabase()
+      const { data, error } = await supabase
+        .storage
+        .from('nhome-inspection-photos')
+        .list(`sessions/${sessionId}`, { limit: 100 })
+
+      if (error) throw error
+
+      const publicUrls = data.map(f => ({
+        name: f.name,
+        url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/nhome-inspection-photos/sessions/${sessionId}/${f.name}`
+      }))
+
+      const packageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/nhome-inspection-photos/sessions/${sessionId}/`
+
+      console.log(`Shared inspection package for session ${sessionId}:`, publicUrls.length, 'files')
+
+      return { success: true, package_url: packageUrl }
+    } catch (e: any) {
+      console.error('Failed to share inspection with client', e)
+      return { success: false, error: e?.message || 'share_failed' }
+    }
+  }
 }
