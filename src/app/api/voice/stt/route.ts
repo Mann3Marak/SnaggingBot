@@ -1,3 +1,5 @@
+export const runtime = "nodejs";
+
 import { NextResponse } from "next/server";
 import { Buffer } from "node:buffer";
 import OpenAI from "openai";
@@ -83,7 +85,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ text: transcription.text });
   } catch (error: any) {
-    console.error("STT error:", error);
+    console.error("STT error:", {
+      message: error?.message,
+      response: error?.response?.data,
+      stack: error?.stack,
+    });
     const message =
       error?.response?.data?.error?.message ||
       error?.message ||
