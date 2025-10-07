@@ -1,6 +1,7 @@
 "use client"
 import React, { useEffect, useState } from "react"
-import { PDFViewer } from "@react-pdf/renderer"
+import dynamic from "next/dynamic"
+const PDFViewer = dynamic(() => import("@react-pdf/renderer").then(mod => mod.PDFViewer), { ssr: false })
 import { NHomeReportGenerationService } from "@/services/nhomeReportGenerationService"
 
 interface NHomeReportPreviewProps {
