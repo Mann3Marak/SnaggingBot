@@ -51,6 +51,8 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   const [showNotes, setShowNotes] = useState<null | { type: 'issue' | 'critical' }>(null)
   const [notesText, setNotesText] = useState('')
 
+  const [isPlaying, setIsPlaying] = useState(false);
+
   const sendTextMessage = async (message: string, role: string = "user", addToTurns = false) => {
     if (addToTurns) {
       setUserTurns(prev => [...prev, message])
@@ -66,10 +68,13 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
         const audioBlob = await resp.blob()
         const url = URL.createObjectURL(audioBlob)
         const audio = new Audio(url)
+        setIsPlaying(true)
         audio.play()
+        audio.onended = () => setIsPlaying(false)
       }
     } catch (e) {
       console.error("TTS playback failed", e)
+      setIsPlaying(false)
     }
     setAssistantMessages(prev => [...prev, message])
   }
@@ -532,13 +537,17 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               <button
                 onClick={handleToggleAssistant}
                 className={`w-16 h-16 flex items-center justify-center rounded-full text-white font-semibold shadow-md transition-all duration-200 ${
-                  isRecording
-                    ? 'bg-red-500 hover:bg-red-600 scale-105 animate-pulse'
-                    : 'bg-green-500 hover:bg-green-600 scale-105'
+                  isPlaying
+                    ? 'bg-blue-500 hover:bg-blue-600 scale-105'
+                    : isRecording
+                      ? 'bg-red-500 hover:bg-red-600 scale-105 animate-pulse'
+                      : 'bg-green-500 hover:bg-green-600 scale-105'
                 }`}
               >
                 <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  {isRecording ? (
+                  {isPlaying ? (
+                    <path d="M8 5v14l11-7z" />
+                  ) : isRecording ? (
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
                   ) : (
                     <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
