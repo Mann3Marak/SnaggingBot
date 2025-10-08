@@ -71,7 +71,18 @@ export async function POST(req: Request) {
     // Log agent reply for debugging
     console.log("🤖 Agent Reply:", reply);
 
-    return NextResponse.json({ reply });
+    // Backend safeguard: remove all "Moving to the next item" unless it is the *only* phrase at the end
+    const cleanedReply = (() => {
+      const lower = reply.trim().toLowerCase();
+      // Only allow if it's the *only* phrase or clearly intentional
+      if (lower === "moving to the next item" || lower.endsWith("\n\nmoving to the next item")) {
+        return reply.trim();
+      }
+      // Otherwise strip it completely
+      return reply.replace(/moving to the next item/gi, "").trim();
+    })();
+
+    return NextResponse.json({ reply: cleanedReply });
   } catch (error: any) {
     console.error("Agent error:", error);
     return NextResponse.json({ error: "Failed to generate response" }, { status: 500 });

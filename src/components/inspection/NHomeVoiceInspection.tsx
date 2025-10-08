@@ -341,9 +341,16 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             }
 
             // Detect special action phrase from agent
-            if (reply.includes("Moving to the next item")) {
-              // Prevent automatic movement — require explicit user confirmation instead
-              console.log("⏸️ Auto-advance disabled. Waiting for inspector confirmation.");
+            // Frontend safeguard: only auto-advance if phrase appears at the end of the reply
+            const normalizedReply = reply.trim().toLowerCase();
+            if (normalizedReply.endsWith("moving to the next item")) {
+              console.log("🔁 Agent triggered auto-advance via explicit phrase (end of reply).");
+              const userComment = latestTurn?.trim() || "";
+              if (userComment) {
+                console.log("🗒️ Saving user comment before advancing:", userComment);
+                await saveNHomeResult(currentItem.id, "issue", userComment, 1, [], true);
+              }
+              await onRefreshReport?.();
               return;
             }
           } else {

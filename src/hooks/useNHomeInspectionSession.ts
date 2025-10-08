@@ -60,7 +60,8 @@ export function useNHomeInspectionSession(sessionId: string){
     status: 'good' | 'issue' | 'critical',
     notes: string,
     priority: number = 1,
-    photos: string[] = []
+    photos: string[] = [],
+    shouldAdvance: boolean = false
   ) {
     const supabase = getSupabase()
     // Upsert the inspection result incrementally
@@ -76,15 +77,19 @@ export function useNHomeInspectionSession(sessionId: string){
 
     // Update session progress incrementally
     const totalItems = session?.checklist_items?.length ?? 0
-    const nextIndex = (session?.current_item_index ?? 0) + 1
     const rawScore = Number(nhomeProgress.quality_score || 0)
     const clamped = Math.max(1, Math.min(10, rawScore))
     const safeScoreInt = Math.round(clamped)
-    const updates: any = { current_item_index: nextIndex, nhome_quality_score: safeScoreInt }
+    const updates: any = { nhome_quality_score: safeScoreInt }
 
-    if (totalItems > 0 && nextIndex >= totalItems) {
-      updates.status = 'completed'
-      updates.completed_at = new Date().toISOString()
+    // Only advance if explicitly requested
+    if (shouldAdvance) {
+      const nextIndex = (session?.current_item_index ?? 0) + 1
+      updates.current_item_index = nextIndex
+      if (totalItems > 0 && nextIndex >= totalItems) {
+        updates.status = 'completed'
+        updates.completed_at = new Date().toISOString()
+      }
     }
 
     await supabase.from('inspection_sessions').update(updates).eq('id', sessionId)

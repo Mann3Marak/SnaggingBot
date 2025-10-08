@@ -28,7 +28,9 @@
         "nodemailer": "6.9.15",
         "openai": "^5.23.1",
         "react": "18.2.0",
+        "react-camera-pro": "^1.4.0",
         "react-dom": "18.2.0",
+        "styled-components": "^6.1.19",
         "workbox-webpack-plugin": "7.1.0"
     },
     "devDependencies": {
