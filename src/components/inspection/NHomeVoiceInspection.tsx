@@ -22,11 +22,17 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
 
   const goToNext = async () => {
     if (currentItem) {
-      await saveNHomeResult(currentItem.id, "good", "Advanced to next item")
+      // Capture only the assistant's response text (omit prefix) if available
+      if (lastResponse && lastResponse.trim() !== "") {
+        await saveNHomeResult(currentItem.id, "good", lastResponse.trim(), 1, [], true);
+      }
+
+      // Move to the next checklist item
+      await reload();
     } else {
-      await reload()
+      await reload();
     }
-  }
+  };
 
   const goToPrevious = async () => {
     if (!session) return
@@ -41,6 +47,8 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   // Realtime voice session removed. Placeholder state for STT/TTS integration.
   const [userTurns, setUserTurns] = useLocalState<string[]>([])
   const [assistantMessages, setAssistantMessages] = useLocalState<string[]>([])
+  const [itemConversations, setItemConversations] = useState<Record<string, { role: "user" | "assistant"; content: string }[]>>({});
+  const [conversation, setConversation] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
   const [isRecording, setIsRecording] = useLocalState(false)
   const status = isRecording ? "Recording..." : "Idle"
   const [liveUserTranscript, setLiveUserTranscript] = useLocalState<string>("")
@@ -301,79 +309,116 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
 //   }, [sessionId, sendTextMessage, inspectionInstructions])
 
   useEffect(() => {
-    if (userTurns.length === 0) return
-    const latestTurn = userTurns[userTurns.length - 1]
+    if (userTurns.length === 0 || !currentItem?.id) return;
+    const latestTurn = userTurns[userTurns.length - 1];
 
-    // Only process if not already processing
     if (!isProcessingTurnRef.current) {
-      isProcessingTurnRef.current = true
-      ;(async () => {
+      isProcessingTurnRef.current = true;
+      (async () => {
         try {
-          // Instead of front-end deciding, delegate to backend agent
+          const currentItemId = currentItem.id;
+          const existingConversation = itemConversations[currentItemId] || [];
+          const updatedConversation = [
+            ...existingConversation,
+            { role: "user" as const, content: latestTurn },
+          ];
+
           const resp = await fetch("/api/nhome/agent", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               instructions: inspectionInstructions,
-              messages: [
-                { role: "user", content: latestTurn }
-              ],
+              messages: updatedConversation,
               sessionId,
               currentItem,
-              nhomeProgress
-            })
-          })
+              nhomeProgress,
+            }),
+          });
+
           if (resp.ok) {
-            const data = await resp.json()
-            const reply = data.reply || "I heard you."
-            setLastResponse(reply)
-            await sendTextMessage(reply, "assistant", true)
+            const data = await resp.json();
+            const reply = data.reply || "I heard you.";
+            setLastResponse(reply);
+            await sendTextMessage(reply, "assistant", true);
 
-            // Detect and save issue or critical issue responses
-            if (reply.toLowerCase().includes("issue") || reply.toLowerCase().includes("problem") || reply.toLowerCase().includes("critical")) {
-              if (currentItem) {
-                const description = latestTurn || reply;
-                const type = reply.toLowerCase().includes("critical") ? "critical" : "issue";
-                console.log(`📝 Saving ${type} note from voice agent:`, description);
-                await saveNHomeResult(currentItem.id, type, description);
-                onRefreshReport?.();
-              }
-            }
+            const newConversation = [
+              ...updatedConversation,
+              { role: "assistant" as const, content: reply },
+            ];
 
-            // Detect special action phrase from agent
-            // Frontend safeguard: only auto-advance if phrase appears at the end of the reply
-            const normalizedReply = reply.trim().toLowerCase();
-            if (normalizedReply.endsWith("moving to the next item")) {
-              console.log("🔁 Agent triggered auto-advance via explicit phrase (end of reply).");
-              const userComment = latestTurn?.trim() || "";
-              if (userComment) {
-                console.log("🗒️ Saving user comment before advancing:", userComment);
-                await saveNHomeResult(currentItem.id, "issue", userComment, 1, [], true);
-              }
-              await onRefreshReport?.();
-              return;
-            }
+            // Persist conversation to Supabase (split into user and agent columns)
+            const supabase = (await import("@/lib/supabase")).getSupabase();
+            const userMessages = newConversation.filter(m => m.role === "user").map(m => m.content);
+            const agentMessages = newConversation.filter(m => m.role === "assistant").map(m => m.content);
+
+            await supabase
+              .from("inspection_conversations")
+              .upsert(
+                {
+                  session_id: sessionId,
+                  item_id: currentItemId,
+                  user_messages: userMessages,
+                  agent_messages: agentMessages,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "session_id,item_id" }
+              );
+
+            setItemConversations((prev) => ({
+              ...prev,
+              [currentItemId]: newConversation,
+            }));
+
+            setConversation(newConversation);
           } else {
-            await sendTextMessage("Agent could not process input.", "assistant", true)
+            await sendTextMessage("Agent could not process input.", "assistant", true);
           }
         } finally {
-          setUserTurns([])
-          isProcessingTurnRef.current = false
+          setUserTurns([]);
+          isProcessingTurnRef.current = false;
         }
-      })()
+      })();
     }
-  }, [inspectionInstructions, sessionId, currentItem, nhomeProgress, userTurns, sendTextMessage])
+  }, [inspectionInstructions, sessionId, currentItem, nhomeProgress, userTurns, sendTextMessage, itemConversations]);
 
 
   useEffect(() => {
+    const loadConversation = async () => {
+      if (!currentItem?.id) return;
+      const supabase = (await import("@/lib/supabase")).getSupabase();
+      const { data, error } = await supabase
+        .from("inspection_conversations")
+        .select("user_messages, agent_messages")
+        .eq("session_id", sessionId)
+        .eq("item_id", currentItem.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        const mergedConversation = [
+          ...(data.user_messages || []).map((content: string) => ({ role: "user" as const, content })),
+          ...(data.agent_messages || []).map((content: string) => ({ role: "assistant" as const, content })),
+        ];
+        setConversation(mergedConversation);
+        setItemConversations((prev) => ({
+          ...prev,
+          [currentItem.id]: mergedConversation,
+        }));
+      } else {
+        setConversation([]);
+      }
+    };
+
+    loadConversation();
+  }, [currentItem?.id, sessionId]);
+
+  useEffect(() => {
     if (!isRecording) {
-      return
+      return;
     }
     if (inspectionInstructions) {
-      updateSessionInstructions(inspectionInstructions)
+      updateSessionInstructions(inspectionInstructions);
     }
-
-  }, [currentItem, inspectionInstructions, isRecording, sendTextMessage, session, updateSessionInstructions])
+  }, [currentItem, inspectionInstructions, isRecording, sendTextMessage, session, updateSessionInstructions]);
 
   const handleToggleAssistant = useCallback(async () => {
     if (isRecording) {
@@ -462,8 +507,16 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               <div className="flex justify-center gap-4">
                 <button
                   onClick={async () => {
-                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards')
-                    onRefreshReport?.()
+                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards');
+                    // Explicitly increment the current item index in Supabase before reloading
+                    const supabase = (await import("@/lib/supabase")).getSupabase();
+                    const nextIndex = (session?.current_item_index ?? 0) + 1;
+                    await supabase
+                      .from("inspection_sessions")
+                      .update({ current_item_index: nextIndex })
+                      .eq("id", sessionId);
+                    await reload();
+                    onRefreshReport?.();
                   }}
                   className="px-6 py-2 rounded-full bg-green-500 text-white hover:bg-green-600 text-sm font-semibold shadow-md transition-all"
                 >
@@ -499,10 +552,18 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                           currentItem.id,
                           showNotes.type,
                           notesText || 'No additional notes provided'
-                        )
-                        setShowNotes(null)
-                        setNotesText('')
-                        onRefreshReport?.()
+                        );
+                        // Explicitly increment the current item index in Supabase before reloading
+                        const supabase = (await import("@/lib/supabase")).getSupabase();
+                        const nextIndex = (session?.current_item_index ?? 0) + 1;
+                        await supabase
+                          .from("inspection_sessions")
+                          .update({ current_item_index: nextIndex })
+                          .eq("id", sessionId);
+                        await reload();
+                        setShowNotes(null);
+                        setNotesText('');
+                        onRefreshReport?.();
                       }}
                       className="px-4 py-1.5 rounded-md bg-nhome-primary text-white text-sm hover:bg-nhome-secondary"
                     >

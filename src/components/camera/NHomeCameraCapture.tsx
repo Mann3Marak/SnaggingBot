@@ -152,6 +152,16 @@ export function NHomeCameraCapture({
             onChange={(e) => {
               const zoomValue = parseFloat(e.target.value);
               try {
+                const videoElement = cameraRef.current?.videoRef?.current || document.querySelector("video");
+                if (videoElement) {
+                  // Apply CSS transform zoom as fallback for browsers without native zoom
+                  videoElement.style.transform = `scale(${zoomValue})`;
+                  videoElement.style.transformOrigin = "center center";
+                  videoElement.style.zIndex = "-1"; // ensure video stays behind UI
+                  videoElement.style.position = "relative";
+                }
+
+                // Attempt native zoom if supported
                 const track = cameraRef.current?.stream?.getVideoTracks?.()[0];
                 const capabilities = track?.getCapabilities?.();
                 if (capabilities?.zoom) {
