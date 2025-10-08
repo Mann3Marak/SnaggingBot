@@ -7,21 +7,23 @@
   },
   "overrides": {
     "react-camera-pro": {
-      "react": "18.2.0"
+      "react": "18.2.0",
+      "react-dom": "18.2.0"
     }
   },
   "scripts": {
-        "dev": "next dev",
-        "build": "next build",
-        "start": "next start",
-        "lint": "eslint",
-        "brand:assets": "python scripts/generate_brand_assets.py",
-        "db:migrate": "supabase --workdir ./supabase db push --linked",
-        "db:seed": "supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
-        "db:pull": "supabase --workdir ./supabase db pull",
-        "db:diff": "supabase --workdir ./supabase db diff",
-        "db:reset": "supabase --workdir ./supabase db reset"
-    },
+    "preinstall": "npm config set legacy-peer-deps true",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "brand:assets": "python scripts/generate_brand_assets.py",
+    "db:migrate": "supabase --workdir ./supabase db push --linked",
+    "db:seed": "supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
+    "db:pull": "supabase --workdir ./supabase db pull",
+    "db:diff": "supabase --workdir ./supabase db diff",
+    "db:reset": "supabase --workdir ./supabase db reset"
+  },
     "dependencies": {
         "@azure/msal-browser": "^3.30.0",
         "@heroicons/react": "2.1.5",
