@@ -2,7 +2,15 @@
     "name": "app",
     "version": "0.1.0",
     "private": true,
-    "scripts": {
+  "resolutions": {
+    "react-camera-pro/react": "18.2.0"
+  },
+  "overrides": {
+    "react-camera-pro": {
+      "react": "18.2.0"
+    }
+  },
+  "scripts": {
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
