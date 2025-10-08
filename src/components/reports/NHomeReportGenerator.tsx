@@ -260,13 +260,25 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
             <h5 className="font-medium mb-3">🚀 Quick Actions</h5>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <button
-                onClick={() => window.open(reportUrls.portuguese!, '_blank')}
+                onClick={() => {
+                  if (reportUrls.portuguese) {
+                    window.open(reportUrls.portuguese, "_blank");
+                  } else {
+                    alert("Portuguese report not available yet.");
+                  }
+                }}
                 className="bg-nhome-primary hover:bg-nhome-primary-dark text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors"
               >
                 🇵🇹 View Portuguese Report
               </button>
               <button
-                onClick={() => window.open(reportUrls.english!, '_blank')}
+                onClick={() => {
+                  if (reportUrls.english) {
+                    window.open(reportUrls.english, "_blank");
+                  } else {
+                    alert("English report not available yet.");
+                  }
+                }}
                 className="bg-nhome-secondary hover:bg-nhome-secondary-dark text-white px-4 py-3 rounded-lg text-sm font-medium transition-colors"
               >
                 🇬🇧 View English Report

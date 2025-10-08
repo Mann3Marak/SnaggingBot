@@ -107,13 +107,33 @@ export async function GET(
       return { ...r, preview_photos: [] }
     })
 
+    // Helper to sanitize text fields and remove corrupted characters
+    const clean = (s: any) =>
+      typeof s === 'string' ? s.replace(/[^\x20-\x7EÀ-ÿ–—]/g, '-') : s
+
     // Shape expected by NHomeReportGenerationService
     const payload = {
       session,
-      apartment,
-      project: apartment.projects,
-      developer: { name: apartment.projects?.developer_name },
-      results: resultsWithPhotos,
+      apartment: {
+        ...apartment,
+        apartment_type: clean(apartment.apartment_type),
+        unit_number: clean(apartment.unit_number),
+      },
+      project: {
+        ...apartment.projects,
+        name: clean(apartment.projects?.name),
+        developer_name: clean(apartment.projects?.developer_name),
+      },
+      developer: { name: clean(apartment.projects?.developer_name) },
+      results: resultsWithPhotos.map(r => ({
+        ...r,
+        checklist_templates: {
+          ...r.checklist_templates,
+          item_description: clean(r.checklist_templates?.item_description),
+          room_type: clean(r.checklist_templates?.room_type),
+        },
+        notes: clean(r.notes),
+      })),
       photos,
       inspector: null,
       company_info: {

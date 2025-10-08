@@ -49,8 +49,9 @@ export const NHomeReportDocument: React.FC<NHomeReportDocumentProps> = ({ data }
         <Text style={styles.title}>Project Information</Text>
         <Text style={styles.text}>Project: {data.project?.name}</Text>
         <Text style={styles.text}>Developer: {data.developer?.name}</Text>
-        <Text style={styles.text}>Apartment: {data.apartment?.unit_number}</Text>
-        <Text style={styles.text}>Type: {data.apartment?.apartment_type}</Text>
+        <Text style={styles.text}>
+          Unit: {data.apartment?.unit_number} - Type: {data.apartment?.apartment_type}
+        </Text>
       </View>
 
       <View style={styles.section}>
@@ -61,38 +62,54 @@ export const NHomeReportDocument: React.FC<NHomeReportDocumentProps> = ({ data }
             ? new Date(data.session.created_at).toLocaleDateString()
             : data.session?.inspection_date || "N/A"}
         </Text>
-        <Text style={styles.text}>Inspector: {data.inspector?.name || "N/A"}</Text>
+        <Text style={styles.text}>Inspector: {data.inspector?.name || "NHome Professional Team"}</Text>
         <Text style={styles.text}>Total Items: {data.results?.length || 0}</Text>
+
+        {data.results && data.results.length > 0 && (
+          <Text style={styles.text}>
+            {(() => {
+              const total = data.results.length
+              const good = data.results.filter((r: any) => r.status === "good").length
+              const issues = data.results.filter((r: any) => r.status !== "good").length
+              const score = Math.max(1, (good / total) * 10 - (issues / total) * 2).toFixed(1)
+              return `${score}/10 | ${good} good | ${issues} issues`
+            })()}
+          </Text>
+        )}
       </View>
 
-      {data.results?.map((item: any, i: number) => (
-        <View key={i} style={styles.section}>
-          <Text style={styles.title}>
-            {i + 1}. {item.checklist_templates?.item_name || item.checklist_templates?.title || "Unnamed Item"}
-          </Text>
-          <Text style={styles.text}>Room: {item.checklist_templates?.room || item.room || "N/A"}</Text>
-          <Text style={styles.text}>Category: {item.checklist_templates?.category || item.category || "N/A"}</Text>
-          <Text style={styles.text}>Status: {item.status}</Text>
-          <Text style={styles.text}>Comments: {item.comment || "No comments"}</Text>
+      <View style={styles.section}>
+        <Text style={styles.title}>All Areas</Text>
+        {data.results?.map((item: any, i: number) => (
+          <View key={i} style={styles.section}>
+            <Text style={styles.title}>
+              {i + 1}. {item.checklist_templates?.item_name || item.checklist_templates?.title || "Unnamed Item"} ({item.priority_level || "N/A"})
+            </Text>
+            <Text style={styles.text}>Room: {item.checklist_templates?.room || item.room || "N/A"}</Text>
+            <Text style={styles.text}>Category: {item.checklist_templates?.category || item.category || "N/A"}</Text>
+            <Text style={styles.text}>Status: {item.status}</Text>
+            <Text style={styles.text}>Notes: {item.comment || item.notes || "No notes"}</Text>
 
-          {item.preview_photos?.length > 0 ? (
-            <View style={styles.imageRow}>
-              {item.preview_photos.map((p: any, j: number) => {
-                const src = p.base64 || p.url
-                return src ? <Image key={j} src={src} style={styles.image} /> : null
-              })}
-            </View>
-          ) : (
-            <Text style={styles.text}>No photos available</Text>
-          )}
-        </View>
-      ))}
+            {item.preview_photos?.length > 0 ? (
+              <View style={styles.imageRow}>
+                {item.preview_photos.map((p: any, j: number) => {
+                  const src = p.base64 || p.url
+                  return src ? <Image key={j} src={src} style={styles.image} /> : null
+                })}
+              </View>
+            ) : (
+              <Text style={styles.text}>No photos available</Text>
+            )}
+          </View>
+        ))}
+      </View>
 
       <View style={styles.section}>
         <Text style={styles.title}>Company Information</Text>
         <Text style={styles.text}>{data.company_info?.name}</Text>
         <Text style={styles.text}>{data.company_info?.location}</Text>
         <Text style={styles.text}>{data.company_info?.website}</Text>
+        <Text style={styles.text}>Email: {data.company_info?.email}</Text>
         <Text style={styles.text}>Established: {data.company_info?.established}</Text>
       </View>
     </Page>

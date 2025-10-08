@@ -329,14 +329,22 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             setLastResponse(reply)
             await sendTextMessage(reply, "assistant", true)
 
+            // Detect and save issue or critical issue responses
+            if (reply.toLowerCase().includes("issue") || reply.toLowerCase().includes("problem") || reply.toLowerCase().includes("critical")) {
+              if (currentItem) {
+                const description = latestTurn || reply;
+                const type = reply.toLowerCase().includes("critical") ? "critical" : "issue";
+                console.log(`📝 Saving ${type} note from voice agent:`, description);
+                await saveNHomeResult(currentItem.id, type, description);
+                onRefreshReport?.();
+              }
+            }
+
             // Detect special action phrase from agent
             if (reply.includes("Moving to the next item")) {
-              // Advance to next item in the inspection session
-              if (currentItem) {
-                // Default to "good" if agent said item is good
-                await saveNHomeResult(currentItem.id, "good", "Meets NHome standards")
-                onRefreshReport?.()
-              }
+              // Prevent automatic movement — require explicit user confirmation instead
+              console.log("⏸️ Auto-advance disabled. Waiting for inspector confirmation.");
+              return;
             }
           } else {
             await sendTextMessage("Agent could not process input.", "assistant", true)

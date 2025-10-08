@@ -50,9 +50,13 @@ export async function POST(req: Request) {
       ? `${BASE_SYSTEM_PROMPT}\n\n${instructions.trim()}`
       : BASE_SYSTEM_PROMPT;
 
+    // Log only user input and agent response for debugging
+    const lastUserMessage = sanitizedMessages[sanitizedMessages.length - 1]?.content || "N/A";
+    console.log("🎤 User Input:", lastUserMessage);
+
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.6,
+      model: "gpt-4.1",
+      temperature: 1,
       messages: [
         {
           role: "system",
@@ -63,6 +67,9 @@ export async function POST(req: Request) {
     });
 
     const reply = completion.choices[0]?.message?.content?.trim() || "I'm not sure how to respond.";
+
+    // Log agent reply for debugging
+    console.log("🤖 Agent Reply:", reply);
 
     return NextResponse.json({ reply });
   } catch (error: any) {
