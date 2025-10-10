@@ -15,7 +15,11 @@ export async function POST(req: Request) {
     );
 
     const buffer = Buffer.from(file, "base64");
-    const path = `reports/${sessionId}/${fileName}`;
+    // Use fixed filenames to ensure overwriting existing reports
+    const isEnglish = fileName.toLowerCase().includes("english");
+    const isPortuguese = fileName.toLowerCase().includes("relatorio") || fileName.toLowerCase().includes("portuguese");
+    const fixedName = isEnglish ? "english.pdf" : isPortuguese ? "portuguese.pdf" : fileName;
+    const path = `reports/${sessionId}/${fixedName}`;
 
     console.log("📤 Uploading report via API route:", path);
 

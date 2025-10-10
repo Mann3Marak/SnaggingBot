@@ -43,7 +43,7 @@ const styles = StyleSheet.create({
 export const NHomeReportDocument: React.FC<NHomeReportDocumentProps> = ({ data }) => (
   <Document>
     <Page size="A4" style={styles.page}>
-      <Text style={styles.header}>NHome Professional Inspection Report</Text>
+<Text style={styles.header}>Snag List Inspection</Text>
 
       <View style={styles.section}>
         <Text style={styles.title}>Project Information</Text>

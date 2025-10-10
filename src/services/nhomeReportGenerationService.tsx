@@ -46,7 +46,7 @@ Font.register({
 })
 
 const PT: NHomeReportLanguage = {
-  title: 'RELATÓRIO PROFISSIONAL DE INSPEÇÃO',
+  title: 'INSPEÇÃO DE LISTA DE PENDÊNCIAS',
   company_title: 'NHome Property Setup & Management',
   client: 'Cliente',
   property: 'Imóvel',
@@ -62,7 +62,7 @@ const PT: NHomeReportLanguage = {
 }
 
 const EN: NHomeReportLanguage = {
-  title: 'PROFESSIONAL PROPERTY INSPECTION REPORT',
+  title: 'SNAG LIST INSPECTION',
   company_title: 'NHome Property Setup & Management',
   client: 'Client',
   property: 'Property',

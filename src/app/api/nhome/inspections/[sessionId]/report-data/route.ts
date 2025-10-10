@@ -139,7 +139,7 @@ export async function GET(
       photos,
       inspector: null,
       company_info: {
-        name: 'NHome Property Setup & Management',
+        name: '',
         founder: "Natalie O'Kelly",
         location: 'Algarve, Portugal',
         website: 'https://www.nhomesetup.com',

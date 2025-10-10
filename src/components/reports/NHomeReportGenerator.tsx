@@ -32,8 +32,9 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
       // Step 2: Upload to Supabase (70%)
       setProgress(70)
 
-      const portugalFilename = `NHome_Relatorio_Profissional_${sessionData.apartment.unit_number}_${getDateString()}.pdf`
-      const englishFilename = `NHome_Professional_Report_${sessionData.apartment.unit_number}_${getDateString()}.pdf`
+      // Use fixed filenames to ensure overwriting in Supabase
+      const portugalFilename = "portuguese.pdf"
+      const englishFilename = "english.pdf"
 
       // Upload both reports to Supabase
       const [ptUrl, enUrl] = await Promise.all([
