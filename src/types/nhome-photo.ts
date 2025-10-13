@@ -12,7 +12,7 @@ export interface NHomePhotoMetadata {
 
 export interface NHomePhoto {
   id: string
-  blob: Blob
+  blob?: Blob // made optional to allow persistence of Supabase-only records
   url: string
   metadata: NHomePhotoMetadata
   itemId?: string
@@ -20,4 +20,3 @@ export interface NHomePhoto {
   uploaded: boolean
   onedrive_url?: string
 }
-

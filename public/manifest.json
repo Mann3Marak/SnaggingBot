@@ -2,8 +2,8 @@
   "name": "NHome Inspection Pro",
   "short_name": "NHome Inspector",
   "description": "Professional apartment inspection tool by NHome Property Management - Algarve, Portugal",
-  "theme_color": "#2563EB",
-  "background_color": "#F9FAFB",
+  "theme_color": "#bcae69",
+  "background_color": "#F9F5EA",
   "start_url": "/",
   "display": "standalone",
   "scope": "/",
@@ -54,3 +54,4 @@
     }
   ]
 }
+

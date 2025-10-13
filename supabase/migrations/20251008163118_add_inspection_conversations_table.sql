@@ -1,0 +1,1 @@
+create table if not exists inspection_conversations ( session_id uuid not null, item_id uuid not null, conversation jsonb not null, updated_at timestamptz default now(), primary key (session_id, item_id) );

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useEffect, useState } from 'react'
 import type { NHomePhoto, NHomePhotoMetadata } from '@/types/nhome-photo'
 
@@ -116,16 +116,41 @@ export function useNHomePhotoCapture() {
     return photos.filter(photo => photo.itemId === itemId)
   }
 
-  const markPhotoUploaded = (photoId: string, onedrive_url: string) => {
+  const markPhotoUploaded = (photoId: string, supabase_url: string) => {
     setPhotos(prev => {
-      const next = prev.map(photo => 
-        photo.id === photoId 
-          ? { ...photo, uploaded: true, onedrive_url }
+      const next = prev.map(photo =>
+        photo.id === photoId
+          ? ({
+              ...photo,
+              uploaded: true,
+              url: supabase_url,
+              onedrive_url: supabase_url,
+              blob: photo.blob ?? ({} as Blob) // maintain type safety
+            } as NHomePhoto)
           : photo
       )
-      // persist updated record
-      const p = next.find(p => p.id === photoId)
-      if (p) idbPut<NHomePhoto>(p).catch(err => console.warn('Failed to persist upload state', err))
+      const updated = next.find(p => p.id === photoId)
+      if (updated) {
+        // Directly update the existing record in IndexedDB with Supabase URL
+        openDB()
+          .then(db => {
+            const tx = db.transaction(STORE, "readwrite");
+            const store = tx.objectStore(STORE);
+            const req = store.get(photoId);
+            req.onsuccess = () => {
+              const record = req.result;
+              if (record) {
+                record.url = supabase_url;
+                record.uploaded = true;
+                record.onedrive_url = supabase_url;
+                delete record.blob; // remove blob reference
+                store.put(record);
+              }
+            };
+            req.onerror = () => console.warn("Failed to fetch record for update", req.error);
+          })
+          .catch(err => console.warn("Failed to update Supabase URL in IndexedDB", err));
+      }
       return next
     })
   }
@@ -165,4 +190,3 @@ export function useNHomePhotoCapture() {
     generateNHomeFileName
   }
 }
-

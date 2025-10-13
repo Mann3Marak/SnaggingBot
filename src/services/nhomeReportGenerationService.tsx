@@ -1,5 +1,5 @@
 import React from 'react'
-import { Document, Page, Text, View, StyleSheet, Image } from '@react-pdf/renderer'
+import { Document, Page, Text, View, StyleSheet, Image, Link, Font } from '@react-pdf/renderer'
 import { format } from 'date-fns'
 import { pt, enGB } from 'date-fns/locale'
 
@@ -40,16 +40,21 @@ interface NHomeReportLanguage {
   of: string
 }
 
+Font.register({
+  family: 'Roboto',
+  src: '/fonts/Roboto-Regular.ttf',
+})
+
 const PT: NHomeReportLanguage = {
-  title: 'RELATÓRIO PROFISSIONAL DE VISTORIA',
+  title: 'INSPEÇÃO DE LISTA DE PENDÊNCIAS',
   company_title: 'NHome Property Setup & Management',
   client: 'Cliente',
-  property: 'Propriedade',
-  apartment: 'Apartamento',
+  property: 'Imóvel',
+  apartment: 'Fração',
   date: 'Data',
   inspector: 'Inspetor',
   summary: 'RESUMO EXECUTIVO',
-  defects: 'QUESTÕES IDENTIFICADAS',
+  defects: 'ANOMALIAS IDENTIFICADAS',
   recommendations: 'RECOMENDAÇÕES',
   quality_assessment: 'AVALIAÇÃO DE QUALIDADE',
   page: 'Página',
@@ -57,7 +62,7 @@ const PT: NHomeReportLanguage = {
 }
 
 const EN: NHomeReportLanguage = {
-  title: 'PROFESSIONAL PROPERTY INSPECTION REPORT',
+  title: 'SNAG LIST INSPECTION',
   company_title: 'NHome Property Setup & Management',
   client: 'Client',
   property: 'Property',
@@ -73,15 +78,15 @@ const EN: NHomeReportLanguage = {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontFamily: 'Helvetica' },
-  header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: '#2563EB', paddingBottom: 10 },
-  title: { fontSize: 20, color: '#2563EB', textAlign: 'center' },
+  page: { padding: 40, fontFamily: 'Roboto' },
+  header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: '#d29d54', paddingBottom: 10 },
+  title: { fontSize: 20, color: '#8f8552', textAlign: 'center' },
   sub: { fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 6 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', marginTop: 16 },
   cell: { width: '48%', marginBottom: 8 },
-  label: { fontSize: 10, color: '#2563EB' },
+  label: { fontSize: 10, color: '#a59a5e' },
   value: { fontSize: 11, color: '#0f172a' },
-  h2: { fontSize: 14, color: '#2563EB', marginTop: 18, marginBottom: 8 },
+  h2: { fontSize: 14, color: '#8f8552', marginTop: 18, marginBottom: 8 },
   text: { fontSize: 11, color: '#0f172a', lineHeight: 1.5 },
   item: { marginTop: 8, padding: 8, borderLeftWidth: 3, borderLeftColor: '#e5e7eb', backgroundColor: '#f8fafc' },
   photo: { width: '48%', height: 110, marginTop: 6, borderWidth: 1, borderColor: '#e5e7eb' },
@@ -117,7 +122,7 @@ export class NHomeReportGenerationService {
     const issues = data.results.filter((r) => r.status !== 'good').length
     const date = format(new Date(data.session.started_at), 'PPP', { locale: lang === 'pt' ? pt : enGB })
     if (lang === 'pt') {
-      return `Vistoria profissional ao ${apt} - Unidade ${data.apartment.unit_number} no projecto ${data.project.name} em ${date}. Foram avaliados ${total} pontos de qualidade, com ${issues} questões identificadas. Pontuação de qualidade NHome: ${qs}/10.`
+      return `Vistoria profissional ao ${apt} - Unidade ${data.apartment.unit_number} no projeto ${data.project.name} em ${date}. Foram avaliados ${total} pontos de qualidade, com ${issues} questões identificadas. Pontuação de qualidade NHome: ${qs}/10.`
     }
     return `Professional inspection of ${apt} - Unit ${data.apartment.unit_number} at ${data.project.name} on ${date}. Assessed ${total} quality points, with ${issues} issues identified. NHome quality score: ${qs}/10.`
   }
@@ -125,6 +130,32 @@ export class NHomeReportGenerationService {
   private priorityText(p: number, lang: 'pt' | 'en'): string {
     if (lang === 'pt') return p === 3 ? 'Alta' : p === 2 ? 'Média' : p === 1 ? 'Baixa' : 'N/A'
     return p === 3 ? 'High' : p === 2 ? 'Medium' : p === 1 ? 'Low' : 'N/A'
+  }
+
+  private translateItem(desc?: string): string {
+    if (!desc) return ''
+    const dict: Record<string, string> = {
+      'Lights': 'Luzes',
+      'Ceiling': 'Teto',
+      'Walls / wood panels': 'Paredes / painéis de madeira',
+      'Door': 'Porta',
+      'Floor & skirting': 'Pavimento e rodapés',
+      'Window': 'Janela',
+      'Kitchen': 'Cozinha',
+      'Bathroom': 'Casa de banho',
+      'Hall': 'Corredor',
+    }
+    return dict[desc] || desc
+  }
+
+  private translateNote(note?: string): string {
+    if (!note) return ''
+    const dict: Record<string, string> = {
+      'Meets NHome standards': 'Cumpre os padrões NHome',
+      'lights hanging out': 'luzes penduradas',
+      'door is cracked': 'porta rachada',
+    }
+    return dict[note] || note
   }
 
   createNHomeReport(data: NHomeInspectionData, language: 'pt' | 'en') {
@@ -146,57 +177,67 @@ export class NHomeReportGenerationService {
           <View style={styles.grid}>
             <View style={styles.cell}><Text style={styles.label}>{L.client}:</Text><Text style={styles.value}>{data.project.developer_name}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.property}:</Text><Text style={styles.value}>{data.project.name}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.apartment_type} • {data.apartment.unit_number}</Text></View>
+            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.apartment_type} – {data.apartment.unit_number}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.date}:</Text><Text style={styles.value}>{format(new Date(data.session.started_at), 'PPP', { locale })}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.inspector}:</Text><Text style={styles.value}>NHome Professional Team</Text></View>
           </View>
 
           <Text style={styles.h2}>{L.quality_assessment}</Text>
-          <Text style={styles.text}>{qs}/10 • {good.length} good • {defects.length + critical.length} issues</Text>
+          <Text style={styles.text}>{qs}/10 – {good.length} good – {defects.length + critical.length} issues</Text>
 
           <Text style={styles.h2}>{L.summary}</Text>
           <Text style={styles.text}>{this.execSummary(data, language, qs)}</Text>
 
-          {critical.length > 0 && (
-            <>
-              <Text style={styles.h2}>CRITICAL</Text>
-              {critical.map((it, i) => {
-                const ph = data.photos.filter((p) => p.item_id === it.item_id).slice(0, 2)
+          <Text style={styles.h2}>{language === 'pt' ? 'TODAS AS ÁREAS' : 'ALL AREAS'}</Text>
+          {Object.entries(
+            data.results.reduce((acc: Record<string, any[]>, it: any) => {
+              const room = it.checklist_templates?.room_type || 'Uncategorized'
+              if (!acc[room]) acc[room] = []
+              acc[room].push(it)
+              return acc
+            }, {} as Record<string, any[]>)
+          ).map(([room, items], ri) => (
+            <View key={`room-${ri}`} style={{ marginBottom: 12 }}>
+              <Text style={[styles.h2, { marginTop: 12 }]}>{room}</Text>
+              {(items as any[]).map((it, i) => {
+                const ph = it.preview_photos?.slice(0, 2) || []
                 return (
-                  <View key={`c-${i}`} style={styles.item}>
-                    <Text style={styles.text}>🚨 {i + 1}. {it.checklist_templates?.item_description} ({this.priorityText(it.priority_level, language)})</Text>
-                    {ph.length > 0 && (
-                      <View style={styles.row}>
-                        {ph.map((p: any, j: number) => <Image key={j} style={styles.photo} src={p.onedrive_url} />)}
-                      </View>
-                    )}
-                  </View>
-                )
-              })}
-            </>
-          )}
+                  <View key={`all-${ri}-${i}`} style={styles.item}>
+                    <Text style={styles.text}>
+                      {it.status === 'good' ? '✔️' : it.status === 'issue' ? '⚠️' : '❌'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`) : (it.checklist_templates?.item_description || `Item ${it.item_id}`)} ({this.priorityText(it.priority_level, language)})
 
-          {defects.length > 0 && (
-            <>
-              <Text style={styles.h2}>{L.defects}</Text>
-              {defects.map((it, i) => {
-                const ph = data.photos.filter((p) => p.item_id === it.item_id).slice(0, 2)
-                return (
-                  <View key={`d-${i}`} style={styles.item}>
-                    <Text style={styles.text}>{i + 1}. {it.checklist_templates?.item_description} ({this.priorityText(it.priority_level, language)})</Text>
+                    </Text>
                     {ph.length > 0 && (
                       <View style={styles.row}>
-                        {ph.map((p: any, j: number) => <Image key={j} style={styles.photo} src={p.onedrive_url} />)}
+                        {ph.map((p: any, j: number) => {
+                          const rawUrl = typeof p.url === 'string' ? p.url : ''
+                          if (!rawUrl) return null
+                          const decodedUrl = decodeURI(rawUrl)
+                          const isSharepoint = /sharepoint\.com|onedrive\.live\.com/i.test(rawUrl)
+                          if (isSharepoint) {
+                            return (
+                              <Link key={j} src={rawUrl} style={styles.text}>
+                                {decodedUrl}
+                              </Link>
+                            )
+                          }
+                          return <Image key={j} style={styles.photo} src={rawUrl} />
+                        })}
                       </View>
+                    )}
+                    {it.notes && (
+                      <Text style={styles.text}>
+                        {language === 'pt' ? 'Notas' : 'Notes'}: {language === 'pt' ? this.translateNote(it.enhanced_notes || it.notes) : it.notes}
+                      </Text>
                     )}
                   </View>
                 )
               })}
-            </>
-          )}
+            </View>
+          ))}
 
           <View style={styles.footer}>
-            <Text style={styles.text}>{this.companyInfo.name} • {this.companyInfo.email}</Text>
+            <Text style={styles.text}>{this.companyInfo.name} - {this.companyInfo.email}</Text>
             <Text style={styles.text}>{L.page} 1 {L.of} 1</Text>
           </View>
         </Page>
@@ -207,7 +248,7 @@ export class NHomeReportGenerationService {
   }
 
   async generateNHomeBilingualReports(sessionId: string): Promise<{ portuguese: Blob; english: Blob }> {
-    const data = await this.fetchNHomeInspectionData(sessionId)
+    const data = await this.loadInspectionData(sessionId)
     const PTReport = this.createNHomeReport(data, 'pt')
     const ENReport = this.createNHomeReport(data, 'en')
     const portuguese = await this.renderNHomePDF(PTReport)
@@ -215,8 +256,8 @@ export class NHomeReportGenerationService {
     return { portuguese, english }
   }
 
-  private async fetchNHomeInspectionData(sessionId: string): Promise<NHomeInspectionData> {
-    const res = await fetch(`/api/nhome/inspections/${sessionId}/report-data`)
+  public async loadInspectionData(sessionId: string): Promise<NHomeInspectionData> {
+    const res = await fetch(`/api/nhome/inspections/${sessionId}/report-data?t=${Date.now()}`, { cache: 'no-store' })
     if (!res.ok) throw new Error('Failed to fetch NHome inspection data')
     return (await res.json()) as NHomeInspectionData
   }
@@ -232,11 +273,11 @@ export class NHomeReportGenerationService {
     photoPackage: string
     documentationSummary: string
   }> {
+    const data = await this.loadInspectionData(sessionId)
     const reports = await this.generateNHomeBilingualReports(sessionId)
     const photoUploadService = new (await import('@/services/nhomePhotoUploadService')).NHomePhotoUploadService()
-    const photoPackage = await photoUploadService.shareInspectionWithClient(sessionId)
-    const data = await this.fetchNHomeInspectionData(sessionId)
+    const { package_url: photoPackageUrl } = await photoUploadService.shareInspectionWithClient(sessionId, data.session)
     const documentationSummary = `NHome Professional Inspection Summary: ${data.project.name} - ${data.apartment.unit_number}`
-    return { reports, photoPackage, documentationSummary }
+    return { reports, photoPackage: photoPackageUrl ?? '', documentationSummary }
   }
 }

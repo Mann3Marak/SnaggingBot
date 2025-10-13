@@ -61,16 +61,51 @@ export function NHomeInspectionStart() {
       const supabase = getSupabase()
       const { data: user } = await supabase.auth.getUser()
       const inspectorId = user.user?.id
+      console.log("Supabase auth user:", user)
       if (!inspectorId) throw new Error('Not signed in')
       if (!selectedApartment) throw new Error('Choose an apartment')
 
+      // First check if an active session already exists for this apartment (any inspector)
+      const { data: existing } = await supabase
+        .from('inspection_sessions')
+        .select('*')
+        .eq('apartment_id', selectedApartment)
+        .eq('status', 'in_progress')
+        .order('started_at', { ascending: false })
+        .maybeSingle()
+
+      if (existing) {
+        router.push(`/inspection/nhome/${existing.id}`)
+        return
+      }
+
       const { data, error } = await supabase
         .from('inspection_sessions')
-        .insert({ apartment_id: selectedApartment, inspector_id: inspectorId, status: 'in_progress', nhome_quality_score: null, started_at: new Date().toISOString() })
+        .insert({ 
+          apartment_id: selectedApartment, 
+          inspector_id: inspectorId, 
+          inspection_type: inspectionType,
+          status: 'in_progress', 
+          nhome_quality_score: null, 
+          started_at: new Date().toISOString() 
+        })
         .select('*')
         .single()
 
-      if (error) throw error
+      console.log("Insert result:", { data, error })
+
+      // Double-check by querying the table immediately
+      const { data: checkRows, error: checkError } = await supabase
+        .from('inspection_sessions')
+        .select('*')
+        .eq('id', data?.id)
+
+      console.log("Verification query:", { checkRows, checkError })
+
+      if (error || !data) {
+        throw new Error(error?.message || "Insert failed or blocked by RLS")
+      }
+
       router.push(`/inspection/nhome/${data.id}`)
     } catch (e: any) {
       alert(`Error starting NHome inspection: ${e?.message ?? e}`)

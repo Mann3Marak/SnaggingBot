@@ -10,14 +10,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        'nhome-primary': '#2563EB',
-        'nhome-secondary': '#0891B2',
-        'nhome-accent': '#F59E0B',
-        'nhome-success': '#10B981',
-        'nhome-warning': '#F59E0B',
-        'nhome-error': '#EF4444',
-        'nhome-background': '#F9FAFB',
-        'nhome-foreground': '#111827',
+        'nhome-primary': 'var(--nhome-primary)',
+        'nhome-primary-light': 'var(--nhome-primary-light)',
+        'nhome-primary-dark': 'var(--nhome-primary-dark)',
+        'nhome-secondary': 'var(--nhome-secondary)',
+        'nhome-accent': 'var(--nhome-accent)',
+        'nhome-success': 'var(--nhome-success)',
+        'nhome-warning': 'var(--nhome-warning)',
+        'nhome-error': 'var(--nhome-error)',
+        'nhome-background': 'var(--nhome-background)',
+        'nhome-foreground': 'var(--nhome-foreground)',
       },
       fontFamily: {
         nhome: ['var(--font-inter)', 'Inter', 'system-ui', 'sans-serif'],
@@ -28,3 +30,4 @@ const config: Config = {
 };
 
 export default config;
+

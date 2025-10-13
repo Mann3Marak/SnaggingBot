@@ -1,0 +1,260 @@
+/* Jo Widget Styles */
+
+.jo-widget {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  font-family: 'Arial', sans-serif;
+}
+
+.jo-widget-button {
+  display: flex;
+  align-items: center;
+  background-color: #ffffff;
+  border-radius: 30px;
+  padding: 8px 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.jo-widget-button:hover {
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  transform: translateY(-2px);
+}
+
+.jo-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-right: 10px;
+}
+
+.jo-avatar-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.jo-agent-name {
+  font-weight: bold;
+  font-size: 16px;
+  color: #333;
+}
+
+.jo-status-indicator {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background-color: #4BB543; /* Green by default */
+  margin-left: 10px;
+}
+
+.jo-status-indicator.status-connecting {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+
+.jo-widget-expanded {
+  display: none;
+  width: 320px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.jo-widget.expanded .jo-widget-expanded {
+  display: block;
+}
+
+.jo-widget-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background-color: #f8f8f8;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.jo-widget-title {
+  display: flex;
+  align-items: center;
+}
+
+.jo-header-image {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  margin-right: 10px;
+}
+
+.jo-widget-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #666;
+  cursor: pointer;
+}
+
+.jo-widget-body {
+  padding: 15px;
+}
+
+.jo-message {
+  margin-bottom: 15px;
+  line-height: 1.5;
+  color: #333;
+}
+
+.jo-controls {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.jo-call-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #bcae69; /* Match Contact Us button color */
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 10px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+.jo-call-button:hover {
+  background-color: #a59a5e; /* Match Contact Us button hover color */
+}
+
+.jo-call-button:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+.jo-button-icon {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.jo-status {
+  font-size: 14px;
+  color: #666;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .jo-widget-expanded {
+    width: 280px;
+  }
+  
+  .jo-widget-button {
+    padding: 6px 12px;
+  }
+  
+  .jo-avatar {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* Minimized widget */
+.jo-widget-minimized {
+  display: none; /* Hidden by default, shown when .jo-widget.minimized */
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex; /* Use flex to align items */
+  flex-direction: column; /* Stack image and name vertically */
+  align-items: center; /* Center items horizontally */
+  cursor: pointer;
+}
+
+.jo-widget.minimized .jo-widget-minimized {
+  display: flex; /* Changed from block to flex */
+}
+
+.jo-widget.minimized .jo-widget-expanded {
+  display: none;
+}
+
+.jo-minimized-button { /* This will now be a container for the image and indicator */
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  background-color: #ffffff; /* White background for the circle */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.2); /* Enhanced 3D shadow */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease, box-shadow 0.3s ease; /* Added box-shadow to transition */
+  position: relative; /* For indicator positioning */
+  margin-bottom: 5px; /* Space between image circle and name */
+  border: 3px solid #d29d54; /* Added brand accent color border */
+  padding: 2px; /* Add some padding so the image doesn't touch the border */
+}
+
+.jo-minimized-button:hover {
+  transform: scale(1.1) translateY(-2px); /* Slight lift on hover */
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35), 0 3px 8px rgba(0, 0, 0, 0.25); /* More pronounced shadow on hover */
+}
+
+.jo-minimized-image {
+  width: 100%; /* Fill the padded button space */
+  height: 100%; /* Fill the padded button space */
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.jo-minimized-indicator {
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: #4BB543; /* Green indicator */
+  border: 2px solid white;
+  bottom: 2px; /* Adjusted for better positioning */
+  right: 2px;  /* Adjusted for better positioning */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.jo-minimized-name {
+  font-size: 14px;
+  color: #333; /* Dark text for name */
+  font-weight: bold;
+  text-align: center;
+  background-color: rgba(255, 255, 255, 0.8); /* Optional: slight background for readability */
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* Expanded widget - ensure it's correctly positioned */
+.jo-widget-expanded {
+  /* display: none; by default, shown when .jo-widget.expanded */
+  width: 320px;
+  background-color: #ffffff;
+  border-radius: 10px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  /* margin-bottom: 15px; No longer needed as it's fixed */
+  overflow: hidden;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 1000;
+}

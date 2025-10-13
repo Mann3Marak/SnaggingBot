@@ -2,18 +2,30 @@
     "name": "app",
     "version": "0.1.0",
     "private": true,
-    "scripts": {
-        "dev": "next dev",
-        "build": "next build",
-        "start": "next start",
-        "lint": "eslint",
-        "brand:assets": "python scripts/generate_brand_assets.py",
-        "db:migrate": "supabase --workdir ./supabase db push --linked",
-        "db:seed": "supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
-        "db:pull": "supabase --workdir ./supabase db pull",
-        "db:diff": "supabase --workdir ./supabase db diff",
-        "db:reset": "supabase --workdir ./supabase db reset"
+  "resolutions": {
+    "react-camera-pro/react": "18.2.0"
+  },
+  "overrides": {
+    "react-camera-pro": {
+      "react": "18.2.0",
+      "react-dom": "18.2.0",
+      "styled-components": "^6.1.19"
     },
+    "styled-components": "^6.1.19"
+  },
+  "scripts": {
+    "preinstall": "npm config set legacy-peer-deps true",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "brand:assets": "python scripts/generate_brand_assets.py",
+    "db:migrate": "supabase --workdir ./supabase db push --linked",
+    "db:seed": "supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
+    "db:pull": "supabase --workdir ./supabase db pull",
+    "db:diff": "supabase --workdir ./supabase db diff",
+    "db:reset": "supabase --workdir ./supabase db reset"
+  },
     "dependencies": {
         "@azure/msal-browser": "^3.30.0",
         "@heroicons/react": "2.1.5",
@@ -26,13 +38,17 @@
         "next": "14.2.14",
         "next-pwa": "5.6.0",
         "nodemailer": "6.9.15",
+        "openai": "^5.23.1",
         "react": "18.2.0",
+        "react-camera-pro": "^1.4.0",
         "react-dom": "18.2.0",
+        "styled-components": "^6.1.19",
         "workbox-webpack-plugin": "7.1.0"
     },
     "devDependencies": {
         "@eslint/eslintrc": "2.1.4",
         "@tailwindcss/forms": "0.5.7",
+        "@tailwindcss/typography": "^0.5.19",
         "@types/node": "20.16.11",
         "@types/nodemailer": "6.4.15",
         "@types/react": "18.3.12",

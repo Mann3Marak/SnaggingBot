@@ -1,6 +1,6 @@
-﻿"use client"
+"use client"
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
-import { useRealtimeVoiceSession } from '@/hooks/useRealtimeVoiceSession'
+import { useState as useLocalState } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
 import { NHomeLogo } from '@/components/NHomeLogo'
 import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
@@ -10,33 +10,177 @@ import { ConnectOneDrive } from '@/components/onedrive/ConnectOneDrive'
 
 interface NHomeVoiceInspectionProps {
   sessionId: string
+  onRefreshReport?: () => void
 }
 
-type VoiceAssessment = 'good' | 'issue' | 'critical'
+// Legacy classification retained for reference; no current references.
+// type VoiceAssessment = 'good' | 'issue' | 'critical'
 
-export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
-  const { session, currentItem, nhomeProgress, saveNHomeResult } = useNHomeInspectionSession(sessionId)
+export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
+  const { session, currentItem, nhomeProgress, saveNHomeResult, reload } = useNHomeInspectionSession(sessionId)
+  const currentIndex = session?.current_item_index ?? 0
+
+  const goToNext = async () => {
+    if (currentItem) {
+      // Capture only the assistant's response text (omit prefix) if available
+      if (lastResponse && lastResponse.trim() !== "") {
+        await saveNHomeResult(currentItem.id, "good", lastResponse.trim(), 1, [], true);
+      }
+
+      // Move to the next checklist item
+      await reload();
+    } else {
+      await reload();
+    }
+  };
+
+  const goToPrevious = async () => {
+    if (!session) return
+    const supabase = (await import("@/lib/supabase")).getSupabase()
+    const prevIndex = Math.max(0, (session.current_item_index ?? 0) - 1)
+    await supabase.from("inspection_sessions").update({ current_item_index: prevIndex }).eq("id", sessionId)
+    await reload()
+  }
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
 
-  const {
-    status,
-    isActive,
-    isConnecting,
-    userTurns,
-    liveUserTranscript,
-    assistantMessages,
-    logs,
-    startSession,
-    stopSession,
-    resetTranscripts,
-    sendTextMessage,
-    updateSessionInstructions,
-  } = useRealtimeVoiceSession()
+  // Realtime voice session removed. Placeholder state for STT/TTS integration.
+  const [userTurns, setUserTurns] = useLocalState<string[]>([])
+  const [assistantMessages, setAssistantMessages] = useLocalState<string[]>([])
+  const [itemConversations, setItemConversations] = useState<Record<string, { role: "user" | "assistant"; content: string }[]>>({});
+  const [conversation, setConversation] = useState<{ role: "user" | "assistant"; content: string }[]>([]);
+  const [isRecording, setIsRecording] = useLocalState(false)
+  const status = isRecording ? "Recording..." : "Idle"
+  const [liveUserTranscript, setLiveUserTranscript] = useLocalState<string>("")
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null)
+  const audioChunksRef = useRef<Blob[]>([])
 
-  const processedTurnsRef = useRef(0)
-  const processingChainRef = useRef(Promise.resolve())
-  const lastAnnouncedItemRef = useRef<string | null>(null)
+  // Local state for notes section when selecting Issue or Critical
+  const [showNotes, setShowNotes] = useState<null | { type: 'issue' | 'critical' }>(null)
+  const [notesText, setNotesText] = useState('')
+
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const sendTextMessage = async (message: string, role: string = "user", addToTurns = false) => {
+    if (addToTurns) {
+      setUserTurns(prev => [...prev, message])
+    }
+    // Call TTS API to play assistant response
+    try {
+      const resp = await fetch("/api/voice/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: message })
+      })
+      if (resp.ok) {
+        const audioBlob = await resp.blob()
+        const url = URL.createObjectURL(audioBlob)
+        const audio = new Audio(url)
+        setIsPlaying(true)
+        audio.play()
+        audio.onended = () => setIsPlaying(false)
+      }
+    } catch (e) {
+      console.error("TTS playback failed", e)
+      setIsPlaying(false)
+    }
+    setAssistantMessages(prev => [...prev, message])
+  }
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      const mediaRecorder = new MediaRecorder(stream)
+      mediaRecorderRef.current = mediaRecorder
+      audioChunksRef.current = []
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
+      }
+
+      mediaRecorder.onstop = async () => {
+        const chunks = [...audioChunksRef.current]
+        audioChunksRef.current = []
+
+        if (chunks.length === 0) {
+          console.warn('STT skipped: no audio chunks captured')
+          return
+        }
+
+        const audioBlob = new Blob(chunks, { type: 'audio/webm' })
+        if (audioBlob.size < 2048) {
+          console.warn('STT skipped: audio too short to transcribe')
+          return
+        }
+
+        const formData = new FormData()
+        formData.append('file', audioBlob, 'input.webm')
+
+        try {
+          const resp = await fetch('/api/voice/stt', {
+            method: 'POST',
+            body: formData,
+          })
+          if (resp.ok) {
+            const data = await resp.json()
+            const transcript = data.text
+            setLiveUserTranscript(transcript)
+            setUserTurns(prev => [...prev, transcript])
+          } else {
+            const errorBody = await resp.json().catch(() => undefined)
+            console.error('STT request failed', errorBody)
+          }
+        } catch (err) {
+          console.error('STT error', err)
+        }
+      }
+
+      mediaRecorder.start()
+      setIsRecording(true)
+    } catch (err) {
+      console.error("Mic access denied or error:", err)
+    }
+  }
+
+  const stopRecording = useCallback(() => {
+    const recorder = mediaRecorderRef.current
+    if (!recorder) {
+      return
+    }
+
+    try {
+      if (recorder.state !== 'inactive') {
+        recorder.stop()
+      }
+    } catch (error) {
+      console.error('Failed to stop recording cleanly:', error)
+    }
+
+    try {
+      recorder.stream?.getTracks().forEach(track => {
+        track.stop()
+      })
+    } catch (error) {
+      console.error('Failed to release audio stream:', error)
+    }
+
+    mediaRecorderRef.current = null
+    setIsRecording(false)
+  }, [])
+
+  const resetTranscripts = () => {
+    setUserTurns([])
+    setAssistantMessages([])
+  }
+
+  const updateSessionInstructions = (_: string) => {
+    // no-op for now
+  }
+
+  const isProcessingTurnRef = useRef(false)
+  
 
   const {
     isCameraOpen,
@@ -54,9 +198,11 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
 
   useEffect(() => {
     return () => {
-      stopSession({ silent: true })
+      if (isRecording || mediaRecorderRef.current) {
+        stopRecording()
+      }
     }
-  }, [stopSession])
+  }, [])
 
   const enhanceNHomeDescription = useCallback(async (userInput: string, item = currentItem) => {
     const trimmed = userInput.trim()
@@ -92,79 +238,23 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
       return trimmed
     }
   }, [currentItem, session])
+  /*
+   Legacy assessor retained for reference - replaced by server-side agent.
+   const categorizeAssessment = useCallback((input: string): VoiceAssessment => {
+     const normalized = input.trim().toLowerCase()
+     const isGoodCondition = /^(good|fine|ok|okay|perfect|excellent|no issues?|meets standards?|nhome standard)$/i.test(normalized)
+     if (isGoodCondition) {
+       return 'good'
+     }
+     const isCriticalIssue = /(critical|urgent|major|serious|dangerous|immediate|safety|structural|flood|gas)/i.test(normalized)
+     if (isCriticalIssue) {
+       return 'critical'
+     }
+     // Default to issue if not good or critical
+     return 'issue'
+   }, [])
+  */
 
-  const categorizeAssessment = useCallback((input: string): VoiceAssessment => {
-    const normalized = input.trim().toLowerCase()
-    const isGoodCondition = /^(good|fine|ok|okay|perfect|excellent|no issues?|meets standards?|nhome standard)$/i.test(normalized)
-    if (isGoodCondition) {
-      return 'good'
-    }
-    const isCriticalIssue = /(critical|urgent|major|serious|dangerous|immediate|safety|structural|flood|gas)/i.test(normalized)
-    if (isCriticalIssue) {
-      return 'critical'
-    }
-    return 'issue'
-  }, [])
-
-  const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
-    const itemSnapshot = currentItem
-    if (!itemSnapshot) {
-      return
-    }
-
-    setProcessing(true)
-    const outcome = categorizeAssessment(userInput)
-
-    try {
-      if (outcome === 'good') {
-        await saveNHomeResult(itemSnapshot.id, 'good', 'Meets NHome professional standards')
-        setLastResponse('Marked as good – meets NHome professional standards.')
-        sendTextMessage(
-          `Inspector confirms that ${itemSnapshot.room_type}: ${itemSnapshot.item_description} meets NHome quality standards. Acknowledge and prepare the next inspection step.`,
-          'user',
-          true
-        )
-      } else {
-        const enhancedDescription = await enhanceNHomeDescription(userInput, itemSnapshot)
-        const priority = outcome === 'critical' ? 3 : /\b(minor|small|cosmetic)\b/i.test(userInput.toLowerCase()) ? 1 : 2
-        await saveNHomeResult(
-          itemSnapshot.id,
-          outcome === 'critical' ? 'critical' : 'issue',
-          enhancedDescription,
-          priority
-        )
-        const summary = outcome === 'critical'
-          ? 'Logged a critical NHome issue – immediate developer attention required.'
-          : 'Logged an inspection issue according to NHome standards.'
-        setLastResponse(summary)
-        sendTextMessage(
-          `Inspector reports a ${outcome} finding for ${itemSnapshot.room_type}: ${itemSnapshot.item_description}. Details: ${enhancedDescription}. Provide professional guidance, next steps, and prompt for supporting photos if appropriate.`,
-          'user',
-          true
-        )
-      }
-    } catch (error) {
-      console.error('Error processing NHome voice response:', error)
-      setLastResponse('Unable to log the result. Please retry or use manual controls.')
-      sendTextMessage(
-        `I encountered an issue saving the inspector update for ${itemSnapshot.item_description}. Offer a brief apology and ask for a quick restatement or confirmation.`,
-        'user',
-        true
-      )
-    } finally {
-      setProcessing(false)
-    }
-  }, [categorizeAssessment, currentItem, enhanceNHomeDescription, saveNHomeResult, sendTextMessage])
-
-  useEffect(() => {
-    if (userTurns.length > processedTurnsRef.current) {
-      const newTurns = userTurns.slice(processedTurnsRef.current)
-      processedTurnsRef.current = userTurns.length
-      newTurns.forEach((turn) => {
-        processingChainRef.current = processingChainRef.current.then(() => handleNHomeVoiceResponse(turn))
-      })
-    }
-  }, [handleNHomeVoiceResponse, userTurns])
 
   const inspectionInstructions = useMemo(() => {
     if (!session) {
@@ -181,61 +271,174 @@ export function NHomeVoiceInspection({ sessionId }: NHomeVoiceInspectionProps) {
 Project: ${projectName}
 Developer: ${developer}
 Unit: ${unitNumber} (${apartmentType})
-Current focus: ${currentRoom} – ${currentDescription}
+Current focus: ${currentRoom} - ${currentDescription}
 Maintain Natalie O'Kelly's professional standards, reference Algarve-specific considerations, and keep guidance concise, actionable, and thorough.`
   }, [currentItem, session])
 
+  // Legacy front-end handler retained for reference; backend agent handles turns now.
+//   const handleNHomeVoiceResponse = useCallback(async (userInput: string) => {
+//     setProcessing(true)
+//     try {
+//       // Call a backend agent endpoint to generate a dynamic response
+//       const resp = await fetch("/api/nhome/agent", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({
+//           instructions: inspectionInstructions,
+//           messages: [
+//             { role: "user", content: userInput }
+//           ],
+//           sessionId
+//         })
+//       })
+//       if (resp.ok) {
+//         const data = await resp.json()
+//         const reply = data.reply || "I heard you."
+//         setLastResponse(reply)
+//         sendTextMessage(reply, "assistant", true)
+//       } else {
+//         console.error("Agent request failed")
+//         setLastResponse("Agent request failed")
+//       }
+//     } catch (error) {
+//       console.error("Error processing NHome voice response:", error)
+//       setLastResponse("Unable to process your request.")
+//     } finally {
+//       setProcessing(false)
+//     }
+//   }, [sessionId, sendTextMessage, inspectionInstructions])
+
   useEffect(() => {
-    if (!isActive) {
-      return
+    if (userTurns.length === 0 || !currentItem?.id) return;
+    const latestTurn = userTurns[userTurns.length - 1];
+
+    if (!isProcessingTurnRef.current) {
+      isProcessingTurnRef.current = true;
+      (async () => {
+        try {
+          const currentItemId = currentItem.id;
+          const existingConversation = itemConversations[currentItemId] || [];
+          const updatedConversation = [
+            ...existingConversation,
+            { role: "user" as const, content: latestTurn },
+          ];
+
+          const resp = await fetch("/api/nhome/agent", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              instructions: inspectionInstructions,
+              messages: updatedConversation,
+              sessionId,
+              currentItem,
+              nhomeProgress,
+            }),
+          });
+
+          if (resp.ok) {
+            const data = await resp.json();
+            const reply = data.reply || "I heard you.";
+            setLastResponse(reply);
+            await sendTextMessage(reply, "assistant", true);
+
+            const newConversation = [
+              ...updatedConversation,
+              { role: "assistant" as const, content: reply },
+            ];
+
+            // Persist conversation to Supabase (split into user and agent columns)
+            const supabase = (await import("@/lib/supabase")).getSupabase();
+            const userMessages = newConversation.filter(m => m.role === "user").map(m => m.content);
+            const agentMessages = newConversation.filter(m => m.role === "assistant").map(m => m.content);
+
+            await supabase
+              .from("inspection_conversations")
+              .upsert(
+                {
+                  session_id: sessionId,
+                  item_id: currentItemId,
+                  user_messages: userMessages,
+                  agent_messages: agentMessages,
+                  updated_at: new Date().toISOString(),
+                },
+                { onConflict: "session_id,item_id" }
+              );
+
+            setItemConversations((prev) => ({
+              ...prev,
+              [currentItemId]: newConversation,
+            }));
+
+            setConversation(newConversation);
+          } else {
+            await sendTextMessage("Agent could not process input.", "assistant", true);
+          }
+        } finally {
+          setUserTurns([]);
+          isProcessingTurnRef.current = false;
+        }
+      })();
+    }
+  }, [inspectionInstructions, sessionId, currentItem, nhomeProgress, userTurns, sendTextMessage, itemConversations]);
+
+
+  useEffect(() => {
+    const loadConversation = async () => {
+      if (!currentItem?.id) return;
+      const supabase = (await import("@/lib/supabase")).getSupabase();
+      const { data, error } = await supabase
+        .from("inspection_conversations")
+        .select("user_messages, agent_messages")
+        .eq("session_id", sessionId)
+        .eq("item_id", currentItem.id)
+        .maybeSingle();
+
+      if (!error && data) {
+        const mergedConversation = [
+          ...(data.user_messages || []).map((content: string) => ({ role: "user" as const, content })),
+          ...(data.agent_messages || []).map((content: string) => ({ role: "assistant" as const, content })),
+        ];
+        setConversation(mergedConversation);
+        setItemConversations((prev) => ({
+          ...prev,
+          [currentItem.id]: mergedConversation,
+        }));
+      } else {
+        setConversation([]);
+      }
+    };
+
+    loadConversation();
+  }, [currentItem?.id, sessionId]);
+
+  useEffect(() => {
+    if (!isRecording) {
+      return;
     }
     if (inspectionInstructions) {
-      updateSessionInstructions(inspectionInstructions)
+      updateSessionInstructions(inspectionInstructions);
     }
-
-    if (currentItem) {
-      if (lastAnnouncedItemRef.current !== currentItem.id) {
-        lastAnnouncedItemRef.current = currentItem.id
-        sendTextMessage(
-          `We are now assessing ${currentItem.room_type}: ${currentItem.item_description}. ${currentItem.nhome_standard_notes ? `Reference note: ${currentItem.nhome_standard_notes}.` : ''} Prompt the inspector to provide their assessment following NHome professional standards.`,
-          'user',
-          true
-        )
-      }
-    } else if (session && lastAnnouncedItemRef.current !== 'completed') {
-      lastAnnouncedItemRef.current = 'completed'
-      sendTextMessage(
-        'All inspection items are complete. Offer a concise professional wrap-up and suggest preparing the final report for the client.',
-        'user',
-        true
-      )
-    }
-  }, [currentItem, inspectionInstructions, isActive, sendTextMessage, session, updateSessionInstructions])
+  }, [currentItem, inspectionInstructions, isRecording, sendTextMessage, session, updateSessionInstructions]);
 
   const handleToggleAssistant = useCallback(async () => {
-    if (isActive || isConnecting) {
-      stopSession({ keepTranscripts: true })
+    if (isRecording) {
+      stopRecording()
       return
     }
     try {
-      processedTurnsRef.current = 0
-      processingChainRef.current = Promise.resolve()
-      lastAnnouncedItemRef.current = null
       setLastResponse('')
       resetTranscripts()
-      await startSession()
+      await startRecording()
     } catch (error) {
-      console.error('Failed to start realtime session:', error)
+      console.error('Failed to start recording session:', error)
     }
-  }, [isActive, isConnecting, resetTranscripts, startSession, stopSession])
+  }, [isRecording, resetTranscripts, startRecording, stopRecording])
 
   const activeStatus = processing
     ? 'Processing the latest NHome assessment...'
-    : isActive
-      ? 'NHome Assistant is live. Describe the condition when ready.'
-      : isConnecting
-        ? 'Connecting to the NHome voice assistant...'
-        : 'Tap to start the NHome voice assistant.'
+    : isRecording
+      ? 'NHome Assistant is listening. Speak now.'
+      : 'Tap to start recording your input.'
 
   const userTranscriptSegments = useMemo(() => {
     const segments = [...userTurns]
@@ -257,7 +460,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+    <div className="min-h-screen bg-gradient-to-br from-[#f9fafb] via-white to-[#f3f4f6] text-gray-900">
       <div className="bg-gradient-to-r from-nhome-primary to-nhome-secondary text-white p-4 shadow-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -279,7 +482,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           <div />
           <ConnectOneDrive />
         </div>
-        <div className="bg-white rounded-xl shadow-lg border border-gray-200 p-6">
+        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-10 text-center">
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-gradient-to-br from-nhome-primary to-nhome-secondary rounded-full flex items-center justify-center mx-auto mb-4">
               <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
@@ -299,17 +502,97 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 <strong>NHome Standards:</strong> {currentItem.nhome_standard_notes}
               </div>
             )}
+
+            <div className="mt-4 flex flex-col items-center gap-4">
+              <div className="flex justify-center gap-4">
+                <button
+                  onClick={async () => {
+                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards');
+                    // Explicitly increment the current item index in Supabase before reloading
+                    const supabase = (await import("@/lib/supabase")).getSupabase();
+                    const nextIndex = (session?.current_item_index ?? 0) + 1;
+                    await supabase
+                      .from("inspection_sessions")
+                      .update({ current_item_index: nextIndex })
+                      .eq("id", sessionId);
+                    await reload();
+                    onRefreshReport?.();
+                  }}
+                  className="px-6 py-2 rounded-full bg-green-500 text-white hover:bg-green-600 text-sm font-semibold shadow-md transition-all"
+                >
+                  Good
+                </button>
+                <button
+                  onClick={() => setShowNotes({ type: 'issue' })}
+                  className="px-6 py-2 rounded-full bg-yellow-400 text-white hover:bg-yellow-500 text-sm font-semibold shadow-md transition-all"
+                >
+                  Issue
+                </button>
+                <button
+                  onClick={() => setShowNotes({ type: 'critical' })}
+                  className="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 text-sm font-semibold shadow-md transition-all"
+                >
+                  Critical
+                </button>
+              </div>
+
+              {showNotes && (
+                <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
+                  <textarea
+                    value={notesText}
+                    onChange={(e) => setNotesText(e.target.value)}
+                    placeholder="Describe the issue..."
+                    className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-nhome-primary"
+                    rows={3}
+                  />
+                  <div className="flex justify-end gap-2 mt-3">
+                    <button
+                      onClick={async () => {
+                        await saveNHomeResult(
+                          currentItem.id,
+                          showNotes.type,
+                          notesText || 'No additional notes provided'
+                        );
+                        // Explicitly increment the current item index in Supabase before reloading
+                        const supabase = (await import("@/lib/supabase")).getSupabase();
+                        const nextIndex = (session?.current_item_index ?? 0) + 1;
+                        await supabase
+                          .from("inspection_sessions")
+                          .update({ current_item_index: nextIndex })
+                          .eq("id", sessionId);
+                        await reload();
+                        setShowNotes(null);
+                        setNotesText('');
+                        onRefreshReport?.();
+                      }}
+                      className="px-4 py-1.5 rounded-md bg-nhome-primary text-white text-sm hover:bg-nhome-secondary"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowNotes(null)
+                        setNotesText('')
+                      }}
+                      className="px-4 py-1.5 rounded-md bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className="mb-6">
             <div className="flex justify-between text-sm text-gray-600 mb-2">
               <span>Inspection Progress</span>
-              <span>{nhomeProgress.completed} of {nhomeProgress.total} items</span>
+              <span>{currentIndex + 1} of {nhomeProgress.total} items</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-3">
               <div
                 className="bg-gradient-to-r from-nhome-primary to-nhome-secondary h-3 rounded-full transition-all duration-500"
-                style={{ width: `${(nhomeProgress.completed / nhomeProgress.total) * 100}%` }}
+                style={{ width: `${((currentIndex + 1) / (nhomeProgress.total || 1)) * 100}%` }}
               />
             </div>
 
@@ -319,31 +602,41 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             </div>
           </div>
 
-          <div className="text-center space-y-4">
-            <button
-              onClick={handleToggleAssistant}
-              className={`w-24 h-24 rounded-full font-bold text-white transition-all duration-200 transform ${
-                isActive
-                  ? 'bg-nhome-error animate-pulse scale-110 shadow-xl'
-                  : 'bg-nhome-success hover:scale-105 shadow-lg hover:shadow-xl'
-              } ${isConnecting ? 'animate-pulse bg-amber-500' : ''}`}
-            >
-              {isActive ? (
-                <div className="space-y-1">
-                  <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+          <div className="text-center space-y-2 mt-6">
+            <div className="flex justify-center items-center gap-6">
+              <button
+                onClick={goToPrevious}
+                className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
+              >
+                ← Previous Item
+              </button>
+              <button
+                onClick={handleToggleAssistant}
+                className={`w-16 h-16 flex items-center justify-center rounded-full text-white font-semibold shadow-md transition-all duration-200 ${
+                  isPlaying
+                    ? 'bg-blue-500 hover:bg-blue-600 scale-105'
+                    : isRecording
+                      ? 'bg-red-500 hover:bg-red-600 scale-105 animate-pulse'
+                      : 'bg-green-500 hover:bg-green-600 scale-105'
+                }`}
+              >
+                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                  {isPlaying ? (
+                    <path d="M8 5v14l11-7z" />
+                  ) : isRecording ? (
                     <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                  </svg>
-                  <div className="text-xs">LISTENING</div>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <svg className="w-8 h-8 mx-auto" fill="currentColor" viewBox="0 0 24 24">
+                  ) : (
                     <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-                  </svg>
-                  <div className="text-xs">START</div>
-                </div>
-              )}
-            </button>
+                  )}
+                </svg>
+              </button>
+              <button
+                onClick={goToNext}
+                className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
+              >
+                Next Item →
+              </button>
+            </div>
 
             <div className="space-y-2">
               <p className="text-lg font-medium text-gray-900">{activeStatus}</p>
@@ -370,7 +663,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   ))}
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">Awaiting inspector input…</p>
+                <p className="text-sm text-gray-500">Awaiting inspector input...</p>
               )}
             </div>
             <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-left">
@@ -387,21 +680,9 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             </div>
           </div>
 
-          {logs.length > 0 && (
-            <div className="mt-4 text-left">
-              <details className="bg-white border border-gray-200 rounded-lg">
-                <summary className="cursor-pointer px-4 py-2 text-sm text-gray-600">Session diagnostics</summary>
-                <div className="px-4 py-3 text-xs text-gray-500 space-y-1">
-                  {logs.slice(-8).map((entry, index) => (
-                    <div key={`${entry}-${index}`}>{entry}</div>
-                  ))}
-                </div>
-              </details>
-            </div>
-          )}
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="mt-8 flex flex-wrap justify-center gap-6">
           <button
             onClick={() => currentItem && openNHomeCamera(currentItem.id)}
             className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-accent transition-all"
@@ -418,7 +699,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           </button>
 
           <button
-            onClick={() => currentItem && openNHomeCamera(currentItem.id)}
+            onClick={handleToggleAssistant}
             className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-secondary transition-all"
           >
             <div className="text-center">
@@ -445,7 +726,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   </div>
                   <button
                     onClick={() => removeNHomePhoto(photo.id)}
-                    className="absolute top-1 right-1 bg-black/60 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                    type="button" className="absolute top-1 right-1 bg-black/60 z-10 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove photo"
                   >
                     Remove
@@ -457,21 +738,23 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                           updateUploadProgress(photo.id, 1)
                           const fileName = generateNHomeFileName(photo.metadata)
                           const res = await uploader.uploadNHomeInspectionPhoto(
-                            photo.blob,
+                            photo.blob as Blob,
                             photo.metadata,
                             sessionId,
                             photo.itemId || currentItem.id,
                             fileName,
-                            (p) => updateUploadProgress(photo.id, p)
+                            session,
+                            (p) => updateUploadProgress(photo.id, p),
                           )
-                          if (res.success && res.onedrive_url) {
-                            markPhotoUploaded(photo.id, res.onedrive_url)
+                          if (res.success && res.supabase_url) {
+                            markPhotoUploaded(photo.id, res.supabase_url)
                           }
                         } catch (e) {
+                          console.error('NHome photo upload failed', e)
                           updateUploadProgress(photo.id, 0)
                         }
                       }}
-                      className="absolute bottom-1 right-1 bg-nhome-secondary hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
+                      type="button" className="absolute bottom-1 right-1 bg-nhome-secondary z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
                       title="Upload to OneDrive"
                     >
                       Upload
@@ -479,6 +762,17 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   )}
                   <div className="p-2 text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
                     {generateNHomeFileName(photo.metadata)}
+                    {photo.uploaded && photo.onedrive_url && (
+                      <a
+                        href={photo.onedrive_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
+                        title={photo.onedrive_url}
+                      >
+                        {photo.onedrive_url}
+                      </a>
+                    )}
                   </div>
                 </div>
               ))}
@@ -494,22 +788,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           </div>
         )}
 
-        <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-xl p-4 border border-nhome-primary/10">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-nhome-primary rounded-full flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" />
-              </svg>
-            </div>
-            <div className="flex-1">
-              <h4 className="font-semibold text-nhome-primary">NHome Professional Excellence</h4>
-              <p className="text-sm text-gray-600">
-                Maintaining Natalie O'Kelly's standards of excellence for Algarve properties.
-                Every assessment contributes to our reputation for thorough, professional service.
-              </p>
-            </div>
-          </div>
-        </div>
       </div>
       <NHomeCameraCapture
         isOpen={isCameraOpen}

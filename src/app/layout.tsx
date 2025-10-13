@@ -1,6 +1,8 @@
-﻿import type { Metadata, Viewport } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { NHomeHeader } from '@/components/layout/NHomeHeader';
+import { NHomeFooter } from '@/components/layout/NHomeFooter';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -16,17 +18,17 @@ export const metadata: Metadata = {
   manifest: '/manifest.json',
   icons: {
     icon: [
-      { url: '/icons/nhome-192x192.png', sizes: '192x192', type: 'image/png' },
-      { url: '/icons/nhome-512x512.png', sizes: '512x512', type: 'image/png' },
+      { url: '/icons/NHome_Icon.ico', type: 'image/x-icon' },
+      { url: '/icons/NHome_V4__Logo.png', type: 'image/png', sizes: '354x354' },
     ],
-    apple: ['/icons/apple-touch-icon.png'],
-    shortcut: ['/icons/nhome-192x192.png'],
-    other: [{ rel: 'mask-icon', url: '/icons/nhome-192x192.png', color: '#2563EB' }],
+    apple: [{ url: '/icons/NHome_V4__Logo.png', sizes: '180x180', type: 'image/png' }],
+    shortcut: ['/icons/NHome_Icon.ico'],
+    other: [{ rel: 'mask-icon', url: '/icons/NHome_Icon.ico', color: '#bcae69' }],
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#2563EB',
+  themeColor: '#bcae69',
   colorScheme: 'light',
 };
 
@@ -40,7 +42,14 @@ export default function RootLayout({
 
   return (
     <html lang='en' className='bg-nhome-background'>
-      <body className={bodyClass}>{children}</body>
+      <body className={bodyClass}>
+        <NHomeHeader />
+        <main className='flex-1'>
+          {children}
+        </main>
+        <NHomeFooter />
+      </body>
     </html>
   );
 }
+

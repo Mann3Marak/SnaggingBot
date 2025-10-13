@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Image from 'next/image';
 
@@ -13,23 +13,23 @@ interface NHomeLogoProps {
 }
 
 const VARIANT_PATH: Record<NHomeLogoVariant, string> = {
-  primary: '/branding/logos/nhome-logo-primary.svg',
+  primary: '/icons/NHome_V4__Logo.png',
   white: '/branding/logos/nhome-logo-white.svg',
   icon: '/branding/logos/nhome-icon.svg',
   wordmark: '/branding/logos/nhome-wordmark.svg',
 };
 
 const LOGO_WIDTHS: Record<NHomeLogoSize, number> = {
-  sm: 180,
-  md: 240,
-  lg: 320,
-  xl: 380,
+  sm: 100,
+  md: 160,
+  lg: 220,
+  xl: 280,
 };
 
 const WORDMARK_WIDTHS: Record<NHomeLogoSize, number> = {
   sm: 200,
   md: 260,
-  lg: 320,
+  lg: 220,
   xl: 400,
 };
 
@@ -41,6 +41,7 @@ const ICON_SIZES: Record<NHomeLogoSize, number> = {
 };
 
 const LOGO_RATIO = 120 / 320;
+const PRIMARY_LOGO_RATIO = 1;
 const WORDMARK_RATIO = 200 / 720;
 
 export function NHomeLogo({
@@ -63,8 +64,9 @@ export function NHomeLogo({
     ? ICON_SIZES[size]
     : isWordmark
       ? Math.round(width * WORDMARK_RATIO)
-      : Math.round(width * LOGO_RATIO);
-
+      : variant === 'primary'
+        ? Math.round(width * PRIMARY_LOGO_RATIO)
+        : Math.round(width * LOGO_RATIO);
   return (
     <span className={computedClassName} aria-label='NHome Inspection Pro logo'>
       <Image
@@ -77,3 +79,4 @@ export function NHomeLogo({
     </span>
   );
 }
+

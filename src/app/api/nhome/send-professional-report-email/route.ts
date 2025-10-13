@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     const html = `<!DOCTYPE html>
 <html><head><meta charSet="utf-8" />
-<style>body{font-family:Segoe UI,Arial,sans-serif;line-height:1.6;color:#333} .header{background:linear-gradient(135deg,#2563EB 0%,#0891B2 100%);color:#fff;padding:20px;text-align:center} .content{padding:30px;max-width:600px;margin:0 auto} .button{display:inline-block;background:#2563EB;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px} .section{background:#f8f9fa;padding:20px;border-radius:8px;margin:20px 0}</style>
+<style>body{font-family:Segoe UI,Arial,sans-serif;line-height:1.6;color:#333} .header{background:linear-gradient(135deg,#bcae69 0%,#a59a5e 100%);color:#fff;padding:20px;text-align:center} .content{padding:30px;max-width:600px;margin:0 auto} .button{display:inline-block;background:#bcae69;color:#fff;padding:12px 24px;text-decoration:none;border-radius:6px;font-weight:bold;margin:5px} .section{background:#f9f5ea;padding:20px;border-radius:8px;margin:20px 0}</style>
 </head><body>
   <div class="header"><div class="logo">NHome Property Management</div><div class="tagline">Professional Property Services in the Algarve</div></div>
   <div class="content">
@@ -69,4 +69,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Failed to send professional email' }, { status: 500 })
   }
 }
+
 

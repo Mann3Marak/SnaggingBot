@@ -1,11 +1,12 @@
-﻿<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 120'>
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 320 120'>
   <title>NHome Primary Logo</title>
   <rect width='320' height='120' rx='16' fill='#ffffff'/>
   <g transform='translate(28 20)'>
-    <circle cx='40' cy='40' r='40' fill='#2563EB'/>
+    <circle cx='40' cy='40' r='40' fill='#bcae69'/>
     <path d='M19 46.5v-17l21-18 21 18v17h-12v-15.4l-9-7.6-9 7.6V46.5H19Z' fill='#ffffff'/>
     <path d='M46 62v-14h12v14H46Z' fill='#ffffff' opacity='.7'/>
-    <text x='115' y='51' font-family="'Inter', 'Segoe UI', sans-serif" font-size='40' font-weight='700' fill='#2563EB'>NHome</text>
-    <text x='116' y='76' font-family="'Inter', 'Segoe UI', sans-serif" font-size='18' font-weight='500' fill='#1D4ED8'>Inspection Pro</text>
+    <text x='115' y='51' font-family="'Inter', 'Segoe UI', sans-serif" font-size='40' font-weight='700' fill='#bcae69'>NHome</text>
+    <text x='116' y='76' font-family="'Inter', 'Segoe UI', sans-serif" font-size='18' font-weight='500' fill='#8f8552'>Inspection Pro</text>
   </g>
 </svg>
+
