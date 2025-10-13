@@ -76,43 +76,6 @@ export function NHomeCameraCapture({
     }
   };
 
-  const addNHomeWatermark = async (context: CanvasRenderingContext2D, width: number, height: number) => {
-    context.save()
-    context.fillStyle = 'rgba(37, 99, 235, 0.8)'
-    context.fillRect(0, height - 80, width, 80)
-    context.fillStyle = 'white'
-    context.font = 'bold 16px Inter, sans-serif'
-    context.fillText('NHome Property Management', 20, height - 50)
-    context.font = '12px Inter, sans-serif'
-    const timestamp = new Date().toLocaleString('en-GB', { 
-      timeZone: 'Europe/Lisbon',
-      day: '2-digit',
-      month: '2-digit', 
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-    context.fillText(`${sessionData?.project_name || 'Property'} - Unit ${sessionData?.apartment_unit || 'TBD'}`, 20, height - 30)
-    context.fillText(`${inspectionItem?.room_type || 'General'} ??? ${timestamp} ??? Algarve, Portugal`, 20, height - 15)
-    context.font = 'bold 10px Inter, sans-serif'
-    context.fillText('PROFESSIONAL INSPECTION DOCUMENTATION', width - 250, height - 15)
-    context.restore()
-  }
-
-  const createNHomePhotoMetadata = (): NHomePhotoMetadata => {
-    return {
-      inspector: sessionData?.inspector_name || 'NHome Inspector',
-      company: 'NHome Property Setup & Management',
-      property: sessionData?.project_name || 'Algarve Property',
-      unit: sessionData?.apartment_unit || 'TBD',
-      room: inspectionItem?.room_type || 'General',
-      item: inspectionItem?.item_description || 'General Documentation',
-      timestamp: new Date().toISOString(),
-      location: 'Algarve, Portugal',
-      quality_standards: inspectionItem?.nhome_standard_notes || 'NHome Professional Standards'
-    }
-  }
-
   // react-camera-pro handles permissions and lifecycle automatically
   // Remove redundant useEffect to prevent hook count mismatch
   // Error state is already initialized and reset on capture

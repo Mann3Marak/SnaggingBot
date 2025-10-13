@@ -60,11 +60,6 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     }
   }
 
-  // Legacy function placeholder (no longer needed with Supabase)
-  const createNHomeReportFolder = async (): Promise<string> => {
-    return "supabase/reports";
-  }
-
   const saveNHomeReportUrls = async (ptUrl: string, enUrl: string, photoPackage: string) => {
     await fetch('/api/nhome/inspections/save-reports', {
       method: 'POST',
@@ -193,7 +188,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
           <div className="mt-2 text-xs text-gray-500">
             {progress < 40 && 'Preparing NHome professional templates...'}
             {progress >= 40 && progress < 70 && 'Generating bilingual reports...'}
-            {progress >= 70 && progress < 100 && 'Uploading to professional OneDrive folders...'}
+            {progress >= 70 && progress < 100 && 'Uploading to secure NHome storage...'}
             {progress === 100 && 'Professional reports ready!'}
           </div>
         </div>

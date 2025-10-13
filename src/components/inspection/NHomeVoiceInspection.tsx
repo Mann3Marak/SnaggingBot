@@ -6,7 +6,6 @@ import { NHomeLogo } from '@/components/NHomeLogo'
 import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
 import { NHomePhotoUploadService } from '@/services/nhomePhotoUploadService'
 import { NHomeCameraCapture } from '@/components/camera/NHomeCameraCapture'
-import { ConnectOneDrive } from '@/components/onedrive/ConnectOneDrive'
 
 interface NHomeVoiceInspectionProps {
   sessionId: string
@@ -478,10 +477,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       </div>
 
       <div className="p-4 space-y-6">
-        <div className="flex items-center justify-between">
-          <div />
-          <ConnectOneDrive />
-        </div>
         <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-10 text-center">
           <div className="text-center mb-6">
             <div className="w-20 h-20 bg-gradient-to-br from-nhome-primary to-nhome-secondary rounded-full flex items-center justify-center mx-auto mb-4">
@@ -755,22 +750,22 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                         }
                       }}
                       type="button" className="absolute bottom-1 right-1 bg-nhome-secondary z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
-                      title="Upload to OneDrive"
+                      title="Upload to NHome cloud storage"
                     >
                       Upload
                     </button>
                   )}
                   <div className="p-2 text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
                     {generateNHomeFileName(photo.metadata)}
-                    {photo.uploaded && photo.onedrive_url && (
+                    {photo.uploaded && photo.storage_url && (
                       <a
-                        href={photo.onedrive_url}
+                        href={photo.storage_url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
-                        title={photo.onedrive_url}
+                        title={photo.storage_url}
                       >
-                        {photo.onedrive_url}
+                        {photo.storage_url}
                       </a>
                     )}
                   </div>

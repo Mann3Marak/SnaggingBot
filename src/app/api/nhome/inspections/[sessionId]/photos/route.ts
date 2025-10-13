@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
-import { getOpenAIConfig } from "@/lib/env";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
@@ -13,9 +12,9 @@ export async function POST(
   try {
     const sessionId = params.sessionId;
     const body = await req.json();
-    const { item_id, file_name, onedrive_url, metadata, folder_path, file_size, image_dimensions } = body;
+    const { item_id, file_name, storage_url, storage_path, metadata, file_size, image_dimensions } = body;
 
-    if (!item_id || !file_name || !onedrive_url) {
+    if (!item_id || !file_name || !storage_url) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -26,8 +25,8 @@ export async function POST(
           session_id: sessionId,
           item_id,
           file_name,
-          onedrive_url,
-          folder_path: folder_path || "/",
+          storage_url,
+          storage_path: storage_path || `/sessions/${sessionId}/${file_name}`,
           metadata: metadata || {},
           file_size,
           image_dimensions,
