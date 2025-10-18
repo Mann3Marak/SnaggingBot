@@ -124,7 +124,7 @@ export function useNHomePhotoCapture() {
               ...photo,
               uploaded: true,
               url: supabase_url,
-              onedrive_url: supabase_url,
+              storage_url: supabase_url,
               blob: photo.blob ?? ({} as Blob) // maintain type safety
             } as NHomePhoto)
           : photo
@@ -142,7 +142,7 @@ export function useNHomePhotoCapture() {
               if (record) {
                 record.url = supabase_url;
                 record.uploaded = true;
-                record.onedrive_url = supabase_url;
+                record.storage_url = supabase_url;
                 delete record.blob; // remove blob reference
                 store.put(record);
               }

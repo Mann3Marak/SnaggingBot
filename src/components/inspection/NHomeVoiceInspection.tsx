@@ -15,22 +15,140 @@ interface NHomeVoiceInspectionProps {
 // Legacy classification retained for reference; no current references.
 // type VoiceAssessment = 'good' | 'issue' | 'critical'
 
+type InspectionStatus = 'good' | 'issue' | 'critical'
+
+const STATUS_SEVERITY: Record<InspectionStatus, number> = {
+  good: 0,
+  issue: 1,
+  critical: 2,
+}
+
+const GOOD_PATTERNS = [
+  /\bgood\b/i,
+  /\blooks\s+good\b/i,
+  /\bin\s+good\s+condition\b/i,
+  /\bno\s+issues?\b/i,
+  /\bworks?\s+(?:well|fine)\b/i,
+  /\bmeets?\s+(?:nhome\s+)?standards?\b/i,
+]
+
+const CRITICAL_PATTERNS = [
+  /\bcritical\b/i,
+  /\bmajor\b/i,
+  /\burgent\b/i,
+  /\bsevere\b/i,
+  /\bbroken\b/i,
+  /\bnot\s+working\b/i,
+  /\bsafety\b/i,
+  /\bstructural\b/i,
+  /\brequires?\s+replacement\b/i,
+]
+
+const ISSUE_PATTERNS = [
+  /\bissue\b/i,
+  /\bproblem\b/i,
+  /\bdamage(?:d)?\b/i,
+  /\bchip\b/i,
+  /\bscratch\b/i,
+  /\bleak\b/i,
+  /\bneeds?\b/i,
+  /\brequires?\b/i,
+  /\bmissing\b/i,
+  /\bnot\s+installed\b/i,
+  /\bneeds?\s+attention\b/i,
+  /\btouch-?up\b/i,
+]
+
+function classifyStatusFromUserInput(text: string): InspectionStatus | null {
+  const normalized = text.toLowerCase()
+  const trimmed = normalized.trim()
+  if (!trimmed) return null
+
+  if (CRITICAL_PATTERNS.some(pattern => pattern.test(text))) {
+    return 'critical'
+  }
+
+  const explicitlyNegative = /\b(not|isn't|aint|ain't|no)\s+(good|ok|okay|fine)\b/i.test(text)
+  if (!explicitlyNegative && GOOD_PATTERNS.some(pattern => pattern.test(text))) {
+    return 'good'
+  }
+
+  if (ISSUE_PATTERNS.some(pattern => pattern.test(text))) {
+    return 'issue'
+  }
+
+  // Short descriptive statements like "scratched door" without keywords should still count as issue
+  if (trimmed.split(/\s+/).length <= 6 && /\b[a-z]+(?:ed|en|ing)\b/i.test(trimmed)) {
+    return 'issue'
+  }
+
+  return null
+}
+
+function detectStatusFromAgentReply(text: string): InspectionStatus | null {
+  const lower = text.toLowerCase()
+  if (!lower) return null
+
+  if (CRITICAL_PATTERNS.some(pattern => pattern.test(lower))) {
+    return 'critical'
+  }
+  if (GOOD_PATTERNS.some(pattern => pattern.test(lower))) {
+    return 'good'
+  }
+  if (ISSUE_PATTERNS.some(pattern => pattern.test(lower)) || lower.includes("i've documented")) {
+    return 'issue'
+  }
+  return null
+}
+
+function extractDocumentedNotes(reply: string): string[] {
+  const matches: string[] = []
+  const regex = /I've documented:\s*([\s\S]*?)(?:(?:Please upload|Please provide|Is there anything else|Moving to the next item)[\s\S]*|$)/gi
+  let match: RegExpExecArray | null
+  while ((match = regex.exec(reply)) !== null) {
+    const raw = match[1]?.trim() ?? ''
+    const cleaned = raw.replace(/^["'\s]+/, '').replace(/["'\s]+$/, '').trim()
+    if (cleaned.length) {
+      matches.push(cleaned)
+    }
+  }
+  return matches
+}
+
+function stripMovingStatement(reply: string): string {
+  return reply.replace(/moving to the next item/gi, '').trim()
+}
+
+function determinePriority(status: InspectionStatus): number {
+  switch (status) {
+    case 'critical':
+      return 3
+    case 'issue':
+      return 2
+    default:
+      return 1
+  }
+}
+
 export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
   const { session, currentItem, nhomeProgress, saveNHomeResult, reload } = useNHomeInspectionSession(sessionId)
   const currentIndex = session?.current_item_index ?? 0
 
   const goToNext = async () => {
-    if (currentItem) {
-      // Capture only the assistant's response text (omit prefix) if available
-      if (lastResponse && lastResponse.trim() !== "") {
-        await saveNHomeResult(currentItem.id, "good", lastResponse.trim(), 1, [], true);
-      }
+    if (!session) return;
+    const supabase = (await import("@/lib/supabase")).getSupabase();
+    const nextIndex = (session.current_item_index ?? 0) + 1;
 
-      // Move to the next checklist item
-      await reload();
-    } else {
-      await reload();
+    if (currentItem && lastResponse && lastResponse.trim() !== "") {
+      await saveNHomeResult(currentItem.id, "good", lastResponse.trim(), 1, [], true);
     }
+
+    await supabase
+      .from("inspection_sessions")
+      .update({ current_item_index: nextIndex })
+      .eq("id", sessionId);
+
+    await reload();
   };
 
   const goToPrevious = async () => {
@@ -42,6 +160,121 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   }
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
+  const [pendingStatus, setPendingStatus] = useState<InspectionStatus | null>(null)
+  const pendingStatusRef = useRef<InspectionStatus | null>(null)
+  const [pendingNotes, setPendingNotes] = useState<string[]>([])
+  const pendingNotesRef = useRef<string[]>([])
+  const isAutoAdvancingRef = useRef(false)
+
+  useEffect(() => {
+    pendingStatusRef.current = pendingStatus
+  }, [pendingStatus])
+
+  useEffect(() => {
+    pendingNotesRef.current = pendingNotes
+  }, [pendingNotes])
+
+  useEffect(() => {
+    pendingStatusRef.current = null
+    pendingNotesRef.current = []
+    isAutoAdvancingRef.current = false
+    setPendingStatus(null)
+    setPendingNotes([])
+  }, [currentItem?.id])
+
+  const updatePendingStatus = useCallback((candidate: InspectionStatus) => {
+    setPendingStatus(prev => {
+      if (!prev) return candidate
+      if (prev === candidate) return prev
+      if (candidate === 'good' && prev) {
+        return prev
+      }
+      const currentRank = STATUS_SEVERITY[prev]
+      const candidateRank = STATUS_SEVERITY[candidate]
+      return candidateRank >= currentRank ? candidate : prev
+    })
+  }, [])
+
+  const mergeDocumentedNotes = useCallback((notes: string[]) => {
+    if (!notes.length) return
+    setPendingNotes(prev => {
+      const dedup = new Set(prev)
+      notes.forEach(note => {
+        const cleaned = note.trim()
+        if (cleaned.length) {
+          dedup.add(cleaned)
+        }
+      })
+      return Array.from(dedup)
+    })
+  }, [])
+
+  const maybeUpdateStatusFromUserInput = useCallback((text: string) => {
+    const status = classifyStatusFromUserInput(text)
+    if (status) {
+      updatePendingStatus(status)
+    }
+  }, [updatePendingStatus])
+
+  const finalizeCurrentItem = useCallback(async (agentReply: string) => {
+    if (!currentItem || isAutoAdvancingRef.current) return
+
+    const inferredStatus = detectStatusFromAgentReply(agentReply)
+    const status: InspectionStatus = pendingStatusRef.current ?? inferredStatus ?? 'good'
+
+    const noteCandidates = pendingNotesRef.current.length
+      ? pendingNotesRef.current
+      : extractDocumentedNotes(agentReply)
+
+    const uniqueNotes = Array.from(new Set(noteCandidates.map(n => n.trim()).filter(Boolean)))
+    let notesToPersist = uniqueNotes.join('\n').trim()
+
+    if (!notesToPersist) {
+      const fallback = stripMovingStatement(agentReply)
+      notesToPersist = fallback || (
+        status === 'good'
+          ? `${currentItem.item_description || 'Current item'} noted as good condition`
+          : `${currentItem.item_description || 'Current item'} marked as ${status}`
+      )
+    }
+
+    try {
+      isAutoAdvancingRef.current = true
+      await saveNHomeResult(
+        currentItem.id,
+        status,
+        notesToPersist,
+        determinePriority(status),
+        [],
+        true
+      )
+      onRefreshReport?.()
+      setPendingStatus(null)
+      setPendingNotes([])
+    } catch (error) {
+      console.error('Auto-advance failed to save NHome result', error)
+    } finally {
+      isAutoAdvancingRef.current = false
+    }
+  }, [currentItem, onRefreshReport, saveNHomeResult])
+
+  const handleAgentReply = useCallback(async (reply: string) => {
+    if (!reply) return
+
+    const statusFromAgent = detectStatusFromAgentReply(reply)
+    if (statusFromAgent) {
+      updatePendingStatus(statusFromAgent)
+    }
+
+    const documented = extractDocumentedNotes(reply)
+    if (documented.length) {
+      mergeDocumentedNotes(documented)
+    }
+
+    if (/moving to the next item/i.test(reply)) {
+      await finalizeCurrentItem(reply)
+    }
+  }, [finalizeCurrentItem, mergeDocumentedNotes, updatePendingStatus])
 
   // Realtime voice session removed. Placeholder state for STT/TTS integration.
   const [userTurns, setUserTurns] = useLocalState<string[]>([])
@@ -57,6 +290,7 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   // Local state for notes section when selecting Issue or Critical
   const [showNotes, setShowNotes] = useState<null | { type: 'issue' | 'critical' }>(null)
   const [notesText, setNotesText] = useState('')
+  const [selectedStatus, setSelectedStatus] = useState<InspectionStatus | null>(null)
 
   const [isPlaying, setIsPlaying] = useState(false);
 
@@ -310,6 +544,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
   useEffect(() => {
     if (userTurns.length === 0 || !currentItem?.id) return;
     const latestTurn = userTurns[userTurns.length - 1];
+    maybeUpdateStatusFromUserInput(latestTurn);
 
     if (!isProcessingTurnRef.current) {
       isProcessingTurnRef.current = true;
@@ -339,6 +574,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             const reply = data.reply || "I heard you.";
             setLastResponse(reply);
             await sendTextMessage(reply, "assistant", true);
+            await handleAgentReply(reply);
 
             const newConversation = [
               ...updatedConversation,
@@ -378,24 +614,27 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
         }
       })();
     }
-  }, [inspectionInstructions, sessionId, currentItem, nhomeProgress, userTurns, sendTextMessage, itemConversations]);
+  }, [handleAgentReply, inspectionInstructions, itemConversations, maybeUpdateStatusFromUserInput, nhomeProgress, currentItem, sessionId, sendTextMessage, userTurns]);
 
 
+// Load existing conversation and notes when switching items
   useEffect(() => {
-    const loadConversation = async () => {
+    const loadConversationAndNotes = async () => {
       if (!currentItem?.id) return;
       const supabase = (await import("@/lib/supabase")).getSupabase();
-      const { data, error } = await supabase
+
+      // Load conversation
+      const { data: convoData, error: convoError } = await supabase
         .from("inspection_conversations")
         .select("user_messages, agent_messages")
         .eq("session_id", sessionId)
         .eq("item_id", currentItem.id)
         .maybeSingle();
 
-      if (!error && data) {
+      if (!convoError && convoData) {
         const mergedConversation = [
-          ...(data.user_messages || []).map((content: string) => ({ role: "user" as const, content })),
-          ...(data.agent_messages || []).map((content: string) => ({ role: "assistant" as const, content })),
+          ...(convoData.user_messages || []).map((content: string) => ({ role: "user" as const, content })),
+          ...(convoData.agent_messages || []).map((content: string) => ({ role: "assistant" as const, content })),
         ];
         setConversation(mergedConversation);
         setItemConversations((prev) => ({
@@ -405,9 +644,35 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       } else {
         setConversation([]);
       }
+
+      // Load existing notes for this item
+      const { data: resultData, error: resultError } = await supabase
+        .from("inspection_results")
+        .select("status, notes")
+        .eq("item_id", currentItem.id)
+        .eq("session_id", sessionId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (!resultError && resultData) {
+        setSelectedStatus(resultData.status as InspectionStatus);
+        if (resultData.status === "issue" || resultData.status === "critical") {
+          setShowNotes({ type: resultData.status });
+          setNotesText(resultData.notes || "");
+        } else {
+          setShowNotes(null);
+          setNotesText("");
+        }
+      } else {
+        console.warn("No inspection result found for current item", resultError);
+        setShowNotes(null);
+        setNotesText("");
+        setSelectedStatus(null);
+      }
     };
 
-    loadConversation();
+    loadConversationAndNotes();
   }, [currentItem?.id, sessionId]);
 
   useEffect(() => {
@@ -502,8 +767,8 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               <div className="flex justify-center gap-4">
                 <button
                   onClick={async () => {
+                    setSelectedStatus('good');
                     await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards');
-                    // Explicitly increment the current item index in Supabase before reloading
                     const supabase = (await import("@/lib/supabase")).getSupabase();
                     const nextIndex = (session?.current_item_index ?? 0) + 1;
                     await supabase
@@ -513,19 +778,37 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                     await reload();
                     onRefreshReport?.();
                   }}
-                  className="px-6 py-2 rounded-full bg-green-500 text-white hover:bg-green-600 text-sm font-semibold shadow-md transition-all"
+                  className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
+                    selectedStatus === 'good'
+                      ? 'bg-green-700 ring-2 ring-green-300'
+                      : 'bg-green-500 hover:bg-green-600'
+                  }`}
                 >
                   Good
                 </button>
                 <button
-                  onClick={() => setShowNotes({ type: 'issue' })}
-                  className="px-6 py-2 rounded-full bg-yellow-400 text-white hover:bg-yellow-500 text-sm font-semibold shadow-md transition-all"
+                  onClick={() => {
+                    setSelectedStatus('issue');
+                    setShowNotes({ type: 'issue' });
+                  }}
+                  className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
+                    selectedStatus === 'issue'
+                      ? 'bg-yellow-600 ring-2 ring-yellow-300'
+                      : 'bg-yellow-400 hover:bg-yellow-500'
+                  }`}
                 >
                   Issue
                 </button>
                 <button
-                  onClick={() => setShowNotes({ type: 'critical' })}
-                  className="px-6 py-2 rounded-full bg-red-500 text-white hover:bg-red-600 text-sm font-semibold shadow-md transition-all"
+                  onClick={() => {
+                    setSelectedStatus('critical');
+                    setShowNotes({ type: 'critical' });
+                  }}
+                  className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
+                    selectedStatus === 'critical'
+                      ? 'bg-red-700 ring-2 ring-red-300'
+                      : 'bg-red-500 hover:bg-red-600'
+                  }`}
                 >
                   Critical
                 </button>

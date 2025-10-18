@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS nhome_inspection_photos (
   session_id UUID REFERENCES inspection_sessions(id) ON DELETE CASCADE,
   item_id UUID REFERENCES checklist_templates(id),
   file_name TEXT NOT NULL,
-  onedrive_url TEXT NOT NULL,
+  storage_url TEXT NOT NULL,
   folder_path TEXT NOT NULL,
   metadata JSONB NOT NULL,
   company TEXT DEFAULT 'NHome Property Setup & Management',
