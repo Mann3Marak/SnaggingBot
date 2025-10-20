@@ -51,9 +51,9 @@ export class NHomePhotoUploadService {
         body: JSON.stringify({
           item_id: itemId,
           file_name: fileName,
-          onedrive_url: supabaseUrl,
+          storage_url: supabaseUrl,
+          storage_path: path,
           metadata,
-          folder_path: `sessions/${sessionId}/${fileName}`,
         }),
       })
 

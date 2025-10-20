@@ -18,5 +18,6 @@ export interface NHomePhoto {
   itemId?: string
   timestamp: number
   uploaded: boolean
-  onedrive_url?: string
+  storage_url?: string
+  storage_path?: string
 }

@@ -204,16 +204,7 @@ export class NHomeReportGenerationService {
                 return (
                   <View key={`all-${ri}-${i}`} style={styles.item}>
                     <Text style={styles.text}>
-{it.status === 'good' ? '✔️' : it.status === 'issue' ? '⚠️' : '❌'} {i + 1}. {
-  (() => {
-    const desc = it.checklist_templates?.item_description
-    if (language === 'pt') {
-      return this.translateItem(desc || `Item ${it.item_id}`)
-    }
-    // English fallback logic
-    return desc || it.checklist_templates?.item_description_pt || `Item ${it.item_id}`
-  })()
-} ({this.priorityText(it.priority_level, language)})
+                      {it.status === 'good' ? '✔️' : it.status === 'issue' ? '⚠️' : '❌'} {i + 1}. {language === 'pt' ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`) : (it.checklist_templates?.item_description || `Item ${it.item_id}`)} ({this.priorityText(it.priority_level, language)})
 
                     </Text>
                     {ph.length > 0 && (

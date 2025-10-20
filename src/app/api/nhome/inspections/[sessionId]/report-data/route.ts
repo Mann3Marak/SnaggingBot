@@ -91,7 +91,7 @@ export async function GET(
         return {
           ...r,
           preview_photos: linked.map(p => ({
-            url: p.supabase_url || p.onedrive_url || p.photo_url || '',
+            url: p.storage_url || p.photo_url || '',
             metadata: {
               file_name: p.file_name,
               created_at: p.created_at,
