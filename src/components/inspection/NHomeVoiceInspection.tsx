@@ -139,9 +139,7 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
     const supabase = (await import("@/lib/supabase")).getSupabase();
     const nextIndex = (session.current_item_index ?? 0) + 1;
 
-    if (currentItem && lastResponse && lastResponse.trim() !== "") {
-      await saveNHomeResult(currentItem.id, "good", lastResponse.trim(), 1, [], true);
-    }
+    // Removed auto-marking as good when navigating
 
     await supabase
       .from("inspection_sessions")
@@ -826,12 +824,15 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   <div className="flex justify-end gap-2 mt-3">
                     <button
                       onClick={async () => {
+                        if (!notesText.trim()) {
+                          alert("Please add a comment before saving an issue or critical item.");
+                          return;
+                        }
                         await saveNHomeResult(
                           currentItem.id,
                           showNotes.type,
-                          notesText || 'No additional notes provided'
+                          notesText.trim()
                         );
-                        // Explicitly increment the current item index in Supabase before reloading
                         const supabase = (await import("@/lib/supabase")).getSupabase();
                         const nextIndex = (session?.current_item_index ?? 0) + 1;
                         await supabase
@@ -843,7 +844,12 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                         setNotesText('');
                         onRefreshReport?.();
                       }}
-                      className="px-4 py-1.5 rounded-md bg-nhome-primary text-white text-sm hover:bg-nhome-secondary"
+                      disabled={!notesText.trim()}
+                      className={`px-4 py-1.5 rounded-md text-white text-sm transition-all ${
+                        notesText.trim()
+                          ? "bg-nhome-primary hover:bg-nhome-secondary"
+                          : "bg-gray-400 cursor-not-allowed"
+                      }`}
                     >
                       Save
                     </button>

@@ -72,8 +72,8 @@ export async function GET(
       description: r.checklist_templates?.item_description || "Unknown Item",
       status: r.status,
       notes: r.notes,
-      fixed: false,
-      follow_up_comment: "",
+      fixed: r.follow_up_fixed || false,
+      comment: r.follow_up_comment || r.notes || "",
     }));
 
     const apartment = Array.isArray(session.apartments)

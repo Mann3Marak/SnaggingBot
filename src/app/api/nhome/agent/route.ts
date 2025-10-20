@@ -30,12 +30,46 @@ const BASE_SYSTEM_PROMPT = NHOME_WORKFLOW_PROMPT;
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as AgentRequestBody;
-    const { instructions, messages } = body;
+    const contentType = req.headers.get("content-type") || "";
+    const body = contentType.includes("application/json") ? await req.json() : {};
+    const { text, sessionId, instructions, messages } = body;
 
+    // If text is provided, handle structured voice agent logic
+    if (text && sessionId) {
+      const lower = text.toLowerCase();
+      let action = "none";
+      let comment = "";
+      if (lower.includes("good")) action = "markItemAsGood";
+      else if (lower.includes("issue") || lower.includes("problem")) action = "markItemAsIssue";
+      else if (lower.includes("skip") || lower.includes("next")) action = "moveToNextItem";
+
+      const match = lower.match(/(?:because|is|looks like|seems)\s+(.*)/);
+      if (match) comment = match[1].trim();
+
+      const { moveToNextItem, markItemAsGood, markItemAsIssue } = await import("@/lib/server/nhome-inspection-state");
+
+      let reply = "";
+      if (action === "markItemAsGood") {
+        await markItemAsGood(sessionId);
+        reply = "Noted - item marked as good.";
+      } else if (action === "markItemAsIssue") {
+        await markItemAsIssue(sessionId, comment);
+        reply = `Got it. ${comment ? "Noted: " + comment + "." : ""}`;
+      } else if (action === "moveToNextItem") {
+        // Prevent automatic navigation
+        reply = "Okay, noted your request to move to the next item. Please confirm manually when ready.";
+      } else {
+        reply = "I didn’t quite catch that. Could you repeat?";
+      }
+
+      return NextResponse.json({ action, comment, reply });
+    }
+
+    // Otherwise, fallback to OpenAI conversation logic
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Missing messages" }, { status: 400 });
     }
+    // Sanitize and process conversation messages for OpenAI
 
     const sanitizedMessages = messages
       .filter((m): m is ConversationMessage => Boolean(m?.role && m?.content))
@@ -71,18 +105,26 @@ export async function POST(req: Request) {
     // Log agent reply for debugging
     console.log("🤖 Agent Reply:", reply);
 
-    // Backend safeguard: remove all "Moving to the next item" unless it is the *only* phrase at the end
-    const cleanedReply = (() => {
-      const lower = reply.trim().toLowerCase();
-      // Only allow if it's the *only* phrase or clearly intentional
-      if (lower === "moving to the next item" || lower.endsWith("\n\nmoving to the next item")) {
-        return reply.trim();
+    // Attempt to extract structured action object from model output
+    let actionData: any = null;
+    const actionMatch = reply.match(/ACTION:\s*({[\s\S]*})/i);
+    if (actionMatch) {
+      try {
+        actionData = JSON.parse(actionMatch[1]);
+        console.log("🧩 Parsed Action Object:", actionData);
+      } catch (err) {
+        console.warn("⚠️ Failed to parse action object:", err);
       }
-      // Otherwise strip it completely
-      return reply.replace(/moving to the next item/gi, "").trim();
-    })();
+    }
 
-    return NextResponse.json({ reply: cleanedReply });
+    // Clean reply by removing ACTION block for display/TTS
+    const cleanedReply = reply.replace(/ACTION:\s*{[\s\S]*}$/i, "").trim();
+
+    // Return both human-readable reply and structured action (if any)
+    return NextResponse.json({
+      reply: cleanedReply,
+      ...(actionData ? actionData : {}),
+    });
   } catch (error: any) {
     console.error("Agent error:", error);
     return NextResponse.json({ error: "Failed to generate response" }, { status: 500 });

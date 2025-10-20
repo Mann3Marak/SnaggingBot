@@ -12,6 +12,7 @@ interface FollowUpItem {
   fixed: boolean;
   comment?: string;
   showComment?: boolean;
+  changed?: boolean; // Track if item was modified
 }
 
 export default function NHomeFollowUpInspection() {
@@ -27,7 +28,14 @@ export default function NHomeFollowUpInspection() {
       const res = await fetch(`/api/nhome/inspections/${id}/follow-up`);
       if (!res.ok) throw new Error("Failed to load follow-up items");
       const data = await res.json();
-      setItems(data.followUpItems || []);
+      // Deep clone items to ensure independent state per item
+      const clonedItems = (data.followUpItems || []).map((item: any) => ({
+        ...item,
+        fixed: Boolean(item.fixed),
+        comment: item.comment || "",
+        showComment: false,
+      }));
+      setItems(clonedItems);
       setSessionInfo(data.session || null);
       setSessionId(id);
     } catch (e) {
@@ -58,10 +66,14 @@ export default function NHomeFollowUpInspection() {
   }
 
   const toggleFixed = (id: string) => {
-    setItems((prev) =>
-      prev.map((item) =>
-        item.id === id ? { ...item, fixed: !item.fixed } : item
-      )
+    setItems((prevItems) =>
+      prevItems.map((item) => {
+        if (item.id === id) {
+          // Toggle only the selected item and mark as changed
+          return { ...item, fixed: !item.fixed, changed: true };
+        }
+        return item;
+      })
     );
   };
 
@@ -78,7 +90,7 @@ export default function NHomeFollowUpInspection() {
   const updateComment = (id: string, value: string) => {
     setItems((prev) =>
       prev.map((item) =>
-        item.id === id ? { ...item, comment: value } : item
+        item.id === id ? { ...item, comment: value, changed: true } : item
       )
     );
   };
@@ -135,6 +147,12 @@ export default function NHomeFollowUpInspection() {
                     >
                       {item.status.toUpperCase()}
                     </span>
+
+                    {item.comment && (
+                      <div className="mt-2 bg-gray-50 border-l-4 border-nhome-primary p-2 rounded text-sm text-gray-700">
+                        <strong>Comment:</strong> {item.comment}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
@@ -180,12 +198,14 @@ export default function NHomeFollowUpInspection() {
           <button
             onClick={async () => {
               try {
+                // Only send changed items to backend
+                const changedItems = items.filter((i) => i.changed);
                 const res = await fetch(`/api/nhome/inspections/${sessionId}/follow-up`, {
                   method: "POST",
                   headers: { "Content-Type": "application/json" },
                   body: JSON.stringify({
                     sessionId,
-                    updates: items.map((i) => ({
+                    updates: changedItems.map((i) => ({
                       id: i.id,
                       fixed: i.fixed,
                       comment: i.comment,
