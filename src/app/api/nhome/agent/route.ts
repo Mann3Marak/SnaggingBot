@@ -46,12 +46,20 @@ export async function POST(req: Request) {
       const match = lower.match(/(?:because|is|looks like|seems)\s+(.*)/);
       if (match) comment = match[1].trim();
 
-      const { moveToNextItem, markItemAsGood, markItemAsIssue } = await import("@/lib/server/nhome-inspection-state");
+      const { moveToNextItem, markItemAsGood, markItemAsIssue, getCurrentItem } = await import("@/lib/server/nhome-inspection-state");
 
       let reply = "";
-      if (action === "markItemAsGood") {
-        await markItemAsGood(sessionId);
+      let currentItemId: string | null = null;
+
+      // Fetch current item to get its ID
+      const currentItem = await getCurrentItem(sessionId);
+      if (currentItem) currentItemId = currentItem.id;
+
+      if (action === "markItemAsGood" && currentItemId) {
+        await markItemAsGood(sessionId, currentItemId);
         reply = "Noted - item marked as good.";
+      } else if (action === "markItemAsGood" && !currentItemId) {
+        reply = "Unable to identify the current item to mark as good.";
       } else if (action === "markItemAsIssue") {
         await markItemAsIssue(sessionId, comment);
         reply = `Got it. ${comment ? "Noted: " + comment + "." : ""}`;
