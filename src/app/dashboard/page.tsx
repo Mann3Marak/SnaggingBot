@@ -1,6 +1,8 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
+import AddApartmentCard from '@/components/dashboard/AddApartmentCard'
+import StartInspectionCard from '@/components/dashboard/StartInspectionCard'
 
 export const dynamic = 'force-dynamic'
 
@@ -98,10 +100,13 @@ export default async function DashboardPage() {
       <section>
         <h2 className='text-lg font-semibold text-nhome-foreground'>Quick Actions</h2>
         <div className='mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-          <a href="/inspection/start" className='rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition'>
-            <h3 className='font-semibold text-nhome-primary'>Start New Inspection</h3>
-            <p className='text-sm text-slate-600 mt-1'>Launch a guided inspection workflow</p>
-          </a>
+          <div>
+            <StartInspectionCard />
+          </div>
+          {/* Add Apartment Quick Action */}
+          <div>
+            <AddApartmentCard />
+          </div>
         </div>
       </section>
 
