@@ -19,5 +19,5 @@ export interface NHomePhoto {
   timestamp: number
   uploaded: boolean
   storage_url?: string
-  storage_path?: string
+  supabase_url?: string
 }

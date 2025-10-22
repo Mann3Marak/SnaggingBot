@@ -52,7 +52,7 @@ export class NHomePhotoUploadService {
           item_id: itemId,
           file_name: fileName,
           storage_url: supabaseUrl,
-          storage_path: path,
+          supabase_url: supabaseUrl,
           metadata,
         }),
       })

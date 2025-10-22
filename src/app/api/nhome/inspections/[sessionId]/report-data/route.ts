@@ -72,10 +72,20 @@ export async function GET(
     }
 
     // 4) Load photos linked to this session
-    const { data: photos, error: photosError } = await supabase
+    let { data: photos, error: photosError } = await supabase
       .from('nhome_inspection_photos')
       .select('*')
-      .eq('session_id', sessionId)
+      .eq('session_id', sessionId);
+
+    if (!photos?.length) {
+      const altQuery = await supabase
+        .from('nhome_inspection_photos')
+        .select('*')
+        .eq('inspection_session_id', sessionId);
+      if (altQuery.data?.length) photos = altQuery.data;
+    }
+
+    console.log(`📸 Found ${photos?.length || 0} photos for session ${sessionId}`);
 
     if (photosError) {
       return NextResponse.json(
@@ -84,14 +94,29 @@ export async function GET(
       )
     }
 
+    // Generate public URLs for Supabase photos
+    const publicPhotos = await Promise.all(
+      (photos ?? []).map(async (p) => {
+        if (p.supabase_url && !p.supabase_url.startsWith("http")) {
+          const { data } = supabase.storage
+            .from("nhome-inspection-photos")
+            .getPublicUrl(p.supabase_url);
+          return { ...p, supabase_url: data?.publicUrl || p.supabase_url };
+        }
+        return p;
+      })
+    );
+
     // Merge photo_urls from results with nhome_inspection_photos
     const resultsWithPhotos = (results ?? []).map(r => {
-      const linked = photos.filter(p => p.item_id === r.item_id)
+      const linked = publicPhotos.filter(p =>
+        String(p.item_id) === String(r.item_id || r.id)
+      )
       if (linked.length > 0) {
         return {
           ...r,
           preview_photos: linked.map(p => ({
-            url: p.storage_url || p.photo_url || '',
+            url: p.supabase_url || p.onedrive_url || p.photo_url || '',
             metadata: {
               file_name: p.file_name,
               created_at: p.created_at,
@@ -152,6 +177,7 @@ export async function GET(
       },
     }
 
+    console.log("🖼️ Public photo URLs:", publicPhotos.map(p => p.supabase_url || p.onedrive_url || p.photo_url));
     return NextResponse.json(payload)
   } catch (e: any) {
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })

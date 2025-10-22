@@ -172,6 +172,7 @@ export class NHomeReportGenerationService {
           <View style={styles.header}>
             <Text style={styles.title}>{L.title}</Text>
             <Text style={styles.sub}>{L.company_title}</Text>
+            <Text style={[styles.sub, { color: 'red', marginTop: 4 }]}>TEST REPORT - TEMPORARY LABEL</Text>
           </View>
 
           <View style={styles.grid}>
