@@ -57,18 +57,23 @@ export function useNHomePhotoCapture() {
   const [currentItemId, setCurrentItemId] = useState<string>('')
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
 
+  // Load photos scoped to sessionId
   useEffect(() => {
-    // Load from IndexedDB on mount (client only)
     let mounted = true
     ;(async () => {
       try {
-        const loaded = await idbGetAll<NHomePhoto>()
-        if (mounted) setPhotos(loaded)
+        const all = await idbGetAll<NHomePhoto>()
+        // Filter photos by sessionId if available in metadata
+        const sessionPhotos = all.filter(p => p.metadata?.sessionId === (typeof window !== 'undefined' ? sessionStorage.getItem('currentSessionId') : null))
+        if (mounted) setPhotos(sessionPhotos)
       } catch (e) {
         console.warn('Failed to load NHome photos from IndexedDB', e)
       }
     })()
-    return () => { mounted = false }
+    return () => {
+      mounted = false
+      setPhotos([]) // clear on unmount or session change
+    }
   }, [])
 
   const openNHomeCamera = (itemId?: string) => {

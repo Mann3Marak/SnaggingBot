@@ -169,27 +169,48 @@ export class NHomeReportGenerationService {
     const Report = () => (
       <Document>
         <Page size="A4" style={styles.page}>
-          <View style={styles.header}>
-            <Text style={styles.title}>{L.title}</Text>
-            <Text style={styles.sub}>{L.company_title}</Text>
-            <Text style={[styles.sub, { color: 'red', marginTop: 4 }]}>TEST REPORT - TEMPORARY LABEL</Text>
+          {/* Header (only on first page) */}
+          <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
+            {/* Left side: title and company info */}
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <Text style={styles.title}>{L.title}</Text>
+              <Text style={styles.sub}>{L.company_title}</Text>
+            </View>
+
+            {/* Right side: logo */}
+            <View style={{ position: 'absolute', right: 0, top: 0, width: 100, height: 80, justifyContent: 'center', alignItems: 'flex-end' }}>
+              <Image
+                src="https://www.nhomesetup.com/branding/logos/nhome-logo-primary.png"
+                style={{ width: 80, height: 80, objectFit: 'contain' }}
+              />
+            </View>
           </View>
 
+          {/* Ensure footer always renders */}
+          <View fixed style={styles.footer}>
+            <Text style={styles.text}>
+              NHomes | +351-966-318-871 | natalie@nhomesetup.com | www.nhomesetup.com
+            </Text>
+            <Text style={styles.text}>
+              {L.page} 1 {L.of} 1
+            </Text>
+          </View>
+
+          {/* Top info grid */}
           <View style={styles.grid}>
             <View style={styles.cell}><Text style={styles.label}>{L.client}:</Text><Text style={styles.value}>{data.project.developer_name}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.property}:</Text><Text style={styles.value}>{data.project.name}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.apartment_type} – {data.apartment.unit_number}</Text></View>
+            <View style={styles.cell}><Text style={styles.label}>{'Building Number'}:</Text><Text style={styles.value}>{data.apartment.building_number || 'N/A'}</Text></View>
+            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.unit_number}</Text></View>
+            <View style={styles.cell}><Text style={styles.label}>{'Type'}:</Text><Text style={styles.value}>{data.apartment.apartment_type}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.date}:</Text><Text style={styles.value}>{format(new Date(data.session.started_at), 'PPP', { locale })}</Text></View>
             <View style={styles.cell}><Text style={styles.label}>{L.inspector}:</Text><Text style={styles.value}>NHome Professional Team</Text></View>
           </View>
 
-          <Text style={styles.h2}>{L.quality_assessment}</Text>
-          <Text style={styles.text}>{qs}/10 – {good.length} good – {defects.length + critical.length} issues</Text>
+          {/* Divider */}
+          <View style={{ borderBottomWidth: 1, borderBottomColor: '#ccc', marginVertical: 10 }} />
 
-          <Text style={styles.h2}>{L.summary}</Text>
-          <Text style={styles.text}>{this.execSummary(data, language, qs)}</Text>
-
-          <Text style={styles.h2}>{language === 'pt' ? 'TODAS AS ÁREAS' : 'ALL AREAS'}</Text>
+          {/* Inspection details */}
           {Object.entries(
             data.results.reduce((acc: Record<string, any[]>, it: any) => {
               const room = it.checklist_templates?.room_type || 'Uncategorized'
@@ -198,56 +219,42 @@ export class NHomeReportGenerationService {
               return acc
             }, {} as Record<string, any[]>)
           ).map(([room, items], ri) => (
-            <View key={`room-${ri}`} style={{ marginBottom: 12 }}>
+            <View key={`room-${ri}`} style={{ marginBottom: 16 }}>
               <Text style={[styles.h2, { marginTop: 12 }]}>{room}</Text>
               {(items as any[]).map((it, i) => {
                 const ph = it.preview_photos?.slice(0, 2) || []
                 return (
-                  <View key={`all-${ri}-${i}`} style={styles.item}>
-                    <Text style={styles.text}>
-{it.status === 'good' ? '✔️' : it.status === 'issue' ? '⚠️' : '❌'} {i + 1}. {
-  (() => {
-    const desc = it.checklist_templates?.item_description
-    if (language === 'pt') {
-      return this.translateItem(desc || `Item ${it.item_id}`)
-    }
-    // English fallback logic
-    return desc || it.checklist_templates?.item_description_pt || `Item ${it.item_id}`
-  })()
-} ({this.priorityText(it.priority_level, language)})
-
-                    </Text>
-                    {ph.length > 0 && (
-                      <View style={styles.row}>
-                        {ph.map((p: any, j: number) => {
-                          const rawUrl = typeof p.url === 'string' ? p.url : ''
-                          if (!rawUrl) return null
-                          const decodedUrl = decodeURI(rawUrl)
-                          const isSharepoint = /sharepoint\.com|onedrive\.live\.com/i.test(rawUrl)
-                          if (isSharepoint) {
-                            return (
-                              <Link key={j} src={rawUrl} style={styles.text}>
-                                {decodedUrl}
-                              </Link>
-                            )
-                          }
-                          return <Image key={j} style={styles.photo} src={rawUrl} />
-                        })}
+                  <View key={`item-${ri}-${i}`} style={styles.item}>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={styles.text}>
+                        {language === 'pt'
+                          ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`)
+                          : it.checklist_templates?.item_description || `Item ${it.item_id}`}
+                      </Text>
+                      <View style={{ alignItems: 'center' }}>
+                        <Text style={styles.text}>
+                          {language === 'pt' ? 'Verificado' : 'Checked'}
+                        </Text>
+                        <View style={{ width: 14, height: 14, borderWidth: 1, borderColor: '#000', marginTop: 4 }} />
                       </View>
-                    )}
+                    </View>
                     {it.notes && (
                       <Text style={styles.text}>
                         {language === 'pt' ? 'Notas' : 'Notes'}: {language === 'pt' ? this.translateNote(it.enhanced_notes || it.notes) : it.notes}
                       </Text>
                     )}
+                    {ph.length > 0 && ph.map((p: any, j: number) => (
+                      <Image key={j} style={styles.photo} src={p.url} />
+                    ))}
                   </View>
                 )
               })}
             </View>
           ))}
 
+          {/* Footer (on all pages) */}
           <View style={styles.footer}>
-            <Text style={styles.text}>{this.companyInfo.name} - {this.companyInfo.email}</Text>
+            <Text style={styles.text}>NHomes | +351-966-318-871 | natalie@nhomesetup.com | www.nhomesetup.com</Text>
             <Text style={styles.text}>{L.page} 1 {L.of} 1</Text>
           </View>
         </Page>

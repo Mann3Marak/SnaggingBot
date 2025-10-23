@@ -12,28 +12,34 @@ export default function StartInspectionCard() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  // Fetch projects each time the modal is opened to ensure fresh data
   useEffect(() => {
-    fetch("/api/nhome/projects")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.projects) setProjects(data.projects);
-      })
-      .catch((err) => console.error("Failed to load projects:", err));
-  }, []);
+    if (showModal) {
+      fetch("/api/nhome/projects/list", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.projects) setProjects(data.projects);
+          else setProjects([]);
+        })
+        .catch((err) => console.error("Failed to load projects:", err));
+    }
+  }, [showModal]);
 
   async function handleProjectSelect(projectId: string) {
     setSelectedProject(projects.find((p) => p.id === projectId));
     setSelectedApartment("");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    const { data } = await supabase
-      .from("apartments")
-      .select("id, unit_number, apartment_type, building_number")
-      .eq("project_id", projectId)
-      .order("unit_number", { ascending: true });
-    setApartments(data || []);
+    try {
+      const res = await fetch(`/api/nhome/apartments/list?projectId=${projectId}`);
+      const data = await res.json();
+      if (data?.apartments) {
+        setApartments(data.apartments);
+      } else {
+        setApartments([]);
+      }
+    } catch (err) {
+      console.error("Error fetching apartments:", err);
+      setApartments([]);
+    }
   }
 
   async function handleStart() {
@@ -130,13 +136,7 @@ export default function StartInspectionCard() {
                   ))}
                 </select>
 
-                {selectedProject && (
-                  <div className="mt-2 text-sm text-slate-600 border rounded-lg p-2 bg-slate-50">
-                    <p><strong>Developer:</strong> {selectedProject.developer_name}</p>
-                    <p><strong>Location:</strong> {selectedProject.address}</p>
-                    <p><strong>Type:</strong> {selectedProject.type || "N/A"}</p>
-                  </div>
-                )}
+                {/* Removed project details section for cleaner UI */}
               </div>
 
               {selectedProject && (

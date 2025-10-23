@@ -5,6 +5,8 @@ import { createClient } from "@supabase/supabase-js";
 export default function AddApartmentCard() {
   const [showModal, setShowModal] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
+  const [availableTypes, setAvailableTypes] = useState<string[]>([]);
+  const [availableLotes, setAvailableLotes] = useState<string[]>([]);
   const [form, setForm] = useState({
     client_name: "",
     client_surname: "",
@@ -16,17 +18,17 @@ export default function AddApartmentCard() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Fetch projects when modal opens to ensure fresh data
   useEffect(() => {
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    supabase
-      .from("projects")
-      .select("id, name")
-      .order("name", { ascending: true })
-      .then(({ data }) => setProjects(data || []));
-  }, []);
+    if (showModal) {
+      fetch("/api/nhome/projects/list", { cache: "no-store" })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data?.projects) setProjects(data.projects);
+        })
+        .catch((err) => console.error("Error loading projects:", err));
+    }
+  }, [showModal]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -75,63 +77,56 @@ export default function AddApartmentCard() {
               Add New Apartment
             </h2>
             <form onSubmit={handleSubmit} className="space-y-3">
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="text"
-                  placeholder="Client Name"
-                  value={form.client_name}
-                  onChange={(e) =>
-                    setForm({ ...form, client_name: e.target.value })
-                  }
-                  className="border rounded-lg p-2 w-full"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Client Surname"
-                  value={form.client_surname}
-                  onChange={(e) =>
-                    setForm({ ...form, client_surname: e.target.value })
-                  }
-                  className="border rounded-lg p-2 w-full"
-                  required
-                />
-              </div>
+              {/* Client Details */}
               <input
                 type="text"
-                placeholder="Building Number"
-                value={form.building_number}
+                placeholder="Client First Name"
+                value={form.client_name}
                 onChange={(e) =>
-                  setForm({ ...form, building_number: e.target.value })
+                  setForm({ ...form, client_name: e.target.value })
                 }
                 className="border rounded-lg p-2 w-full"
                 required
               />
               <input
                 type="text"
-                placeholder="Apartment Number"
-                value={form.apartment_number}
+                placeholder="Client Surname"
+                value={form.client_surname}
                 onChange={(e) =>
-                  setForm({ ...form, apartment_number: e.target.value })
+                  setForm({ ...form, client_surname: e.target.value })
                 }
                 className="border rounded-lg p-2 w-full"
                 required
               />
-              <input
-                type="text"
-                placeholder="Apartment Type (e.g. T2)"
-                value={form.apartment_type}
-                onChange={(e) =>
-                  setForm({ ...form, apartment_type: e.target.value })
-                }
-                className="border rounded-lg p-2 w-full"
-                required
-              />
+
+              {/* Project Selection */}
               <select
                 value={form.project_id}
-                onChange={(e) =>
-                  setForm({ ...form, project_id: e.target.value })
-                }
+                onChange={async (e) => {
+                  const projectId = e.target.value;
+                  setForm({ ...form, project_id: projectId });
+
+                  if (projectId) {
+                    try {
+                      const res = await fetch("/api/nhome/projects/list");
+                      const data = await res.json();
+                      if (data?.projects) {
+                        const selected = data.projects.find(
+                          (p: any) => p.id === projectId
+                        );
+                        if (selected) {
+                          setAvailableTypes(selected.apartment_types || []);
+                          setAvailableLotes(selected.building_numbers || []);
+                        }
+                      }
+                    } catch (err) {
+                      console.error("Error fetching project details:", err);
+                    }
+                  } else {
+                    setAvailableTypes([]);
+                    setAvailableLotes([]);
+                  }
+                }}
                 className="border rounded-lg p-2 w-full"
                 required
               >
@@ -142,6 +137,62 @@ export default function AddApartmentCard() {
                   </option>
                 ))}
               </select>
+
+              {/* Building Number */}
+              <select
+                value={form.building_number}
+                onChange={(e) =>
+                  setForm({ ...form, building_number: e.target.value })
+                }
+                className="border rounded-lg p-2 w-full"
+                required
+                disabled={!availableLotes.length}
+              >
+                <option value="">
+                  {availableLotes.length
+                    ? "Select Building Number"
+                    : "Select a project first"}
+                </option>
+                {availableLotes.map((lote) => (
+                  <option key={lote} value={lote}>
+                    {lote}
+                  </option>
+                ))}
+              </select>
+
+              {/* Apartment Type */}
+              <select
+                value={form.apartment_type}
+                onChange={(e) =>
+                  setForm({ ...form, apartment_type: e.target.value })
+                }
+                className="border rounded-lg p-2 w-full"
+                required
+                disabled={!availableTypes.length}
+              >
+                <option value="">
+                  {availableTypes.length
+                    ? "Select Apartment Type"
+                    : "Select a project first"}
+                </option>
+                {availableTypes.map((type) => (
+                  <option key={type} value={type}>
+                    {type}
+                  </option>
+                ))}
+              </select>
+
+              {/* Apartment Number */}
+              <input
+                type="text"
+                placeholder="Apartment Number"
+                value={form.apartment_number}
+                onChange={(e) =>
+                  setForm({ ...form, apartment_number: e.target.value })
+                }
+                className="border rounded-lg p-2 w-full"
+                required
+              />
 
               <button
                 type="submit"
@@ -157,7 +208,19 @@ export default function AddApartmentCard() {
             )}
 
             <button
-              onClick={() => setShowModal(false)}
+              onClick={() => {
+                // Reset form and message when closing modal
+                setForm({
+                  client_name: "",
+                  client_surname: "",
+                  building_number: "",
+                  apartment_number: "",
+                  apartment_type: "",
+                  project_id: "",
+                });
+                setMessage("");
+                setShowModal(false);
+              }}
               className="mt-4 w-full text-sm text-slate-500 hover:text-nhome-primary"
             >
               Close

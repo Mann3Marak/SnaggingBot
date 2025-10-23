@@ -20,11 +20,21 @@ export function useNHomeInspectionSession(sessionId: string){
         .eq('id', sessionId)
         .single()
 
-      const { data: checklist } = await supabase
+      const { data: checklist, error: checklistError } = await supabase
         .from('checklist_templates')
         .select('*')
         .eq('apartment_type', sessionData?.apartments?.apartment_type)
-        .order('order_sequence')
+        .order('order_sequence');
+
+      if (checklistError) {
+        console.warn("Error loading checklist templates:", checklistError.message);
+      }
+
+      if (!checklist || checklist.length === 0) {
+        console.warn(
+          `No checklist templates found for apartment type: ${sessionData?.apartments?.apartment_type}`
+        );
+      }
 
       const { data: results } = await supabase
         .from('inspection_results')

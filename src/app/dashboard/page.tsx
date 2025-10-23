@@ -1,10 +1,11 @@
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
-import AddApartmentCard from '@/components/dashboard/AddApartmentCard'
-import StartInspectionCard from '@/components/dashboard/StartInspectionCard'
+import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions'
 
 export const dynamic = 'force-dynamic'
+export const fetchCache = 'force-no-store'
+export const revalidate = 0
 
 export default async function DashboardPage() {
   const cookieStore = cookies()
@@ -97,18 +98,8 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <section>
-        <h2 className='text-lg font-semibold text-nhome-foreground'>Quick Actions</h2>
-        <div className='mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3'>
-          <div>
-            <StartInspectionCard />
-          </div>
-          {/* Add Apartment Quick Action */}
-          <div>
-            <AddApartmentCard />
-          </div>
-        </div>
-      </section>
+      {/* Client-side Quick Actions Section */}
+      <DashboardQuickActions />
 
       <section>
         <h2 className='text-lg font-semibold text-nhome-foreground mt-8'>In-progress inspections</h2>
@@ -140,9 +131,6 @@ export default async function DashboardPage() {
           {inProgress.length === 0 && (
             <div className='rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center'>
               <p className='text-sm text-slate-600 mb-3'>No inspections in progress.</p>
-              <a href='/inspection/start' className='inline-block rounded-lg bg-nhome-primary px-4 py-2 text-white font-medium hover:bg-nhome-secondary transition'>
-                Start a new inspection
-              </a>
             </div>
           )}
         </div>
@@ -183,9 +171,6 @@ export default async function DashboardPage() {
           ) : (
             <div className='rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center'>
               <p className='text-sm text-slate-600 mb-3'>No inspections require follow-up.</p>
-              <a href='/inspection/start' className='inline-block rounded-lg bg-nhome-primary px-4 py-2 text-white font-medium hover:bg-nhome-secondary transition'>
-                Start a new inspection
-              </a>
             </div>
           )}
         </div>

@@ -8,6 +8,7 @@ export interface NHomePhotoMetadata {
   timestamp: string
   location: string
   quality_standards: string
+  sessionId?: string // added to scope photos per inspection session
 }
 
 export interface NHomePhoto {
