@@ -1,6 +1,5 @@
-﻿"use client"
+"use client"
 import { useEffect, useState } from 'react'
-import { getSupabase } from '@/lib/supabase'
 
 export function useNHomeInspectionSession(sessionId: string){
   const [session, setSession] = useState<any>(null)
@@ -13,46 +12,69 @@ export function useNHomeInspectionSession(sessionId: string){
   async function load(){
     setLoading(true)
     try{
-      const supabase = getSupabase()
-      const { data: sessionData } = await supabase
-        .from('inspection_sessions')
-        .select('*, apartments (*, projects (*))')
-        .eq('id', sessionId)
-        .single()
-
-      const { data: checklist, error: checklistError } = await supabase
-        .from('checklist_templates')
-        .select('*')
-        .eq('apartment_type', sessionData?.apartments?.apartment_type)
-        .order('order_sequence');
-
-      if (checklistError) {
-        console.warn("Error loading checklist templates:", checklistError.message);
+      const res = await fetch(
+        `/api/nhome/inspections/${sessionId}/full?ts=${Date.now()}`,
+        { cache: 'no-store' }
+      );
+      if (!res.ok) {
+        console.error("Failed to load inspection session:", await res.text());
+        setLoading(false);
+        return;
       }
 
-      if (!checklist || checklist.length === 0) {
+      const { session: sessionData } = await res.json();
+
+      if (!sessionData?.apartment?.apartment_type) {
         console.warn(
-          `No checklist templates found for apartment type: ${sessionData?.apartments?.apartment_type}`
+          `?? No checklist templates found for apartment type: ${sessionData?.apartment?.apartment_type}`
         );
       }
 
-      const { data: results } = await supabase
-        .from('inspection_results')
-        .select('*')
-        .eq('session_id', sessionId)
+      // Ensure checklist items are sorted by order_sequence
+      const sortedItems = [...(sessionData?.checklist_items ?? [])].sort(
+        (a, b) => (a.order_sequence ?? 0) - (b.order_sequence ?? 0)
+      );
+      sessionData.checklist_items = sortedItems;
 
-      const enhanced = { ...sessionData, checklist_items: checklist ?? [], results: results ?? [], apartment: sessionData?.apartments, project: sessionData?.apartments?.projects }
-      setSession(enhanced)
+      const serverIndexRaw = Number(sessionData?.current_item_index ?? 0);
+      const normalizedIndex = Number.isFinite(serverIndexRaw)
+        ? Math.max(0, serverIndexRaw)
+        : 0;
 
-      const completed = results?.length ?? 0
-      const total = checklist?.length ?? 0
-      const issues_found = (results ?? []).filter((r:any)=>r.status==='issue').length
-      const quality_score = calculateScore(results ?? [])
-      setNHomeProgress({ completed, total, issues_found, quality_score })
+      const items = sessionData?.checklist_items ?? [];
+      const clampedIndex =
+        items.length > 0 ? Math.min(normalizedIndex, items.length - 1) : 0;
+      const newItem =
+        items.length > 0 && Number.isFinite(clampedIndex)
+          ? { ...items[clampedIndex] }
+          : null;
 
-      const idx = sessionData?.current_item_index ?? 0
-      setCurrentItem(checklist?.[idx])
-    }catch(e){ console.error('Error loading NHome session', e) } finally{ setLoading(false) }
+      const normalizedSession = {
+        ...sessionData,
+        current_item_index: normalizedIndex,
+        checklist_items: items,
+      };
+
+      setSession(normalizedSession);
+
+      const results = sessionData?.results ?? [];
+      const completed = results.length;
+      const total = items.length;
+      const issues_found = results.filter((r:any)=>r.status==='issue').length;
+      const quality_score = calculateScore(results);
+      setNHomeProgress({ completed, total, issues_found, quality_score });
+
+      console.log("[Session] reloaded index:", normalizedIndex);
+      console.log("[Session] checklist length:", items.length);
+      console.log("[Session] current item:", newItem?.item_description);
+      setCurrentItem(newItem);
+      return { session: normalizedSession };
+    }catch(e){ 
+      console.error('Error loading NHome session', e);
+      return null;
+    } finally{ 
+      setLoading(false);
+    }
   }
 
   function calculateScore(results:any[]): number{
@@ -73,38 +95,44 @@ export function useNHomeInspectionSession(sessionId: string){
     photos: string[] = [],
     shouldAdvance: boolean = false
   ) {
-    const supabase = getSupabase()
-    // Upsert the inspection result incrementally
-    await supabase.from('inspection_results').upsert({
-      session_id: sessionId,
-      item_id: itemId,
+    console.log("[Result] saveNHomeResult called with:", {
+      sessionId,
+      itemId,
       status,
       notes,
-      priority_level: priority,
-      photo_urls: photos.length > 0 ? photos : undefined,
-      created_at: new Date().toISOString(),
-    })
+      priority,
+      photos,
+      shouldAdvance,
+    });
 
-    // Update session progress incrementally
-    const totalItems = session?.checklist_items?.length ?? 0
-    const rawScore = Number(nhomeProgress.quality_score || 0)
-    const clamped = Math.max(1, Math.min(10, rawScore))
-    const safeScoreInt = Math.round(clamped)
-    const updates: any = { nhome_quality_score: safeScoreInt }
+    const response = await fetch("/api/nhome/inspections/save-result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId,
+        itemId,
+        status,
+        notes,
+        priority,
+        photos,
+        shouldAdvance,
+      }),
+    });
 
-    // Only advance if explicitly requested
-    if (shouldAdvance) {
-      const nextIndex = (session?.current_item_index ?? 0) + 1
-      updates.current_item_index = nextIndex
-      if (totalItems > 0 && nextIndex >= totalItems) {
-        updates.status = 'completed'
-        updates.completed_at = new Date().toISOString()
-      }
+    console.log("[Result] response status:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("[Result] save failed:", errorText);
+      return;
     }
 
-    await supabase.from('inspection_sessions').update(updates).eq('id', sessionId)
-    await load()
+    const result = await response.json();
+    console.log("[Result] save success:", result);
+
+    await load();
   }
 
-  return { session, currentItem, loading, nhomeProgress, saveNHomeResult, reload: load }
+  return { session, currentItem, loading, nhomeProgress, saveNHomeResult, reload: load, setSession, setCurrentItem }
 }
+

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useState as useLocalState } from 'react'
 import { useNHomeInspectionSession } from '@/hooks/useNHomeInspectionSession'
@@ -131,31 +131,151 @@ function determinePriority(status: InspectionStatus): number {
 }
 
 export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
-  const { session, currentItem, nhomeProgress, saveNHomeResult, reload } = useNHomeInspectionSession(sessionId)
-  const currentIndex = session?.current_item_index ?? 0
+  const { session, currentItem, nhomeProgress, saveNHomeResult, reload, setSession, setCurrentItem } = useNHomeInspectionSession(sessionId)
+  const checklistItems = session?.checklist_items ?? []
+  const derivedIndex = useMemo(() => {
+    const byItem = currentItem?.id
+      ? checklistItems.findIndex(item => item.id === currentItem.id)
+      : -1
+    if (byItem >= 0) {
+      return byItem
+    }
+    const fallback = Number(session?.current_item_index ?? 0)
+    if (!Number.isFinite(fallback)) return 0
+    if (!checklistItems.length) return 0
+    return Math.min(Math.max(fallback, 0), checklistItems.length - 1)
+  }, [checklistItems, currentItem?.id, session?.current_item_index])
+  const currentIndex = derivedIndex
 
   const goToNext = async () => {
     if (!session) return;
-    const supabase = (await import("@/lib/supabase")).getSupabase();
-    const nextIndex = (session.current_item_index ?? 0) + 1;
+    const localItems = session.checklist_items ?? [];
+    if (!localItems.length) return;
 
-    // Removed auto-marking as good when navigating
+    const baseIndex = derivedIndex;
+    const nextIndex = Math.min(baseIndex + 1, localItems.length - 1);
+    if (nextIndex === baseIndex) {
+      console.log("[Nav] already at last item");
+      return;
+    }
 
-    await supabase
-      .from("inspection_sessions")
-      .update({ current_item_index: nextIndex })
-      .eq("id", sessionId);
+    const targetItemId = localItems[nextIndex]?.id;
 
-    await reload();
+    await fetch("/api/nhome/inspections/update-index", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, newIndex: nextIndex }),
+      cache: "no-store",
+    });
+
+    console.log("[Nav] request next index:", { baseIndex, nextIndex, targetItemId });
+
+    setSession(prev => (prev ? { ...prev, current_item_index: nextIndex } : prev));
+
+    const immediateNextItem = localItems[nextIndex];
+    if (immediateNextItem) {
+      console.log("[Nav] immediate next item:", immediateNextItem.item_description);
+      setCurrentItem(immediateNextItem);
+    }
+
+    await new Promise(r => setTimeout(r, 400));
+
+    const updated = await reload();
+    if (updated?.session) {
+      const rawIndex = Number(updated.session.current_item_index ?? 0);
+      const updatedItems = updated.session.checklist_items ?? [];
+      const safeIndex = updatedItems.length > 0
+        ? Math.min(Math.max(rawIndex, 0), updatedItems.length - 1)
+        : -1;
+      const confirmedIndex = targetItemId
+        ? updatedItems.findIndex(item => item.id === targetItemId)
+        : -1;
+      const resolvedIndex = confirmedIndex >= 0 ? confirmedIndex : safeIndex;
+      const newItem = resolvedIndex >= 0 ? updatedItems[resolvedIndex] : null;
+      if (newItem) {
+        console.log("[Nav] confirmed next item:", {
+          rawIndex,
+          safeIndex,
+          confirmedIndex,
+          resolvedIndex,
+          label: newItem.item_description,
+        });
+        setSelectedStatus(null);
+        setShowNotes(null);
+        setNotesText('');
+        (window as any).currentItem = newItem;
+        setCurrentItem(newItem);
+        setSession(prev => (prev ? { ...prev, current_item_index: resolvedIndex } : prev));
+      }
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   const goToPrevious = async () => {
-    if (!session) return
-    const supabase = (await import("@/lib/supabase")).getSupabase()
-    const prevIndex = Math.max(0, (session.current_item_index ?? 0) - 1)
-    await supabase.from("inspection_sessions").update({ current_item_index: prevIndex }).eq("id", sessionId)
-    await reload()
-  }
+    if (!session) return;
+    const localItems = session.checklist_items ?? [];
+    if (!localItems.length) return;
+
+    const baseIndex = derivedIndex;
+    const prevIndex = Math.max(baseIndex - 1, 0);
+    if (prevIndex === baseIndex) {
+      console.log("[Nav] already at first item");
+      return;
+    }
+
+    const targetItemId = localItems[prevIndex]?.id;
+
+    await fetch("/api/nhome/inspections/update-index", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sessionId, newIndex: prevIndex }),
+      cache: "no-store",
+    });
+
+    console.log("[Nav] request previous index:", { baseIndex, prevIndex, targetItemId });
+
+    setSession(prev => (prev ? { ...prev, current_item_index: prevIndex } : prev));
+
+    const immediatePrevItem = localItems[prevIndex];
+    if (immediatePrevItem) {
+      console.log("[Nav] immediate previous item:", immediatePrevItem.item_description);
+      setCurrentItem(immediatePrevItem);
+    }
+
+    await new Promise(r => setTimeout(r, 400));
+
+    const updated = await reload();
+    if (updated?.session) {
+      const rawIndex = Number(updated.session.current_item_index ?? 0);
+      const updatedItems = updated.session.checklist_items ?? [];
+      const safeIndex = updatedItems.length > 0
+        ? Math.min(Math.max(rawIndex, 0), updatedItems.length - 1)
+        : -1;
+      const confirmedIndex = targetItemId
+        ? updatedItems.findIndex(item => item.id === targetItemId)
+        : -1;
+      const resolvedIndex = confirmedIndex >= 0 ? confirmedIndex : safeIndex;
+      const newItem = resolvedIndex >= 0 ? updatedItems[resolvedIndex] : null;
+      if (newItem) {
+        console.log("[Nav] confirmed previous item:", {
+          rawIndex,
+          safeIndex,
+          confirmedIndex,
+          resolvedIndex,
+          label: newItem.item_description,
+        });
+        setSelectedStatus(null);
+        setShowNotes(null);
+        setNotesText('');
+        (window as any).currentItem = newItem;
+        setCurrentItem(newItem);
+        setSession(prev => (prev ? { ...prev, current_item_index: resolvedIndex } : prev));
+      }
+    }
+
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
   const [pendingStatus, setPendingStatus] = useState<InspectionStatus | null>(null)
@@ -767,13 +887,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                   onClick={async () => {
                     setSelectedStatus('good');
                     await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards');
-                    const supabase = (await import("@/lib/supabase")).getSupabase();
-                    const nextIndex = (session?.current_item_index ?? 0) + 1;
-                    await supabase
-                      .from("inspection_sessions")
-                      .update({ current_item_index: nextIndex })
-                      .eq("id", sessionId);
-                    await reload();
+                    await goToNext();
                     onRefreshReport?.();
                   }}
                   className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
@@ -833,13 +947,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                           showNotes.type,
                           notesText.trim()
                         );
-                        const supabase = (await import("@/lib/supabase")).getSupabase();
-                        const nextIndex = (session?.current_item_index ?? 0) + 1;
-                        await supabase
-                          .from("inspection_sessions")
-                          .update({ current_item_index: nextIndex })
-                          .eq("id", sessionId);
-                        await reload();
+                        await goToNext();
                         setShowNotes(null);
                         setNotesText('');
                         onRefreshReport?.();
@@ -892,7 +1000,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 onClick={goToPrevious}
                 className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
               >
-                ← Previous Item
+                Previous Item
               </button>
               <button
                 onClick={handleToggleAssistant}
@@ -918,7 +1026,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 onClick={goToNext}
                 className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
               >
-                Next Item →
+                Next Item
               </button>
             </div>
 
@@ -1095,3 +1203,5 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     </div>
   )
 }
+
+
