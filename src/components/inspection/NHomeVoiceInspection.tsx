@@ -982,7 +982,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             </div>
           </button>
 
-          <button
+          {/* <button
             onClick={handleToggleAssistant}
             className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-secondary transition-all"
           >
@@ -995,7 +995,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               <p className="font-medium text-gray-900">Record Voice Notes</p>
               <p className="text-xs text-gray-600">Use assistant prompts for detailed notes</p>
             </div>
-          </button>
+          </button> */}
         </div>
 
         {currentItem && (

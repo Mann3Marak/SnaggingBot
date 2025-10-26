@@ -148,14 +148,42 @@ export class NHomeReportGenerationService {
     return dict[desc] || desc
   }
 
-  private translateNote(note?: string): string {
+  private async translateNoteWithOpenAI(note?: string): Promise<string> {
     if (!note) return ''
-    const dict: Record<string, string> = {
-      'Meets NHome standards': 'Cumpre os padrões NHome',
-      'lights hanging out': 'luzes penduradas',
-      'door is cracked': 'porta rachada',
+    try {
+      const res = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a professional translator that translates English inspection notes into natural, fluent Portuguese used in property inspection reports. Only return the translated text.',
+            },
+            {
+              role: 'user',
+              content: note,
+            },
+          ],
+        }),
+      })
+
+      if (!res.ok) {
+        console.error('OpenAI translation failed:', await res.text())
+        return note
+      }
+
+      const data = await res.json()
+      const translated = data.choices?.[0]?.message?.content?.trim()
+      return translated || note
+    } catch (err) {
+      console.error('Translation error:', err)
+      return note
     }
-    return dict[note] || note
   }
 
   createNHomeReport(data: NHomeInspectionData, language: 'pt' | 'en') {
@@ -186,15 +214,7 @@ export class NHomeReportGenerationService {
             </View>
           </View>
 
-          {/* Ensure footer always renders */}
-          <View fixed style={styles.footer}>
-            <Text style={styles.text}>
-              NHomes | +351-966-318-871 | natalie@nhomesetup.com | www.nhomesetup.com
-            </Text>
-            <Text style={styles.text}>
-              {L.page} 1 {L.of} 1
-            </Text>
-          </View>
+          {/* Footer completely removed */}
 
           {/* Top info grid */}
           <View style={styles.grid}>
@@ -230,6 +250,7 @@ export class NHomeReportGenerationService {
                         {language === 'pt'
                           ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`)
                           : it.checklist_templates?.item_description || `Item ${it.item_id}`}
+                        {' '}({it.status ? it.status.charAt(0).toUpperCase() + it.status.slice(1) : 'N/A'})
                       </Text>
                       <View style={{ alignItems: 'center' }}>
                         <Text style={styles.text}>
@@ -238,9 +259,11 @@ export class NHomeReportGenerationService {
                         <View style={{ width: 14, height: 14, borderWidth: 1, borderColor: '#000', marginTop: 4 }} />
                       </View>
                     </View>
-                    {it.notes && (
+                    {(it.pt_notes || it.notes) && (
                       <Text style={styles.text}>
-                        {language === 'pt' ? 'Notas' : 'Notes'}: {language === 'pt' ? this.translateNote(it.enhanced_notes || it.notes) : it.notes}
+                        {language === 'pt'
+                          ? `Notas: ${it.pt_notes || it.translated_note || it.notes}`
+                          : `Notes: ${it.notes}`}
                       </Text>
                     )}
                     {ph.length > 0 && ph.map((p: any, j: number) => (
@@ -252,11 +275,7 @@ export class NHomeReportGenerationService {
             </View>
           ))}
 
-          {/* Footer (on all pages) */}
-          <View style={styles.footer}>
-            <Text style={styles.text}>NHomes | +351-966-318-871 | natalie@nhomesetup.com | www.nhomesetup.com</Text>
-            <Text style={styles.text}>{L.page} 1 {L.of} 1</Text>
-          </View>
+          {/* Footer removed as per new requirements */}
         </Page>
       </Document>
     )
@@ -266,7 +285,18 @@ export class NHomeReportGenerationService {
 
   async generateNHomeBilingualReports(sessionId: string): Promise<{ portuguese: Blob; english: Blob }> {
     const data = await this.loadInspectionData(sessionId)
-    const PTReport = this.createNHomeReport(data, 'pt')
+
+    // Translate notes using OpenAI API for better accuracy
+    const translatedResults = await Promise.all(
+      data.results.map(async (r) => ({
+        ...r,
+        translated_note: await this.translateNoteWithOpenAI(r.notes),
+      }))
+    )
+
+    const translatedData = { ...data, results: translatedResults }
+
+    const PTReport = this.createNHomeReport(translatedData, 'pt')
     const ENReport = this.createNHomeReport(data, 'en')
     const portuguese = await this.renderNHomePDF(PTReport)
     const english = await this.renderNHomePDF(ENReport)

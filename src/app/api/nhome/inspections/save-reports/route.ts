@@ -38,6 +38,28 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Failed to save reports', detail: error.message }, { status: 500 })
     }
 
+    // After saving reports, trigger translation for any missing pt_notes
+    try {
+      const { data: results } = await supabase
+        .from("nhome_inspection_results")
+        .select("id, notes, pt_notes")
+        .eq("session_id", sessionId)
+
+      if (results && results.length > 0) {
+        for (const r of results) {
+          if (r.notes && !r.pt_notes) {
+            await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || ""}/api/nhome/translate-notes`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ note: r.notes, resultId: r.id }),
+            })
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Translation trigger failed:", err)
+    }
+
     return NextResponse.json({ success: true, session: data })
   } catch (e: any) {
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })
