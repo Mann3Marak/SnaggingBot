@@ -16,7 +16,7 @@ export function useNHomeInspectionSession(sessionId: string){
       const supabase = getSupabase()
       const { data: sessionData } = await supabase
         .from('inspection_sessions')
-        .select('*, apartments (*, projects (*))')
+        .select('*, apartments:apartment_id (*, projects (*))')
         .eq('id', sessionId)
         .single()
 
@@ -75,15 +75,20 @@ export function useNHomeInspectionSession(sessionId: string){
   ) {
     const supabase = getSupabase()
     // Upsert the inspection result incrementally
-    await supabase.from('inspection_results').upsert({
+    const payload: any = {
       session_id: sessionId,
       item_id: itemId,
       status,
-      notes,
       priority_level: priority,
       photo_urls: photos.length > 0 ? photos : undefined,
       created_at: new Date().toISOString(),
-    })
+    }
+
+    if (status !== 'good' && notes) {
+      payload.notes = notes
+    }
+
+    await supabase.from('inspection_results').upsert(payload)
 
     // Update session progress incrementally
     const totalItems = session?.checklist_items?.length ?? 0
