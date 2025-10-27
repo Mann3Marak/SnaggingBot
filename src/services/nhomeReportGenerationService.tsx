@@ -194,113 +194,33 @@ export class NHomeReportGenerationService {
     const good = data.results.filter((r) => r.status === 'good')
     const qs = this.score(data.results)
 
-    const Report = () => (
-      <Document>
-        <Page size="A4" style={styles.page}>
-          {/* Header (only on first page) */}
-          <View style={[styles.header, { flexDirection: 'row', alignItems: 'center' }]}>
-            {/* Left side: title and company info */}
-            <View style={{ flex: 1, alignItems: 'center' }}>
-              <Text style={styles.title}>{L.title}</Text>
-              <Text style={styles.sub}>{L.company_title}</Text>
-            </View>
-
-            {/* Right side: logo */}
-            <View style={{ position: 'absolute', right: 0, top: 0, width: 100, height: 80, justifyContent: 'center', alignItems: 'flex-end' }}>
-              <Image
-                src="https://www.nhomesetup.com/branding/logos/nhome-logo-primary.png"
-                style={{ width: 80, height: 80, objectFit: 'contain' }}
-              />
-            </View>
-          </View>
-
-          {/* Footer completely removed */}
-
-          {/* Top info grid */}
-          <View style={styles.grid}>
-            <View style={styles.cell}><Text style={styles.label}>{L.client}:</Text><Text style={styles.value}>{data.project.developer_name}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.property}:</Text><Text style={styles.value}>{data.project.name}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{'Building Number'}:</Text><Text style={styles.value}>{data.apartment.building_number || 'N/A'}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.apartment}:</Text><Text style={styles.value}>{data.apartment.unit_number}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{'Type'}:</Text><Text style={styles.value}>{data.apartment.apartment_type}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.date}:</Text><Text style={styles.value}>{format(new Date(data.session.started_at), 'PPP', { locale })}</Text></View>
-            <View style={styles.cell}><Text style={styles.label}>{L.inspector}:</Text><Text style={styles.value}>NHome Professional Team</Text></View>
-          </View>
-
-          {/* Divider */}
-          <View style={{ borderBottomWidth: 1, borderBottomColor: '#ccc', marginVertical: 10 }} />
-
-          {/* Inspection details */}
-          {Object.entries(
-            data.results.reduce((acc: Record<string, any[]>, it: any) => {
-              const room = it.checklist_templates?.room_type || 'Uncategorized'
-              if (!acc[room]) acc[room] = []
-              acc[room].push(it)
-              return acc
-            }, {} as Record<string, any[]>)
-          ).map(([room, items], ri) => (
-            <View key={`room-${ri}`} style={{ marginBottom: 16 }}>
-              <Text style={[styles.h2, { marginTop: 12 }]}>{room}</Text>
-              {(items as any[]).map((it, i) => {
-                const ph = it.preview_photos?.slice(0, 2) || []
-                return (
-                  <View key={`item-${ri}-${i}`} style={styles.item}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={styles.text}>
-                        {language === 'pt'
-                          ? this.translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`)
-                          : it.checklist_templates?.item_description || `Item ${it.item_id}`}
-                        {' '}({it.status ? it.status.charAt(0).toUpperCase() + it.status.slice(1) : 'N/A'})
-                      </Text>
-                      <View style={{ alignItems: 'center' }}>
-                        <Text style={styles.text}>
-                          {language === 'pt' ? 'Verificado' : 'Checked'}
-                        </Text>
-                        <View style={{ width: 14, height: 14, borderWidth: 1, borderColor: '#000', marginTop: 4 }} />
-                      </View>
-                    </View>
-                    {(it.pt_notes || it.notes) && (
-                      <Text style={styles.text}>
-                        {language === 'pt'
-                          ? `Notas: ${it.pt_notes || it.translated_note || it.notes}`
-                          : `Notes: ${it.notes}`}
-                      </Text>
-                    )}
-                    {ph.length > 0 && ph.map((p: any, j: number) => (
-                      <Image key={j} style={styles.photo} src={p.url} />
-                    ))}
-                  </View>
-                )
-              })}
-            </View>
-          ))}
-
-          {/* Footer removed as per new requirements */}
-        </Page>
-      </Document>
-    )
-
-    return Report
+    if (language === "pt") {
+      const { NHomeReportTemplatePT } = require("@/components/reports/NHomeReportTemplatePT");
+      const Report = () => <NHomeReportTemplatePT data={data} />;
+      return Report;
+    } else {
+      const { NHomeReportTemplateEN } = require("@/components/reports/NHomeReportTemplateEN");
+      const Report = () => <NHomeReportTemplateEN data={data} />;
+      return Report;
+    }
   }
 
   async generateNHomeBilingualReports(sessionId: string): Promise<{ portuguese: Blob; english: Blob }> {
     const data = await this.loadInspectionData(sessionId)
 
-    // Translate notes using OpenAI API for better accuracy
-    const translatedResults = await Promise.all(
-      data.results.map(async (r) => ({
-        ...r,
-        translated_note: await this.translateNoteWithOpenAI(r.notes),
-      }))
-    )
+    // Use existing Portuguese notes from database (pt_notes)
+    const translatedResults = data.results.map((r) => ({
+      ...r,
+      translated_note: r.pt_notes || r.notes,
+    }));
 
-    const translatedData = { ...data, results: translatedResults }
+    const translatedData = { ...data, results: translatedResults };
 
-    const PTReport = this.createNHomeReport(translatedData, 'pt')
-    const ENReport = this.createNHomeReport(data, 'en')
-    const portuguese = await this.renderNHomePDF(PTReport)
-    const english = await this.renderNHomePDF(ENReport)
-    return { portuguese, english }
+    const PTReport = this.createNHomeReport(translatedData, "pt");
+    const ENReport = this.createNHomeReport(data, "en");
+    const portuguese = await this.renderNHomePDF(PTReport);
+    const english = await this.renderNHomePDF(ENReport);
+    return { portuguese, english };
   }
 
   public async loadInspectionData(sessionId: string): Promise<NHomeInspectionData> {

@@ -60,9 +60,11 @@ export async function POST(req: Request) {
         reply = "Noted - item marked as good.";
       } else if (action === "markItemAsGood" && !currentItemId) {
         reply = "Unable to identify the current item to mark as good.";
-      } else if (action === "markItemAsIssue") {
-        await markItemAsIssue(sessionId, comment);
+      } else if (action === "markItemAsIssue" && currentItemId) {
+        await markItemAsIssue(sessionId, currentItemId, comment);
         reply = `Got it. ${comment ? "Noted: " + comment + "." : ""}`;
+      } else if (action === "markItemAsIssue" && !currentItemId) {
+        reply = "Unable to identify the current item to mark as issue.";
       } else if (action === "moveToNextItem") {
         // Prevent automatic navigation
         reply = "Okay, noted your request to move to the next item. Please confirm manually when ready.";

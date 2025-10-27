@@ -87,6 +87,33 @@ export async function markItemAsIssue(sessionId: string, itemId: string, comment
     .eq("session_id", sessionId);
 
   if (error) throw new Error(error.message);
+
+  // Trigger translation if comment exists
+  if (comment) {
+    try {
+      const baseUrl =
+        process.env.NEXT_PUBLIC_BASE_URL ||
+        process.env.VERCEL_URL
+          ? `https://${process.env.VERCEL_URL}`
+          : "http://localhost:3000";
+
+      const response = await fetch(`${baseUrl}/api/nhome/translate-notes`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ note: comment, resultId: itemId }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        console.error("Translation API failed:", result);
+      } else {
+        console.log("✅ Translation stored successfully:", result.translated);
+      }
+    } catch (err) {
+      console.error("❌ Failed to trigger translation for issue note:", err);
+    }
+  }
+
   return true;
 }
 
