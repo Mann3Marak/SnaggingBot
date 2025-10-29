@@ -4,6 +4,22 @@ export const revalidate = 0;
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
+const BUCKET_ID = 'nhome_photos'
+
+const stripQuery = (value: string) => value.split('?')[0]
+
+function resolveStoragePath(sessionId: string, fileName: string, storedPath?: string | null) {
+  if (!storedPath) return `sessions/${sessionId}/${fileName}`
+  if (storedPath.startsWith('sessions/')) return stripQuery(storedPath)
+
+  const marker = '/nhome_photos/'
+  const index = storedPath.indexOf(marker)
+  if (index >= 0) {
+    return stripQuery(storedPath.slice(index + marker.length))
+  }
+  return stripQuery(storedPath)
+}
+
 export async function GET(
   _req: Request,
   { params }: { params: { sessionId: string } },
@@ -71,21 +87,12 @@ export async function GET(
       )
     }
 
-    // 4) Load photos linked to this session
-    let { data: photos, error: photosError } = await supabase
-      .from('nhome_inspection_photos')
+    // 4) Load photos linked to this session and generate signed URLs
+    const { data: photoRows, error: photosError } = await supabase
+      .from('nhome_photos')
       .select('*')
-      .eq('session_id', sessionId);
-
-    if (!photos?.length) {
-      const altQuery = await supabase
-        .from('nhome_inspection_photos')
-        .select('*')
-        .eq('inspection_session_id', sessionId);
-      if (altQuery.data?.length) photos = altQuery.data;
-    }
-
-    console.log(`📸 Found ${photos?.length || 0} photos for session ${sessionId}`);
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: true })
 
     if (photosError) {
       return NextResponse.json(
@@ -94,47 +101,70 @@ export async function GET(
       )
     }
 
-    // Generate public URLs for Supabase photos
-    const publicPhotos = await Promise.all(
-      (photos ?? []).map(async (p) => {
-        if (p.supabase_url && !p.supabase_url.startsWith("http")) {
-          const { data } = supabase.storage
-            .from("nhome-inspection-photos")
-            .getPublicUrl(p.supabase_url);
-          return { ...p, supabase_url: data?.publicUrl || p.supabase_url };
-        }
-        return p;
-      })
-    );
+    const photos = photoRows ?? []
+    console.log(`📸 Found ${photos.length} persisted photos for session ${sessionId}`)
 
-    // Merge photo_urls from results with nhome_inspection_photos
+    const signedPhotos = await Promise.all(
+      photos.map(async (photo) => {
+        const fileName = photo.file_name ?? `photo-${photo.id}.jpg`
+        const storagePath = resolveStoragePath(sessionId, fileName, photo.supabase_url)
+
+        const { data: signed, error: signedError } = await supabase.storage
+          .from(BUCKET_ID)
+          .createSignedUrl(storagePath, 60 * 60 * 24 * 7)
+
+        if (signedError) {
+          console.warn('[ReportData] Unable to sign photo URL', {
+            sessionId,
+            storagePath,
+            error: signedError.message,
+          })
+        }
+
+        return {
+          ...photo,
+          storage_path: storagePath,
+          signed_url: signed?.signedUrl ?? null,
+        }
+      })
+    )
+
+    const photosByKey = new Map<string, any[]>()
+    signedPhotos.forEach((photo) => {
+      if (!photo.item_id) return
+      const key = String(photo.item_id)
+      const bucket = photosByKey.get(key) ?? []
+      bucket.push(photo)
+      photosByKey.set(key, bucket)
+    })
+
+    const publicBase = process.env.NEXT_PUBLIC_SUPABASE_URL
     const resultsWithPhotos = (results ?? []).map(r => {
-      const linked = publicPhotos.filter(p =>
-        String(p.item_id) === String(r.item_id || r.id)
-      )
-      if (linked.length > 0) {
+      const resultKey = String(r.id)
+      const checklistKey = String(r.item_id)
+      const linked =
+        photosByKey.get(resultKey) ??
+        photosByKey.get(checklistKey) ??
+        []
+
+      const preview_photos = linked.map((photo: any) => {
+        const fallbackUrl = publicBase
+          ? `${publicBase}/storage/v1/object/public/${BUCKET_ID}/${photo.storage_path}`
+          : null
         return {
-          ...r,
-          preview_photos: linked.map(p => ({
-            url: p.supabase_url || p.onedrive_url || p.photo_url || '',
-            metadata: {
-              file_name: p.file_name,
-              created_at: p.created_at,
-              inspector: p.inspector_name || 'NHome Inspector'
-            }
-          }))
+          url: photo.signed_url ?? fallbackUrl,
+          metadata: {
+            file_name: photo.file_name,
+            created_at: photo.created_at,
+            inspector: photo.inspector_name ?? 'NHome Inspector',
+          },
         }
+      })
+
+      return {
+        ...r,
+        preview_photos,
       }
-      if (r.photo_urls && r.photo_urls.length > 0) {
-        return {
-          ...r,
-          preview_photos: r.photo_urls.map((u: string) => ({
-            url: u,
-            metadata: { file_name: 'legacy', created_at: r.created_at }
-          }))
-        }
-      }
-      return { ...r, preview_photos: [] }
     })
 
     // Helper to sanitize text fields and remove corrupted characters
@@ -164,7 +194,7 @@ export async function GET(
         },
         notes: clean(r.notes),
       })),
-      photos,
+      photos: signedPhotos,
       inspector: null,
       company_info: {
         name: '',
@@ -177,7 +207,6 @@ export async function GET(
       },
     }
 
-    console.log("🖼️ Public photo URLs:", publicPhotos.map(p => p.supabase_url || p.onedrive_url || p.photo_url));
     return NextResponse.json(payload)
   } catch (e: any) {
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })

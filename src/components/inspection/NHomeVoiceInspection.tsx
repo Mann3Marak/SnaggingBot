@@ -424,7 +424,7 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
     markPhotoUploaded,
     updateUploadProgress,
     uploadProgress,
-  } = useNHomePhotoCapture()
+  } = useNHomePhotoCapture(sessionId)
   const uploader = useRef(new NHomePhotoUploadService()).current
 
   useEffect(() => {
@@ -1002,10 +1002,12 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
             <h3 className="font-semibold text-gray-900 mb-3">Photos for this item</h3>
             <div className="grid grid-cols-3 gap-3">
-              {getNHomePhotosForItem(currentItem.id).map(photo => (
-                <div key={photo.id} className="relative border rounded-lg overflow-hidden group">
-                  <img src={photo.url} alt={photo.metadata.item} className="w-full h-24 object-cover" />
-                  <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
+              {getNHomePhotosForItem(currentItem.id).map(photo => {
+                const displayName = photo.file_name ?? generateNHomeFileName(photo.metadata)
+                return (
+                  <div key={photo.id} className="relative border rounded-lg overflow-hidden group">
+                    <img src={photo.url} alt={photo.metadata.item} className="w-full h-24 object-cover" />
+                    <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
                     {photo.uploaded ? 'Uploaded' : uploadProgress[photo.id] ? `${Math.round(uploadProgress[photo.id])}%` : ''}
                   </div>
                   <button
@@ -1031,7 +1033,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                             (p) => updateUploadProgress(photo.id, p),
                           )
                           if (res.success && res.supabase_url) {
-                            markPhotoUploaded(photo.id, res.supabase_url)
+                            markPhotoUploaded(photo.id, res.supabase_url, res.photo)
                           }
                         } catch (e) {
                           console.error('NHome photo upload failed', e)
@@ -1044,8 +1046,8 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                       Upload
                     </button>
                   )}
-                  <div className="p-2 text-[10px] text-gray-600 truncate" title={generateNHomeFileName(photo.metadata)}>
-                    {generateNHomeFileName(photo.metadata)}
+                  <div className="p-2 text-[10px] text-gray-600 truncate" title={displayName}>
+                    {displayName}
                     {photo.uploaded && photo.storage_url && (
                       <a
                         href={photo.storage_url}
@@ -1059,7 +1061,8 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                     )}
                   </div>
                 </div>
-              ))}
+                )
+              })}
             </div>
             <div className="mt-3">
               <button

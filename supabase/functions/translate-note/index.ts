@@ -53,13 +53,28 @@ serve(async (req) => {
 
     // Update Supabase record
     // Load environment variables securely (using non-reserved names)
-    const supabaseUrl = Deno.env.get("SB_URL");
-    const supabaseKey = Deno.env.get("SB_SERVICE_ROLE_KEY");
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const openaiKey = Deno.env.get("OPENAI_API_KEY");
 
     if (!supabaseUrl || !supabaseKey || !openaiKey) {
       console.error("❌ Missing required environment variables.");
-      return new Response(JSON.stringify({ error: "Missing environment variables" }), { status: 500 });
+      console.log("🔍 Current environment state:", {
+        SB_URL: supabaseUrl,
+        SB_SERVICE_ROLE_KEY: !!supabaseKey,
+        OPENAI_API_KEY: !!openaiKey,
+      });
+      return new Response(
+        JSON.stringify({
+          error: "Missing environment variables",
+          details: {
+            SB_URL: !!supabaseUrl,
+            SB_SERVICE_ROLE_KEY: !!supabaseKey,
+            OPENAI_API_KEY: !!openaiKey,
+          },
+        }),
+        { status: 500 },
+      );
     }
 
     const { createClient } = await import("https://esm.sh/@supabase/supabase-js@2");

@@ -55,7 +55,8 @@ create policy "NHome team manage reports" on nhome_inspection_reports
     )
   );
 
-create policy if not exists "NHome reports read" on storage.objects
+drop policy if exists "NHome reports read" on storage.objects;
+create policy "NHome reports read" on storage.objects
   for select using (
     bucket_id = 'nhome_reports'
     and (
@@ -64,13 +65,15 @@ create policy if not exists "NHome reports read" on storage.objects
     )
   );
 
-create policy if not exists "NHome reports write" on storage.objects
+drop policy if exists "NHome reports write" on storage.objects;
+create policy "NHome reports write" on storage.objects
   for insert with check (
     bucket_id = 'nhome_reports'
     and owner = auth.uid()
   );
 
-create policy if not exists "NHome reports modify" on storage.objects
+drop policy if exists "NHome reports modify" on storage.objects;
+create policy "NHome reports modify" on storage.objects
   for update using (
     bucket_id = 'nhome_reports'
     and (
@@ -85,7 +88,8 @@ create policy if not exists "NHome reports modify" on storage.objects
     )
   );
 
-create policy if not exists "NHome reports remove" on storage.objects
+drop policy if exists "NHome reports remove" on storage.objects;
+create policy "NHome reports remove" on storage.objects
   for delete using (
     bucket_id = 'nhome_reports'
     and (

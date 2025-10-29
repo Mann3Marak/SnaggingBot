@@ -1,39 +1,95 @@
+import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createServerClient } from "@supabase/ssr";
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json();
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+    const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    const { data, error } = await supabase
+    const body = await req.json();
+    const cookieStore = cookies();
+    const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
+      cookies: {
+        get: (name: string) => cookieStore.get(name)?.value,
+        set: () => {},
+        remove: () => {},
+      },
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabaseAuth.auth.getUser();
+
+    if (userError) {
+      console.error("[NHomeProjects] Failed to read auth user", userError);
+      return NextResponse.json({ error: "Unable to read authenticated user" }, { status: 401 });
+    }
+
+    if (!user) {
+      console.warn("[NHomeProjects] Anonymous request blocked");
+      return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+    }
+
+    const adminClient = createClient(supabaseUrl, serviceRoleKey, { auth: { persistSession: false } });
+
+    const { data: profile, error: profileError } = await adminClient
+      .from("users")
+      .select("company_id, role, full_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (profileError) {
+      console.error("[NHomeProjects] Failed to load user profile", profileError);
+      return NextResponse.json({ error: "Unable to resolve user profile" }, { status: 500 });
+    }
+
+    if (!profile?.company_id) {
+      console.error("[NHomeProjects] User profile missing company assignment", {
+        userId: user.id,
+        email: user.email,
+      });
+      return NextResponse.json(
+        { error: "Your user is not linked to a company. Ask an admin to update your profile." },
+        { status: 403 },
+      );
+    }
+
+    const payload = {
+      name: body.name,
+      developer_name: body.developer_name,
+      developer_contact_email: body.developer_contact_email || null,
+      developer_contact_phone: body.developer_contact_phone || null,
+      address: body.address,
+      apartment_types: body.apartment_types || [],
+      building_numbers: body.building_numbers || [],
+      created_by: user.id,
+      company_id: profile.company_id,
+    };
+
+    const { data, error } = await adminClient
       .from("projects")
-      .insert([
-        {
-          name: body.name,
-          developer_name: body.developer_name,
-          developer_contact_email: body.developer_contact_email || null,
-          developer_contact_phone: body.developer_contact_phone || null,
-          address: body.address,
-          apartment_types: body.apartment_types || [],
-          building_numbers: body.building_numbers || [],
-          created_by: body.created_by || null,
-        },
-      ])
+      .insert([payload])
       .select()
       .single();
 
     if (error) {
-      console.error("Error inserting project:", error);
+      console.error("[NHomeProjects] Error inserting project", { error, userId: user.id, payload });
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    console.info("[NHomeProjects] Project created", {
+      projectId: data?.id,
+      userId: user.id,
+      companyId: profile.company_id,
+    });
+
     return NextResponse.json({ project: data }, { status: 200 });
   } catch (err: any) {
-    console.error("Unexpected error:", err);
+    console.error("[NHomeProjects] Unexpected error creating project", err);
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
   }
 }

@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const bucket = "nhome-inspection-photos";
+    const bucket = "nhome_photos";
     const path = `sessions/${sessionId}/${fileName}`;
 
     const { error: uploadError } = await supabase.storage

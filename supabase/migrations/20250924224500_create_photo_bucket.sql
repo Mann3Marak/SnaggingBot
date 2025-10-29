@@ -72,7 +72,8 @@ create policy "NHome team can access photos" on nhome_inspection_photos
     )
   );
 
-create policy if not exists "NHome photos read" on storage.objects
+drop policy if exists "NHome photos read" on storage.objects;
+create policy "NHome photos read" on storage.objects
   for select
   using (
     bucket_id = 'nhome_photos'
@@ -82,14 +83,16 @@ create policy if not exists "NHome photos read" on storage.objects
     )
   );
 
-create policy if not exists "NHome photos write" on storage.objects
+drop policy if exists "NHome photos write" on storage.objects;
+create policy "NHome photos write" on storage.objects
   for insert
   with check (
     bucket_id = 'nhome_photos'
     and owner = auth.uid()
   );
 
-create policy if not exists "NHome photos modify" on storage.objects
+drop policy if exists "NHome photos modify" on storage.objects;
+create policy "NHome photos modify" on storage.objects
   for update
   using (
     bucket_id = 'nhome_photos'
@@ -106,7 +109,8 @@ create policy if not exists "NHome photos modify" on storage.objects
     )
   );
 
-create policy if not exists "NHome photos remove" on storage.objects
+drop policy if exists "NHome photos remove" on storage.objects;
+create policy "NHome photos remove" on storage.objects
   for delete
   using (
     bucket_id = 'nhome_photos'

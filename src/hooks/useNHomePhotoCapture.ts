@@ -1,10 +1,21 @@
-﻿"use client"
-import { useEffect, useState } from 'react'
+"use client"
+import { useEffect, useMemo, useState } from 'react'
 import type { NHomePhoto, NHomePhotoMetadata } from '@/types/nhome-photo'
 
-// Minimal IndexedDB helpers for offline persistence
 const DB_NAME = 'nhome-photos'
 const STORE = 'photos'
+
+type RemotePhotoRecord = {
+  id: string
+  session_id: string
+  item_id: string | null
+  file_name: string | null
+  supabase_url: string | null
+  inspector_name: string | null
+  storage_path?: string | null
+  signed_url?: string | null
+  created_at?: string | null
+}
 
 function openDB(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -51,30 +62,166 @@ async function idbDelete(id: string): Promise<void> {
   })
 }
 
-export function useNHomePhotoCapture() {
+const DEFAULT_METADATA: Pick<
+  NHomePhotoMetadata,
+  'company' | 'location' | 'quality_standards' | 'unit' | 'property' | 'room'
+> = {
+  company: 'NHome Property Setup & Management',
+  property: 'NHome Property',
+  unit: 'Unit',
+  room: 'Inspection Item',
+  location: 'Algarve, Portugal',
+  quality_standards: 'NHome Professional Standards',
+}
+
+const fileNameFromMetadata = (metadata: NHomePhotoMetadata): string => {
+  const timestamp = new Date(metadata.timestamp).toISOString().replace(/[:.]/g, '-')
+  const cleanProperty = metadata.property.replace(/[^a-zA-Z0-9]/g, '_')
+  const cleanUnit = metadata.unit.replace(/[^a-zA-Z0-9]/g, '_')
+  const cleanRoom = metadata.room.replace(/[^a-zA-Z0-9]/g, '_')
+  const cleanItem = metadata.item
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, '_')
+    .substring(0, 30)
+  return `NHome_${cleanProperty}_${cleanUnit}_${cleanRoom}_${cleanItem}_${timestamp}.jpg`
+}
+
+const deriveKey = (photo: NHomePhoto): string => {
+  if (photo.supabase_photo_id) return `supabase:${photo.supabase_photo_id}`
+  if (photo.storage_url) return `storage:${photo.storage_url}`
+  if (photo.supabase_url) return `storage:${photo.supabase_url}`
+  return `local:${fileNameFromMetadata(photo.metadata)}`
+}
+
+const createRemotePhoto = (
+  record: RemotePhotoRecord,
+  sessionId: string
+): NHomePhoto | null => {
+  const signedUrl = record.signed_url ?? null
+  if (!signedUrl) return null
+
+  const createdAt = record.created_at ? new Date(record.created_at).getTime() : Date.now()
+  const fileName = record.file_name ?? `photo-${record.id}`
+
+  const metadata: NHomePhotoMetadata = {
+    inspector: record.inspector_name || 'NHome Inspector',
+    ...DEFAULT_METADATA,
+    item: fileName,
+    timestamp: new Date(createdAt).toISOString(),
+    sessionId,
+  }
+
+  return {
+    id: `remote_${record.id}`,
+    supabase_photo_id: record.id,
+    sessionId,
+    url: signedUrl,
+    file_name: fileName,
+    metadata,
+    itemId: record.item_id ?? undefined,
+    timestamp: createdAt,
+    uploaded: true,
+    storage_url: signedUrl,
+    supabase_url: signedUrl,
+  }
+}
+
+const mergePhotos = (existing: NHomePhoto[], incoming: NHomePhoto[]) => {
+  if (incoming.length === 0) return existing
+
+  const bySupabaseId = new Map<string, NHomePhoto>()
+  for (const photo of incoming) {
+    if (photo.supabase_photo_id) {
+      bySupabaseId.set(photo.supabase_photo_id, photo)
+    }
+  }
+
+  const merged = existing.map(photo => {
+    if (photo.supabase_photo_id && bySupabaseId.has(photo.supabase_photo_id)) {
+      const remote = bySupabaseId.get(photo.supabase_photo_id)!
+      bySupabaseId.delete(photo.supabase_photo_id)
+      return { ...photo, ...remote, uploaded: true }
+    }
+    return photo
+  })
+
+  const existingKeys = new Set(merged.map(deriveKey))
+  for (const photo of bySupabaseId.values()) {
+    const key = deriveKey(photo)
+    if (!existingKeys.has(key)) {
+      merged.push(photo)
+    }
+  }
+
+  return merged
+}
+
+export function useNHomePhotoCapture(sessionId?: string) {
   const [photos, setPhotos] = useState<NHomePhoto[]>([])
   const [isCameraOpen, setIsCameraOpen] = useState(false)
   const [currentItemId, setCurrentItemId] = useState<string>('')
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({})
 
-  // Load photos scoped to sessionId
   useEffect(() => {
-    let mounted = true
+    let cancelled = false
+    const activeSession =
+      sessionId ??
+      (typeof window !== 'undefined'
+        ? sessionStorage.getItem('currentSessionId') ?? undefined
+        : undefined)
+
+    if (typeof window !== 'undefined' && sessionId) {
+      sessionStorage.setItem('currentSessionId', sessionId)
+    }
+
     ;(async () => {
       try {
         const all = await idbGetAll<NHomePhoto>()
-        // Filter photos by sessionId if available in metadata
-        const sessionPhotos = all.filter(p => p.metadata?.sessionId === (typeof window !== 'undefined' ? sessionStorage.getItem('currentSessionId') : null))
-        if (mounted) setPhotos(sessionPhotos)
-      } catch (e) {
-        console.warn('Failed to load NHome photos from IndexedDB', e)
+        const filtered = activeSession
+          ? all.filter(p => (p.sessionId ?? p.metadata?.sessionId) === activeSession)
+          : all
+
+        if (!cancelled) {
+          setPhotos(filtered)
+        }
+      } catch (err) {
+        console.warn('Failed to load NHome photos from IndexedDB', err)
+        if (!cancelled) setPhotos([])
       }
     })()
-    return () => {
-      mounted = false
-      setPhotos([]) // clear on unmount or session change
+
+    if (activeSession) {
+      ;(async () => {
+        try {
+          const res = await fetch(`/api/nhome/inspections/${activeSession}/photos`, {
+            cache: 'no-store',
+          })
+          if (!res.ok) {
+            console.warn('Failed to fetch persisted photos', activeSession, res.status)
+            return
+          }
+          const payload = await res.json()
+          const remoteRows: RemotePhotoRecord[] = Array.isArray(payload?.photos)
+            ? payload.photos
+            : []
+          const remotePhotos = remoteRows
+            .map(record => createRemotePhoto(record, activeSession))
+            .filter((p): p is NHomePhoto => Boolean(p))
+
+          if (cancelled || remotePhotos.length === 0) return
+          setPhotos(prev => mergePhotos(prev, remotePhotos))
+        } catch (err) {
+          console.warn('Failed to merge persisted photos', err)
+        }
+      })()
     }
-  }, [])
+
+    return () => {
+      cancelled = true
+      setPhotos([])
+    }
+  }, [sessionId])
 
   const openNHomeCamera = (itemId?: string) => {
     setCurrentItemId(itemId || '')
@@ -87,19 +234,24 @@ export function useNHomePhotoCapture() {
   }
 
   const addNHomePhoto = (blob: Blob, url: string, metadata: NHomePhotoMetadata) => {
+    const scopedMetadata: NHomePhotoMetadata = {
+      ...metadata,
+      sessionId: sessionId ?? metadata.sessionId,
+    }
+
     const photo: NHomePhoto = {
       id: `nhome_photo_${Date.now()}`,
       blob,
       url,
-      metadata,
+      metadata: scopedMetadata,
       itemId: currentItemId,
       timestamp: Date.now(),
-      uploaded: false
+      uploaded: false,
+      sessionId,
     }
 
     setPhotos(prev => {
       const next = [...prev, photo]
-      // Persist async; not awaited to keep UI snappy
       idbPut<NHomePhoto>(photo).catch(err => console.warn('Failed to persist photo', err))
       return next
     })
@@ -110,7 +262,9 @@ export function useNHomePhotoCapture() {
     setPhotos(prev => {
       const photo = prev.find(p => p.id === photoId)
       if (photo) {
-        URL.revokeObjectURL(photo.url)
+        if (!photo.supabase_photo_id && photo.url) {
+          URL.revokeObjectURL(photo.url)
+        }
         idbDelete(photoId).catch(err => console.warn('Failed to delete photo', err))
       }
       return prev.filter(p => p.id !== photoId)
@@ -121,41 +275,56 @@ export function useNHomePhotoCapture() {
     return photos.filter(photo => photo.itemId === itemId)
   }
 
-  const markPhotoUploaded = (photoId: string, supabase_url: string) => {
+  const markPhotoUploaded = (
+    photoId: string,
+    supabaseUrl: string,
+    persisted?: RemotePhotoRecord | null
+  ) => {
     setPhotos(prev => {
-      const next = prev.map(photo =>
-        photo.id === photoId
-          ? ({
-              ...photo,
-              uploaded: true,
-              url: supabase_url,
-              onedrive_url: supabase_url,
-              blob: photo.blob ?? ({} as Blob) // maintain type safety
-            } as NHomePhoto)
-          : photo
-      )
+      const next = prev.map(photo => {
+        if (photo.id !== photoId) return photo
+
+        return {
+          ...photo,
+          uploaded: true,
+          url: supabaseUrl,
+          storage_url: supabaseUrl,
+          supabase_url: supabaseUrl,
+          onedrive_url: supabaseUrl,
+          supabase_photo_id: persisted?.id ?? photo.supabase_photo_id,
+          sessionId: sessionId ?? photo.sessionId,
+          file_name: persisted?.file_name ?? photo.file_name,
+          blob: photo.blob ?? ({} as Blob),
+        } as NHomePhoto
+      })
+
       const updated = next.find(p => p.id === photoId)
       if (updated) {
-        // Directly update the existing record in IndexedDB with Supabase URL
         openDB()
           .then(db => {
-            const tx = db.transaction(STORE, "readwrite");
-            const store = tx.objectStore(STORE);
-            const req = store.get(photoId);
+            const tx = db.transaction(STORE, 'readwrite')
+            const store = tx.objectStore(STORE)
+            const req = store.get(photoId)
             req.onsuccess = () => {
-              const record = req.result;
+              const record = req.result
               if (record) {
-                record.url = supabase_url;
-                record.uploaded = true;
-                record.onedrive_url = supabase_url;
-                delete record.blob; // remove blob reference
-                store.put(record);
+                record.url = supabaseUrl
+                record.uploaded = true
+                record.onedrive_url = supabaseUrl
+                record.storage_url = supabaseUrl
+                record.supabase_photo_id = persisted?.id ?? record.supabase_photo_id
+                record.sessionId = sessionId ?? record.sessionId
+                record.file_name = persisted?.file_name ?? record.file_name
+                delete record.blob
+                store.put(record)
               }
-            };
-            req.onerror = () => console.warn("Failed to fetch record for update", req.error);
+            }
+            req.onerror = () =>
+              console.warn('Failed to fetch record for update', req.error)
           })
-          .catch(err => console.warn("Failed to update Supabase URL in IndexedDB", err));
+          .catch(err => console.warn('Failed to update Supabase URL in IndexedDB', err))
       }
+
       return next
     })
   }
@@ -163,22 +332,14 @@ export function useNHomePhotoCapture() {
   const updateUploadProgress = (photoId: string, progress: number) => {
     setUploadProgress(prev => ({
       ...prev,
-      [photoId]: progress
+      [photoId]: progress,
     }))
   }
 
-  const generateNHomeFileName = (metadata: NHomePhotoMetadata): string => {
-    const timestamp = new Date(metadata.timestamp).toISOString().replace(/[:.]/g, '-')
-    const cleanProperty = metadata.property.replace(/[^a-zA-Z0-9]/g, '_')
-    const cleanUnit = metadata.unit.replace(/[^a-zA-Z0-9]/g, '_')
-    const cleanRoom = metadata.room.replace(/[^a-zA-Z0-9]/g, '_')
-    const cleanItem = metadata.item.toLowerCase()
-      .replace(/[^a-z0-9\s]/g, '')
-      .replace(/\s+/g, '_')
-      .substring(0, 30)
-    
-    return `NHome_${cleanProperty}_${cleanUnit}_${cleanRoom}_${cleanItem}_${timestamp}.jpg`
-  }
+  const generateNHomeFileName = useMemo(
+    () => (metadata: NHomePhotoMetadata) => fileNameFromMetadata(metadata),
+    []
+  )
 
   return {
     photos,
@@ -192,6 +353,6 @@ export function useNHomePhotoCapture() {
     getNHomePhotosForItem,
     markPhotoUploaded,
     updateUploadProgress,
-    generateNHomeFileName
+    generateNHomeFileName,
   }
 }

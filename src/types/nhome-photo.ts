@@ -21,4 +21,8 @@ export interface NHomePhoto {
   uploaded: boolean
   storage_url?: string
   supabase_url?: string
+  onedrive_url?: string
+  sessionId?: string
+  supabase_photo_id?: string
+  file_name?: string
 }

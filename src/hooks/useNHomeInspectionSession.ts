@@ -13,12 +13,56 @@ export function useNHomeInspectionSession(sessionId: string){
   async function load(){
     setLoading(true)
     try{
+      console.info('[NHomeSession] Loading session', { sessionId })
       const supabase = getSupabase()
-      const { data: sessionData } = await supabase
+      const { data: sessionData, error: sessionError } = await supabase
         .from('inspection_sessions')
         .select('*, apartments:apartment_id (*, projects (*))')
         .eq('id', sessionId)
         .single()
+
+      if (sessionError) {
+        console.error('[NHomeSession] Failed to load inspection session', {
+          sessionId,
+          error: sessionError.message,
+          code: sessionError.code,
+        })
+      } else {
+        console.info('[NHomeSession] Session row received', {
+          sessionId,
+          hasApartment: Boolean(sessionData?.apartments),
+          hasProject: Boolean(sessionData?.apartments?.projects),
+        })
+      }
+
+      if (!sessionData) {
+        console.warn('[NHomeSession] No session found', { sessionId })
+        setSession(null)
+        setCurrentItem(null)
+        setNHomeProgress({ completed: 0, total: 0, issues_found: 0, quality_score: 0 })
+        return
+      }
+
+      if (!sessionData.apartments || !sessionData.apartments?.projects) {
+        console.warn('[NHomeSession] Session is missing apartment/project relationships', {
+          sessionId,
+          hasApartment: Boolean(sessionData.apartments),
+          hasProject: Boolean(sessionData.apartments?.projects),
+        })
+        try {
+          const diagResponse = await fetch(`/api/nhome/diagnostics/${sessionId}`, { cache: 'no-store' })
+          const diagPayload = await diagResponse.json()
+          console.info('[NHomeSession] Diagnostics snapshot', {
+            status: diagResponse.status,
+            note: diagPayload?.note,
+            sessionInspector: diagPayload?.session?.inspector_id,
+            checklistCount: diagPayload?.resultsCount,
+            photoCount: diagPayload?.photosCount,
+          })
+        } catch (diagError) {
+          console.error('[NHomeSession] Diagnostics fetch failed', diagError)
+        }
+      }
 
       const { data: checklist, error: checklistError } = await supabase
         .from('checklist_templates')
@@ -27,19 +71,33 @@ export function useNHomeInspectionSession(sessionId: string){
         .order('order_sequence');
 
       if (checklistError) {
-        console.warn("Error loading checklist templates:", checklistError.message);
+        console.warn("[NHomeSession] Error loading checklist templates", {
+          sessionId,
+          apartmentType: sessionData?.apartments?.apartment_type,
+          error: checklistError.message,
+          code: checklistError.code,
+        });
       }
 
       if (!checklist || checklist.length === 0) {
         console.warn(
-          `No checklist templates found for apartment type: ${sessionData?.apartments?.apartment_type}`
+          `[NHomeSession] No checklist templates found for apartment type`,
+          { sessionId, apartmentType: sessionData?.apartments?.apartment_type }
         );
       }
 
-      const { data: results } = await supabase
+      const { data: results, error: resultsError } = await supabase
         .from('inspection_results')
         .select('*')
         .eq('session_id', sessionId)
+
+      if (resultsError) {
+        console.error('[NHomeSession] Error loading inspection results', {
+          sessionId,
+          error: resultsError.message,
+          code: resultsError.code,
+        })
+      }
 
       const enhanced = { ...sessionData, checklist_items: checklist ?? [], results: results ?? [], apartment: sessionData?.apartments, project: sessionData?.apartments?.projects }
       setSession(enhanced)
@@ -52,6 +110,13 @@ export function useNHomeInspectionSession(sessionId: string){
 
       const idx = sessionData?.current_item_index ?? 0
       setCurrentItem(checklist?.[idx])
+      console.info('[NHomeSession] Load complete', {
+        sessionId,
+        checklistItems: total,
+        resultsCount: completed,
+        currentIndex: idx,
+        quality_score,
+      })
     }catch(e){ console.error('Error loading NHome session', e) } finally{ setLoading(false) }
   }
 
@@ -75,6 +140,13 @@ export function useNHomeInspectionSession(sessionId: string){
   ) {
     const supabase = getSupabase()
     // Upsert the inspection result incrementally
+    console.info('[NHomeSession] Saving result', {
+      sessionId,
+      itemId,
+      status,
+      photoCount: photos.length,
+      shouldAdvance,
+    })
     const payload: any = {
       session_id: sessionId,
       item_id: itemId,
@@ -88,7 +160,16 @@ export function useNHomeInspectionSession(sessionId: string){
       payload.notes = notes
     }
 
-    await supabase.from('inspection_results').upsert(payload)
+    const { error: upsertError } = await supabase.from('inspection_results').upsert(payload)
+    if (upsertError) {
+      console.error('[NHomeSession] Failed to upsert inspection result', {
+        sessionId,
+        itemId,
+        error: upsertError.message,
+        code: upsertError.code,
+      })
+      throw upsertError
+    }
 
     // Update session progress incrementally
     const totalItems = session?.checklist_items?.length ?? 0
@@ -107,7 +188,21 @@ export function useNHomeInspectionSession(sessionId: string){
       }
     }
 
-    await supabase.from('inspection_sessions').update(updates).eq('id', sessionId)
+    const { error: updateError } = await supabase.from('inspection_sessions').update(updates).eq('id', sessionId)
+    if (updateError) {
+      console.error('[NHomeSession] Failed to update session progress', {
+        sessionId,
+        updates,
+        error: updateError.message,
+        code: updateError.code,
+      })
+      throw updateError
+    }
+
+    console.info('[NHomeSession] Result saved, refreshing session', {
+      sessionId,
+      updates,
+    })
     await load()
   }
 

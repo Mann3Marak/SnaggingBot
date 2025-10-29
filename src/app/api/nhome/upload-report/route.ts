@@ -27,7 +27,7 @@ export async function POST(req: Request) {
     console.log("📤 Uploading report via API route:", path);
 
     const { error } = await supabase.storage
-      .from("nhome-reports")
+      .from("nhome_reports")
       .upload(path, buffer, {
         upsert: true,
         contentType: "application/pdf",
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
     }
 
     const { data: publicUrl } = supabase.storage
-      .from("nhome-reports")
+      .from("nhome_reports")
       .getPublicUrl(path);
 
     console.log("✅ Report uploaded successfully:", publicUrl.publicUrl);

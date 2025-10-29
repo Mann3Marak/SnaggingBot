@@ -1,4 +1,4 @@
-﻿import { getSupabase } from '@/lib/supabase'
+import { getSupabase } from '@/lib/supabase'
 import type { NHomePhotoMetadata } from '@/types/nhome-photo'
 
 type NHomeSessionContext = {
@@ -10,6 +10,8 @@ type NHomeSessionContext = {
   created_at?: string | null
 }
 
+const BUCKET_ID = 'nhome_photos'
+
 export class NHomePhotoUploadService {
   async uploadNHomeInspectionPhoto(
     blob: Blob,
@@ -19,20 +21,18 @@ export class NHomePhotoUploadService {
     fileName: string,
     session?: NHomeSessionContext,
     onProgress?: (p: number) => void,
-  ): Promise<{ success: boolean; supabase_url?: string; error?: string }> {
+  ): Promise<{ success: boolean; supabase_url?: string; photo?: any; error?: string }> {
     try {
-      const supabase = getSupabase()
-      const path = `sessions/${sessionId}/${fileName}`
+      // Ensure Supabase client session is available (fetch relies on active auth cookies)
+      getSupabase()
 
-      const bucket = 'nhome-inspection-photos'
-      // ✅ Use server-side API route to bypass RLS
       const formData = new FormData()
-      formData.append("file", blob)
-      formData.append("sessionId", sessionId)
-      formData.append("fileName", fileName)
+      formData.append('file', blob)
+      formData.append('sessionId', sessionId)
+      formData.append('fileName', fileName)
 
-      const uploadResponse = await fetch("/api/nhome/upload-photo", {
-        method: "POST",
+      const uploadResponse = await fetch('/api/nhome/upload-photo', {
+        method: 'POST',
         body: formData,
       })
 
@@ -41,13 +41,13 @@ export class NHomePhotoUploadService {
         throw new Error(`Upload API failed: ${errorText}`)
       }
 
-      const { supabase_url: supabaseUrl } = await uploadResponse.json()
+      const uploadPayload = await uploadResponse.json().catch(() => ({}))
+      const supabaseUrl = uploadPayload?.supabase_url as string | undefined
       onProgress?.(100)
 
-      // ✅ Persist metadata after successful upload
-      await fetch(`/api/nhome/inspections/${sessionId}/photos`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const metadataResponse = await fetch(`/api/nhome/inspections/${sessionId}/photos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           item_id: itemId,
           file_name: fileName,
@@ -57,7 +57,20 @@ export class NHomePhotoUploadService {
         }),
       })
 
-      return { success: true, supabase_url: supabaseUrl }
+      let persistedPhoto: any = null
+      if (metadataResponse.ok) {
+        const metaPayload = await metadataResponse.json().catch(() => null)
+        persistedPhoto = metaPayload?.photo ?? null
+      } else {
+        const errorText = await metadataResponse.text().catch(() => '')
+        console.warn(
+          '[NHomePhotoUploadService] Metadata persistence failed',
+          metadataResponse.status,
+          errorText,
+        )
+      }
+
+      return { success: true, supabase_url: supabaseUrl, photo: persistedPhoto }
     } catch (e: any) {
       console.error('NHome upload failed', e)
       if (onProgress) onProgress(0)
@@ -65,24 +78,30 @@ export class NHomePhotoUploadService {
     }
   }
 
-  async shareInspectionWithClient(sessionId: string, session?: NHomeSessionContext): Promise<{ success: boolean; package_url?: string; error?: string }> {
+  async shareInspectionWithClient(
+    sessionId: string,
+    session?: NHomeSessionContext,
+  ): Promise<{ success: boolean; package_url?: string; error?: string }> {
     try {
       const supabase = getSupabase()
-      const { data, error } = await supabase
-        .storage
-        .from('nhome-inspection-photos')
+      const { data, error } = await supabase.storage
+        .from(BUCKET_ID)
         .list(`sessions/${sessionId}`, { limit: 100 })
 
       if (error) throw error
 
-      const publicUrls = data.map(f => ({
+      const publicUrls = (data ?? []).map(f => ({
         name: f.name,
-        url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/nhome-inspection-photos/sessions/${sessionId}/${f.name}`
+        url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET_ID}/sessions/${sessionId}/${f.name}`,
       }))
 
-      const packageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/nhome-inspection-photos/sessions/${sessionId}/`
+      const packageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET_ID}/sessions/${sessionId}/`
 
-      console.log(`Shared inspection package for session ${sessionId}:`, publicUrls.length, 'files')
+      console.log(
+        `Shared inspection package for session ${sessionId}:`,
+        publicUrls.length,
+        'files',
+      )
 
       return { success: true, package_url: packageUrl }
     } catch (e: any) {
