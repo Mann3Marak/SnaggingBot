@@ -5,33 +5,55 @@ import { createServerClient } from "@supabase/ssr";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-    const cookieStore = cookies();
-    const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    });
+    let authenticatedUser: any = null;
+    let authError: any = null;
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
-
-    if (userError) {
-      console.error("[NHomeProjectsList] Failed to read auth user", userError);
-      return NextResponse.json({ error: "Unable to read authenticated user" }, { status: 401 });
+    const authHeader = req.headers.get("authorization");
+    const tokenMatch = authHeader?.match(/^Bearer\s+(.+)$/i);
+    if (tokenMatch) {
+      const token = tokenMatch[1]?.trim();
+      if (token) {
+        const anonClient = createClient(supabaseUrl, supabaseAnonKey, {
+          auth: { persistSession: false },
+        });
+        const { data, error } = await anonClient.auth.getUser(token);
+        if (!error && data?.user) {
+          authenticatedUser = data.user;
+        } else {
+          authError = error;
+          console.warn("[NHomeProjectsList] Bearer token rejected", error?.message);
+        }
+      }
     }
 
-    if (!user) {
-      console.warn("[NHomeProjectsList] Anonymous request blocked");
+    if (!authenticatedUser) {
+      const cookieStore = cookies();
+      const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          get: (name: string) => cookieStore.get(name)?.value,
+          set: () => {},
+          remove: () => {},
+        },
+      });
+
+      const {
+        data: { user },
+        error,
+      } = await supabaseAuth.auth.getUser();
+      authenticatedUser = user;
+      authError = error ?? authError;
+    }
+
+    if (!authenticatedUser) {
+      if (authError && authError.message && authError.message !== "Auth session missing!") {
+        console.error("[NHomeProjectsList] Auth lookup failed", authError);
+      }
       return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
     }
 
@@ -42,7 +64,7 @@ export async function GET(_req: NextRequest) {
     const { data: profile, error: profileError } = await adminClient
       .from("users")
       .select("company_id, role")
-      .eq("id", user.id)
+      .eq("id", authenticatedUser.id)
       .maybeSingle();
 
     if (profileError) {
@@ -52,8 +74,8 @@ export async function GET(_req: NextRequest) {
 
     if (!profile?.company_id) {
       console.error("[NHomeProjectsList] User missing company assignment", {
-        userId: user.id,
-        email: user.email,
+        userId: authenticatedUser.id,
+        email: authenticatedUser.email,
       });
       return NextResponse.json(
         { error: "Your user is not linked to a company. Ask an admin to update your profile." },
@@ -68,12 +90,12 @@ export async function GET(_req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("[NHomeProjectsList] Error fetching projects", { error, userId: user.id });
+      console.error("[NHomeProjectsList] Error fetching projects", { error, userId: authenticatedUser.id });
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
     console.info("[NHomeProjectsList] Returning projects", {
-      userId: user.id,
+      userId: authenticatedUser.id,
       companyId: profile.company_id,
       count: data?.length || 0,
     });

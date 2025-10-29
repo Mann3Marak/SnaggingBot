@@ -12,6 +12,9 @@ type RemotePhotoRecord = {
   file_name: string | null
   supabase_url: string | null
   inspector_name: string | null
+  metadata?: NHomePhotoMetadata | null
+  file_size?: number | null
+  image_dimensions?: any
   storage_path?: string | null
   signed_url?: string | null
   created_at?: string | null
@@ -104,12 +107,18 @@ const createRemotePhoto = (
   const createdAt = record.created_at ? new Date(record.created_at).getTime() : Date.now()
   const fileName = record.file_name ?? `photo-${record.id}`
 
+  const rawMeta = record.metadata as NHomePhotoMetadata | null
   const metadata: NHomePhotoMetadata = {
-    inspector: record.inspector_name || 'NHome Inspector',
-    ...DEFAULT_METADATA,
-    item: fileName,
-    timestamp: new Date(createdAt).toISOString(),
-    sessionId,
+    inspector: rawMeta?.inspector || record.inspector_name || 'NHome Inspector',
+    company: rawMeta?.company ?? DEFAULT_METADATA.company,
+    property: rawMeta?.property ?? DEFAULT_METADATA.property,
+    unit: rawMeta?.unit ?? DEFAULT_METADATA.unit,
+    room: rawMeta?.room ?? DEFAULT_METADATA.room,
+    item: rawMeta?.item ?? fileName,
+    timestamp: rawMeta?.timestamp ?? new Date(createdAt).toISOString(),
+    location: rawMeta?.location ?? DEFAULT_METADATA.location,
+    quality_standards: rawMeta?.quality_standards ?? DEFAULT_METADATA.quality_standards,
+    sessionId: rawMeta?.sessionId ?? sessionId,
   }
 
   return {
@@ -124,6 +133,8 @@ const createRemotePhoto = (
     uploaded: true,
     storage_url: signedUrl,
     supabase_url: signedUrl,
+    file_size: record.file_size ?? undefined,
+    image_dimensions: record.image_dimensions ?? undefined,
   }
 }
 
@@ -284,6 +295,20 @@ export function useNHomePhotoCapture(sessionId?: string) {
       const next = prev.map(photo => {
         if (photo.id !== photoId) return photo
 
+        const persistedMeta = (persisted?.metadata as NHomePhotoMetadata | null) ?? null
+        const mergedMetadata: NHomePhotoMetadata = {
+          ...photo.metadata,
+          ...persistedMeta,
+          inspector:
+            persistedMeta?.inspector ??
+            photo.metadata.inspector ??
+            persisted?.inspector_name ??
+            'NHome Inspector',
+          sessionId: persistedMeta?.sessionId ?? sessionId ?? photo.metadata.sessionId,
+          item: persistedMeta?.item ?? photo.metadata.item,
+          timestamp: persistedMeta?.timestamp ?? photo.metadata.timestamp,
+        }
+
         return {
           ...photo,
           uploaded: true,
@@ -294,6 +319,9 @@ export function useNHomePhotoCapture(sessionId?: string) {
           supabase_photo_id: persisted?.id ?? photo.supabase_photo_id,
           sessionId: sessionId ?? photo.sessionId,
           file_name: persisted?.file_name ?? photo.file_name,
+          metadata: mergedMetadata,
+          file_size: persisted?.file_size ?? photo.file_size,
+          image_dimensions: persisted?.image_dimensions ?? photo.image_dimensions,
           blob: photo.blob ?? ({} as Blob),
         } as NHomePhoto
       })
@@ -315,6 +343,18 @@ export function useNHomePhotoCapture(sessionId?: string) {
                 record.supabase_photo_id = persisted?.id ?? record.supabase_photo_id
                 record.sessionId = sessionId ?? record.sessionId
                 record.file_name = persisted?.file_name ?? record.file_name
+                record.metadata = {
+                  ...(record.metadata || {}),
+                  ...(persisted?.metadata || {}),
+                  inspector:
+                    persisted?.metadata?.inspector ??
+                    record.metadata?.inspector ??
+                    persisted?.inspector_name ??
+                    'NHome Inspector',
+                  sessionId: persisted?.metadata?.sessionId ?? sessionId ?? record.sessionId,
+                }
+                record.file_size = persisted?.file_size ?? record.file_size
+                record.image_dimensions = persisted?.image_dimensions ?? record.image_dimensions
                 delete record.blob
                 store.put(record)
               }

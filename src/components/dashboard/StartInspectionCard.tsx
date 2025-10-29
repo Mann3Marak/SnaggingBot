@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
+import { getSupabase } from "@/lib/supabase";
 
 export default function StartInspectionCard() {
   const [showModal, setShowModal] = useState(false);
@@ -14,15 +14,40 @@ export default function StartInspectionCard() {
 
   // Fetch projects each time the modal is opened to ensure fresh data
   useEffect(() => {
-    if (showModal) {
-      fetch("/api/nhome/projects/list", { cache: "no-store" })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.projects) setProjects(data.projects);
-          else setProjects([]);
-        })
-        .catch((err) => console.error("Failed to load projects:", err));
-    }
+    if (!showModal) return;
+
+    let active = true;
+    const loadProjects = async () => {
+      try {
+        const supabase = getSupabase();
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+
+        const res = await fetch("/api/nhome/projects/list", {
+          cache: "no-store",
+          credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || `Request failed (${res.status})`);
+        }
+
+        const payload = await res.json();
+        if (active) {
+          setProjects(payload?.projects ?? []);
+        }
+      } catch (err) {
+        console.error("Failed to load projects:", err);
+        if (active) setProjects([]);
+      }
+    };
+
+    loadProjects();
+    return () => {
+      active = false;
+    };
   }, [showModal]);
 
   async function handleProjectSelect(projectId: string) {
@@ -46,10 +71,7 @@ export default function StartInspectionCard() {
     if (!selectedProject || !selectedApartment) return;
     setLoading(true);
     try {
-      const supabase = createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
+      const supabase = getSupabase();
 
       // Get current user (inspector)
       const { data: user } = await supabase.auth.getUser();

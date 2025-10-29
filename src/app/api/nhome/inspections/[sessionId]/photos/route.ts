@@ -9,13 +9,14 @@ const BUCKET_ID = "nhome_photos";
 
 function resolveStoragePath(
   sessionId: string,
-  fileName: string,
+  fileName: string | null | undefined,
   storedPath?: string | null
 ) {
+  const safeName = fileName && fileName.trim().length > 0 ? fileName : `photo-${Date.now()}.jpg`;
   const stripQuery = (value: string) => value.split("?")[0];
 
   if (!storedPath) {
-    return `sessions/${sessionId}/${fileName}`;
+    return `sessions/${sessionId}/${safeName}`;
   }
 
   if (storedPath.startsWith("sessions/")) {
@@ -72,11 +73,7 @@ export async function GET(
 
     const photosWithUrls = await Promise.all(
       (data ?? []).map(async (photo) => {
-        const path = resolveStoragePath(
-          sessionId,
-          photo.file_name,
-          photo.supabase_url
-        );
+        const path = resolveStoragePath(sessionId, photo.file_name, photo.supabase_url);
 
         const { data: signed, error: signedError } = await supabase.storage
           .from(BUCKET_ID)
@@ -120,6 +117,8 @@ export async function POST(
       storage_url,
       supabase_url,
       metadata,
+      file_size,
+      image_dimensions,
     } = body;
 
     if (!item_id || !file_name) {
@@ -144,6 +143,9 @@ export async function POST(
           file_name,
           supabase_url: storagePath,
           inspector_name: metadata?.inspector ?? "NHome Inspector",
+          metadata: metadata ?? null,
+          file_size: file_size ?? null,
+          image_dimensions: image_dimensions ?? null,
         },
       ])
       .select()

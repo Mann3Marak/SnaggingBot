@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { getSupabase } from "@/lib/supabase";
 
 export default function AddApartmentCard() {
   const [showModal, setShowModal] = useState(false);
@@ -20,14 +20,40 @@ export default function AddApartmentCard() {
 
   // Fetch projects when modal opens to ensure fresh data
   useEffect(() => {
-    if (showModal) {
-      fetch("/api/nhome/projects/list", { cache: "no-store" })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data?.projects) setProjects(data.projects);
-        })
-        .catch((err) => console.error("Error loading projects:", err));
-    }
+    if (!showModal) return;
+
+    let active = true;
+    const loadProjects = async () => {
+      try {
+        const supabase = getSupabase();
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+
+        const res = await fetch("/api/nhome/projects/list", {
+          cache: "no-store",
+          credentials: "include",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        });
+
+        if (!res.ok) {
+          const detail = await res.text().catch(() => "");
+          throw new Error(detail || `Request failed (${res.status})`);
+        }
+
+        const payload = await res.json();
+        if (active && payload?.projects) {
+          setProjects(payload.projects);
+        }
+      } catch (err) {
+        console.error("Error loading projects:", err);
+        if (active) setProjects([]);
+      }
+    };
+
+    loadProjects();
+    return () => {
+      active = false;
+    };
   }, [showModal]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -108,16 +134,12 @@ export default function AddApartmentCard() {
 
                   if (projectId) {
                     try {
-                      const res = await fetch("/api/nhome/projects/list");
-                      const data = await res.json();
-                      if (data?.projects) {
-                        const selected = data.projects.find(
-                          (p: any) => p.id === projectId
-                        );
-                        if (selected) {
-                          setAvailableTypes(selected.apartment_types || []);
-                          setAvailableLotes(selected.building_numbers || []);
-                        }
+                      const selected = projects.find(
+                        (p: any) => p.id === projectId
+                      );
+                      if (selected) {
+                        setAvailableTypes(selected.apartment_types || []);
+                        setAvailableLotes(selected.building_numbers || []);
                       }
                     } catch (err) {
                       console.error("Error fetching project details:", err);

@@ -25,4 +25,7 @@ export interface NHomePhoto {
   sessionId?: string
   supabase_photo_id?: string
   file_name?: string
+  metadata?: any
+  file_size?: number
+  image_dimensions?: any
 }

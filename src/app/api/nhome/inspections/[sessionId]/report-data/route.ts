@@ -133,6 +133,7 @@ export async function GET(
     signedPhotos.forEach((photo) => {
       if (!photo.item_id) return
       const key = String(photo.item_id)
+      if (!key || key === "undefined" || key === "null") return
       const bucket = photosByKey.get(key) ?? []
       bucket.push(photo)
       photosByKey.set(key, bucket)
