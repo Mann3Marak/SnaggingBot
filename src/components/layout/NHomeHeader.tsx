@@ -15,7 +15,7 @@ const navItems = [
 export function NHomeHeader() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { user, loading } = useAuthUser()
-  const pathname = usePathname()
+  const pathname = usePathname() ?? ''
 
   const isAuthenticated = Boolean(user)
   const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'NHome user'

@@ -8,8 +8,14 @@ import NHomeReportGenerator from '@/components/reports/NHomeReportGenerator'
 import { NHomeReportPreview } from '@/components/reports/NHomeReportPreview'
 
 export default function InspectionPage(){
-  const params = useParams<{ sessionId: string }>()
-  const sessionId = params.sessionId
+  const params = useParams<{ sessionId?: string }>()
+  const sessionIdParam = params?.sessionId
+
+  if (typeof sessionIdParam !== 'string' || sessionIdParam.length === 0) {
+    return <main className='p-6'>Session not found.</main>
+  }
+
+  const sessionId = sessionIdParam
   const { session, currentItem, loading, nhomeProgress, saveNHomeResult } = useNHomeInspectionSession(sessionId)
 
   const [showNotes, setShowNotes] = useState<null | 'issue' | 'critical'>(null)

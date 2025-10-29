@@ -47,7 +47,7 @@ export default function NHomeFollowUpInspection() {
 
   // Automatically load sessionId from query string
   const searchParams = useSearchParams();
-  const querySessionId = searchParams.get("sessionId");
+  const querySessionId = searchParams?.get("sessionId");
 
   useEffect(() => {
     if (querySessionId && !sessionId) {
