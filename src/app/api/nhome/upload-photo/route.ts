@@ -37,9 +37,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: signedUrlError.message }, { status: 500 });
     }
 
+    // ✅ Append the public URL to inspection_results.photo_urls
+    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+
+    const { error: updateError } = await supabase.rpc("append_photo_url", {
+      session_id_input: sessionId,
+      photo_url_input: publicUrl,
+    });
+
+    if (updateError) {
+      console.error("Error updating inspection_results.photo_urls:", updateError);
+    }
+
     return NextResponse.json({
       success: true,
       supabase_url: signedUrlData?.signedUrl,
+      public_url: publicUrl,
       path,
     });
   } catch (err: any) {

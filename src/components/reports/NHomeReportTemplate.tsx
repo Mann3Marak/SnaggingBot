@@ -134,9 +134,27 @@ export const NHomeReportTemplate = ({ data, language }: { data: any; language: "
                       : `Notes: ${it.notes}`}
                   </Text>
                 )}
-                {it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
-                  <Image key={j} style={styles.photo} src={p.url} />
-                ))}
+                {/* ✅ Use photo_urls from inspection_results if available */}
+                {(() => {
+                  console.log("📸 Rendering photos for item:", {
+                    itemId: it.item_id,
+                    hasPhotoUrls: !!it.photo_urls?.length,
+                    photoUrls: it.photo_urls,
+                    hasPreviewPhotos: !!it.preview_photos?.length,
+                  });
+                  if (it.photo_urls?.length) {
+                    return it.photo_urls.slice(0, 2).map((url: string, j: number) => (
+                      <Image key={j} style={styles.photo} src={url} />
+                    ));
+                  } else if (it.preview_photos?.length) {
+                    return it.preview_photos.slice(0, 2).map((p: any, j: number) => (
+                      <Image key={j} style={styles.photo} src={p.url} />
+                    ));
+                  } else {
+                    console.log("⚠️ No photos found for item:", it.item_id);
+                    return null;
+                  }
+                })()}
               </View>
             ))}
           </View>

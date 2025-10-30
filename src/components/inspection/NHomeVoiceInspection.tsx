@@ -1002,66 +1002,79 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
           <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
             <h3 className="font-semibold text-gray-900 mb-3">Photos for this item</h3>
             <div className="grid grid-cols-3 gap-3">
+              {/* ✅ Display photos from inspection_results.photo_urls */}
+              {currentItem.photo_urls?.length > 0 && currentItem.photo_urls.map((url: string, index: number) => (
+                <div key={`db-photo-${index}`} className="relative border rounded-lg overflow-hidden group">
+                  <img src={url} alt={`Inspection photo ${index + 1}`} className="w-full h-24 object-cover" />
+                  <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
+                    Saved
+                  </div>
+                </div>
+              ))}
+
+              {/* ✅ Display locally captured photos (not yet uploaded) */}
               {getNHomePhotosForItem(currentItem.id).map(photo => {
-                const displayName = photo.file_name ?? generateNHomeFileName(photo.metadata)
+                const displayName = photo.file_name ?? generateNHomeFileName(photo.metadata);
                 return (
                   <div key={photo.id} className="relative border rounded-lg overflow-hidden group">
                     <img src={photo.url} alt={photo.metadata.item} className="w-full h-24 object-cover" />
                     <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
-                    {photo.uploaded ? 'Uploaded' : uploadProgress[photo.id] ? `${Math.round(uploadProgress[photo.id])}%` : ''}
-                  </div>
-                  <button
-                    onClick={() => removeNHomePhoto(photo.id)}
-                    type="button" className="absolute top-1 right-1 bg-black/60 z-10 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove photo"
-                  >
-                    Remove
-                  </button>
-                  {!photo.uploaded && (
+                      {photo.uploaded ? 'Uploaded' : uploadProgress[photo.id] ? `${Math.round(uploadProgress[photo.id])}%` : ''}
+                    </div>
                     <button
-                      onClick={async () => {
-                        try {
-                          updateUploadProgress(photo.id, 1)
-                          const fileName = generateNHomeFileName(photo.metadata)
-                          const res = await uploader.uploadNHomeInspectionPhoto(
-                            photo.blob as Blob,
-                            photo.metadata,
-                            sessionId,
-                            photo.itemId || currentItem.id,
-                            fileName,
-                            session,
-                            (p) => updateUploadProgress(photo.id, p),
-                          )
-                          if (res.success && res.supabase_url) {
-                            markPhotoUploaded(photo.id, res.supabase_url, res.photo)
-                          }
-                        } catch (e) {
-                          console.error('NHome photo upload failed', e)
-                          updateUploadProgress(photo.id, 0)
-                        }
-                      }}
-                      type="button" className="absolute bottom-1 right-1 bg-nhome-secondary z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
-                      title="Upload to NHome cloud storage"
+                      onClick={() => removeNHomePhoto(photo.id)}
+                      type="button"
+                      className="absolute top-1 right-1 bg-black/60 z-10 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove photo"
                     >
-                      Upload
+                      Remove
                     </button>
-                  )}
-                  <div className="p-2 text-[10px] text-gray-600 truncate" title={displayName}>
-                    {displayName}
-                    {photo.uploaded && photo.storage_url && (
-                      <a
-                        href={photo.storage_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
-                        title={photo.storage_url}
+                    {!photo.uploaded && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            updateUploadProgress(photo.id, 1);
+                            const fileName = generateNHomeFileName(photo.metadata);
+                            const res = await uploader.uploadNHomeInspectionPhoto(
+                              photo.blob as Blob,
+                              photo.metadata,
+                              sessionId,
+                              photo.itemId || currentItem.id,
+                              fileName,
+                              session,
+                              (p) => updateUploadProgress(photo.id, p),
+                            );
+                            if (res.success && res.supabase_url) {
+                              markPhotoUploaded(photo.id, res.supabase_url, res.photo);
+                            }
+                          } catch (e) {
+                            console.error('NHome photo upload failed', e);
+                            updateUploadProgress(photo.id, 0);
+                          }
+                        }}
+                        type="button"
+                        className="absolute bottom-1 right-1 bg-nhome-secondary z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
+                        title="Upload to NHome cloud storage"
                       >
-                        {photo.storage_url}
-                      </a>
+                        Upload
+                      </button>
                     )}
+                    <div className="p-2 text-[10px] text-gray-600 truncate" title={displayName}>
+                      {displayName}
+                      {photo.uploaded && photo.storage_url && (
+                        <a
+                          href={photo.storage_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
+                          title={photo.storage_url}
+                        >
+                          {photo.storage_url}
+                        </a>
+                      )}
+                    </div>
                   </div>
-                </div>
-                )
+                );
               })}
             </div>
             <div className="mt-3">

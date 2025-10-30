@@ -98,9 +98,14 @@ export const NHomeReportTemplateEN = ({ data }: { data: any }) => {
                   {`${it.checklist_templates?.item_description || `Item ${it.item_id}`} (${it.status}) — Checked`}
                 </Text>
                 {it.notes && <Text style={styles.text}>{`Notes: ${it.notes}`}</Text>}
-                {it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
-                  <Image key={j} style={styles.photo} src={p.url} />
-                ))}
+                {/* ✅ Use photo_urls from inspection_results if available */}
+                {it.photo_urls?.length
+                  ? it.photo_urls.slice(0, 2).map((url: string, j: number) => (
+                      <Image key={j} style={styles.photo} src={url} />
+                    ))
+                  : it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
+                      <Image key={j} style={styles.photo} src={p.url} />
+                    ))}
               </View>
             ))}
           </View>

@@ -118,9 +118,14 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
                     {`Observação: ${it.pt_notes || it.translated_note || it.notes}`}
                   </Text>
                 )}
-                {it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
-                  <Image key={j} style={styles.photo} src={p.url} />
-                ))}
+                {/* ✅ Use photo_urls from inspection_results if available */}
+                {it.photo_urls?.length
+                  ? it.photo_urls.slice(0, 2).map((url: string, j: number) => (
+                      <Image key={j} style={styles.photo} src={url} />
+                    ))
+                  : it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
+                      <Image key={j} style={styles.photo} src={p.url} />
+                    ))}
               </View>
             ))}
           </View>
