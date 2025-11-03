@@ -7,7 +7,7 @@ async function ensureInspectionPhotosBucket() {
     const { data: buckets, error: listError } = await supabase.storage.listBuckets();
     if (listError) throw listError;
 
-    const exists = buckets?.some((b) => b.name === "inspection-photos");
+const exists = buckets?.some((b: { name: string }) => b.name === "inspection-photos");
     if (exists) {
       console.log("✅ Supabase bucket 'inspection-photos' already exists.");
       return;
