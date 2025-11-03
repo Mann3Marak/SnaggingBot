@@ -36,7 +36,7 @@ export function useAuthUser(): AuthUserState {
 
     fetchUserWithRole();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
+const { data: authListener } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       if (session?.user) {
         fetch(`/api/auth/role?id=${session.user.id}`)
           .then((res) => res.json())
