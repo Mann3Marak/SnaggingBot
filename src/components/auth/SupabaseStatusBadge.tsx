@@ -14,7 +14,7 @@ export function SupabaseStatusBadge({ className }: Props) {
     let mounted = true
     const supabase = getSupabase()
 
-    supabase.auth.getSession().then(({ data }) => {
+supabase.auth.getSession().then(({ data }: { data: { session: any } }) => {
       if (!mounted) return
       const sess = data.session
       if (sess?.user) {
@@ -25,7 +25,7 @@ export function SupabaseStatusBadge({ className }: Props) {
       }
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+const { data: sub } = supabase.auth.onAuthStateChange((_e: any, session: any) => {
       if (!mounted) return
       if (session?.user) {
         setStatus('signed_in')
@@ -70,4 +70,3 @@ export function SupabaseStatusBadge({ className }: Props) {
     </a>
   )
 }
-
