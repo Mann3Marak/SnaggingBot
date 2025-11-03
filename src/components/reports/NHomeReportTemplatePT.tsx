@@ -110,22 +110,32 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
             <Text style={[styles.h2, { marginTop: 12 }]}>{room}</Text>
             {items.map((it: any, i: number) => (
               <View key={`item-${ri}-${i}`} style={styles.item}>
-                <Text style={styles.text}>
-                  {`${translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`)} (${it.status === "good" ? "Bom" : it.status === "issue" ? "Problema" : it.status === "critical" ? "Crítico" : "N/A"}) — Verificado`}
-                </Text>
-                {(it.pt_notes || it.notes) && (
+                {it.status === 'good' ? (
+                  // For good items: just "Item name - Bom"
                   <Text style={styles.text}>
-                    {`Observação: ${it.pt_notes || it.translated_note || it.notes}`}
+                    {`${translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`)} - Bom`}
                   </Text>
+                ) : (
+                  // For issue/critical items: show status and notes
+                  <>
+                    <Text style={styles.text}>
+                      {`${translateItem(it.checklist_templates?.item_description || `Item ${it.item_id}`)} - ${it.status === 'critical' ? 'Crítico' : 'Problema'}`}
+                    </Text>
+                    {(it.pt_notes || it.notes) && (
+                      <Text style={styles.text}>
+                        {`Observação: ${it.pt_notes || it.translated_note || it.notes}`}
+                      </Text>
+                    )}
+                    {/* ✅ Use photo_urls from inspection_results if available */}
+                    {it.photo_urls?.length
+                      ? it.photo_urls.slice(0, 2).map((url: string, j: number) => (
+                          <Image key={j} style={styles.photo} src={url} />
+                        ))
+                      : it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
+                          <Image key={j} style={styles.photo} src={p.url} />
+                        ))}
+                  </>
                 )}
-                {/* ✅ Use photo_urls from inspection_results if available */}
-                {it.photo_urls?.length
-                  ? it.photo_urls.slice(0, 2).map((url: string, j: number) => (
-                      <Image key={j} style={styles.photo} src={url} />
-                    ))
-                  : it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
-                      <Image key={j} style={styles.photo} src={p.url} />
-                    ))}
               </View>
             ))}
           </View>

@@ -1,0 +1,1 @@
+insert into public.users (id, email, full_name, role, phone) select id, 'natalie@nhomesetup.com', 'Natalie O''Kelly', 'admin', '966318871' from auth.users where id = '80a7071c-6950-4a55-927b-ec10772fc36a';

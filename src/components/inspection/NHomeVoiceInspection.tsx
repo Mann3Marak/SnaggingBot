@@ -138,12 +138,26 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
     if (!session) return;
     const supabase = (await import("@/lib/supabase")).getSupabase();
     const nextIndex = (session.current_item_index ?? 0) + 1;
+    const totalItems = session?.checklist_items?.length ?? 0;
 
     // Removed auto-marking as good when navigating
 
+    const updates: any = { current_item_index: nextIndex };
+
+    // Check if we've completed all items
+    if (totalItems > 0 && nextIndex >= totalItems) {
+      updates.status = 'completed';
+      updates.completed_at = new Date().toISOString();
+      console.info('[NHomeInspection] Manual navigation completed inspection', {
+        sessionId,
+        totalItems,
+        finalIndex: nextIndex,
+      });
+    }
+
     await supabase
       .from("inspection_sessions")
-      .update({ current_item_index: nextIndex })
+      .update(updates)
       .eq("id", sessionId);
 
     await reload();
@@ -710,12 +724,92 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     return segments
   }, [liveUserTranscript, userTurns])
 
-  if (!session || !currentItem) {
+  if (!session) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <NHomeLogo variant="primary" size="lg" className="mx-auto mb-4" />
           <div className="text-lg text-gray-600">Loading NHome inspection...</div>
+        </div>
+      </div>
+    )
+  }
+
+  // Check if inspection is completed
+  if (!currentItem && session?.status === 'completed') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-[#f9fafb] via-white to-[#f3f4f6] text-gray-900">
+        <div className="bg-gradient-to-r from-nhome-primary to-nhome-secondary text-white p-4 shadow-lg">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <NHomeLogo variant="white" size="md" />
+              <div>
+                <h1 className="font-bold text-lg">NHome Professional Inspection</h1>
+                <p className="text-sm opacity-90">{session.project.name}</p>
+              </div>
+            </div>
+            <div className="text-right text-sm">
+              <div className="font-medium">Unit {session.apartment.unit_number}</div>
+              <div className="opacity-90">{session.apartment.apartment_type}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 space-y-6">
+          <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-10 text-center">
+            <div className="w-24 h-24 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg className="w-12 h-12 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+
+            <h2 className="text-3xl font-bold text-nhome-primary mb-3">
+              Inspection Complete!
+            </h2>
+            <p className="text-lg text-gray-700 mb-6">
+              All {nhomeProgress.total} items have been inspected for Unit {session.apartment.unit_number}.
+            </p>
+
+            <div className="bg-nhome-primary/10 border border-nhome-primary/20 rounded-lg p-6 mb-6 max-w-md mx-auto">
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <div className="text-2xl font-bold text-nhome-primary">{nhomeProgress.completed}</div>
+                  <div className="text-sm text-gray-600">Items Checked</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-yellow-600">{nhomeProgress.issues_found}</div>
+                  <div className="text-sm text-gray-600">Issues Found</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-600">{nhomeProgress.quality_score}/10</div>
+                  <div className="text-sm text-gray-600">Quality Score</div>
+                </div>
+              </div>
+            </div>
+
+            <p className="text-gray-600 mb-4">
+              You can now generate and download your professional NHome reports.
+            </p>
+
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-3 rounded-full bg-gradient-to-r from-nhome-primary to-nhome-secondary text-white font-semibold shadow-md hover:shadow-lg transition-all"
+            >
+              View Report Section
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // If no current item and not completed, still loading
+  if (!currentItem) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <NHomeLogo variant="primary" size="lg" className="mx-auto mb-4" />
+          <div className="text-lg text-gray-600">Loading inspection item...</div>
         </div>
       </div>
     )
@@ -766,14 +860,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 <button
                   onClick={async () => {
                     setSelectedStatus('good');
-                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards');
-                    const supabase = (await import("@/lib/supabase")).getSupabase();
-                    const nextIndex = (session?.current_item_index ?? 0) + 1;
-                    await supabase
-                      .from("inspection_sessions")
-                      .update({ current_item_index: nextIndex })
-                      .eq("id", sessionId);
-                    await reload();
+                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards', 1, [], true);
                     onRefreshReport?.();
                   }}
                   className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
@@ -831,15 +918,11 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                         await saveNHomeResult(
                           currentItem.id,
                           showNotes.type,
-                          notesText.trim()
+                          notesText.trim(),
+                          determinePriority(showNotes.type),
+                          [],
+                          true
                         );
-                        const supabase = (await import("@/lib/supabase")).getSupabase();
-                        const nextIndex = (session?.current_item_index ?? 0) + 1;
-                        await supabase
-                          .from("inspection_sessions")
-                          .update({ current_item_index: nextIndex })
-                          .eq("id", sessionId);
-                        await reload();
                         setShowNotes(null);
                         setNotesText('');
                         onRefreshReport?.();

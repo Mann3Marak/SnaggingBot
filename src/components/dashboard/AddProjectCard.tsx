@@ -29,6 +29,7 @@ export default function AddProjectCard() {
       const res = await fetch("/api/nhome/projects/create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           ...form,
           created_by: user?.id || null,

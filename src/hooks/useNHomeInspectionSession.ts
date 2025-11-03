@@ -182,9 +182,18 @@ export function useNHomeInspectionSession(sessionId: string){
     if (shouldAdvance) {
       const nextIndex = (session?.current_item_index ?? 0) + 1
       updates.current_item_index = nextIndex
+
+      // Check if we've completed all items
+      // totalItems is the count, but items are 0-indexed, so valid indexes are 0 to (totalItems-1)
+      // When nextIndex equals totalItems, we've gone past the last item
       if (totalItems > 0 && nextIndex >= totalItems) {
         updates.status = 'completed'
         updates.completed_at = new Date().toISOString()
+        console.info('[NHomeSession] Inspection completed!', {
+          sessionId,
+          totalItems,
+          finalIndex: nextIndex,
+        })
       }
     }
 

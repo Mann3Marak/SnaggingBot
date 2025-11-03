@@ -1,28 +1,15 @@
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { getSupabaseServer } from "@/lib/server/supabaseServer";
 import { createClient } from "@supabase/supabase-js";
-import { createServerClient } from "@supabase/ssr";
 
 export async function POST(req: NextRequest) {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
     const body = await req.json();
-    const cookieStore = cookies();
-    const supabaseAuth = createServerClient(supabaseUrl, supabaseAnonKey, {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    });
 
-    const {
-      data: { user },
-      error: userError,
-    } = await supabaseAuth.auth.getUser();
+    const supabase = getSupabaseServer();
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
 
     if (userError) {
       console.error("[NHomeProjects] Failed to read auth user", userError);

@@ -1,0 +1,132 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+
+serve(async (req) => {
+  try {
+    const payload = await req.json();
+    const eventType = payload?.type;
+    console.log("📢 Event type:", eventType);
+    console.log("📩 Incoming payload:", JSON.stringify(payload, null, 2));
+
+    const newRecord = payload?.record;
+    const oldRecord = payload?.old_record;
+
+    const note = newRecord?.notes;
+    const resultId = newRecord?.id;
+
+    console.log("🧠 Extracted values:", { note, resultId });
+
+    // 🧱 Verify record still exists in the database
+    const verifyUrl = Deno.env.get("SUPABASE_URL");
+    const verifyKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const { createClient: createVerifyClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const verifyClient = createVerifyClient(verifyUrl, verifyKey);
+
+    const { data: existingRecord, error: fetchError } = await verifyClient
+      .from("inspection_results")
+      .select("id")
+      .eq("id", resultId)
+      .single();
+
+    if (fetchError || !existingRecord) {
+      console.log("🧹 Skipping enhancement — record no longer exists in database");
+      return new Response(JSON.stringify({ skipped: true, reason: "record_deleted" }), { status: 200 });
+    }
+
+    // 🛑 Skip if this update came from translation
+    if (newRecord?.translated_notes && oldRecord?.translated_notes !== newRecord?.translated_notes) {
+      console.log("⏭️ Skipping enhancement — triggered by translation update");
+      return new Response(JSON.stringify({ skipped: true }), { status: 200 });
+    }
+
+    // ✅ Handle INSERT and UPDATE events separately
+    if (eventType === "INSERT") {
+      console.log("🆕 New note detected — proceeding with enhancement");
+    } else if (eventType === "UPDATE") {
+      if (!oldRecord || newRecord?.notes !== oldRecord?.notes) {
+        console.log("🧠 Note text changed — proceeding with enhancement");
+      } else {
+        console.log("⏭️ Skipping enhancement — notes did not change");
+        return new Response(JSON.stringify({ skipped: true }), { status: 200 });
+      }
+    } else {
+      console.log("⚠️ Unknown event type, skipping");
+      return new Response(JSON.stringify({ skipped: true }), { status: 200 });
+    }
+
+    if (!note || !resultId) {
+      console.warn("⚠️ Missing note or resultId in payload");
+      return new Response(JSON.stringify({ error: "Missing note or resultId", payload }), { status: 400 });
+    }
+
+    // Enhance note using OpenAI with timeout and faster model
+    async function enhanceNoteText(text: string): Promise<string> {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+      try {
+        const res = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          signal: controller.signal,
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${Deno.env.get("OPENAI_API_KEY")}`,
+          },
+          body: JSON.stringify({
+            model: "gpt-4o-mini",
+            temperature: 0.4,
+            messages: [
+              {
+                role: "system",
+                content:
+                  "You are a professional construction inspector assistant. Rewrite the user's note to be clear, builder-friendly, and actionable. Use concise, professional language suitable for contractors or repair teams. Do not add new information, only clarify and refine the existing note. Here are examples of how to transform user notes:\n\n- User: 'there's some paint missing' → 'Paint touch-up needed at [location]'\n- User: 'it's chipped in the corner' → 'Chip present in [specific corner location]'\n- User: 'needs sealing' → 'Requires sealant at [specific joint/area]'\n- User: 'scratches on the wall' → 'Visible scratch marks on [wall location]'",
+              },
+              {
+                role: "user",
+                content: `Original note: "${text}"\n\nTransform it into a clear, builder-friendly statement.`,
+              },
+            ],
+          }),
+        });
+
+        clearTimeout(timeout);
+
+        if (!res.ok) {
+          console.error("❌ OpenAI API error:", await res.text());
+          return text;
+        }
+
+        const data = await res.json();
+        console.log("🧾 Raw OpenAI response:", JSON.stringify(data, null, 2));
+        return data.choices?.[0]?.message?.content?.trim() || text;
+      } catch (err) {
+        console.error("⚠️ OpenAI request failed or timed out:", err);
+        return text;
+      }
+    }
+
+    const enhanced = await enhanceNoteText(note);
+
+    // Update Supabase record
+    const updateUrl = Deno.env.get("SUPABASE_URL");
+    const updateKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const { createClient: createUpdateClient } = await import("https://esm.sh/@supabase/supabase-js@2");
+    const updateClient = createUpdateClient(updateUrl, updateKey);
+
+    const { data: updateData, error } = await updateClient
+      .from("inspection_results")
+      .update({ enhanced_notes: enhanced })
+      .eq("id", resultId)
+      .select();
+
+    if (error) {
+      console.error("❌ Supabase update error:", error);
+      return new Response(JSON.stringify({ error: error.message, resultId, enhanced }), { status: 500 });
+    }
+
+    console.log("✅ Enhanced note stored successfully for:", resultId, "Updated row:", updateData);
+    return new Response(JSON.stringify({ success: true, resultId, enhanced, updateData }), { status: 200 });
+  } catch (err) {
+    console.error("Unexpected error:", err);
+    return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+  }
+});

@@ -28,7 +28,11 @@ export function NHomeAuthForm() {
       } else {
         const { data, error } = await getSupabase().auth.signInWithPassword({ email, password })
         if (error) throw error
-        if (data.session) router.replace('/dashboard')
+        if (data.session) {
+          // Redirect to the page they were trying to access, or dashboard by default
+          const redirectTo = params?.get('redirectedFrom') || '/dashboard'
+          router.replace(redirectTo)
+        }
       }
     } catch (err: any) {
       setError(err?.message ?? 'Authentication failed')
@@ -38,6 +42,7 @@ export function NHomeAuthForm() {
   }
 
   const message = params?.get('message')
+  const redirectedFrom = params?.get('redirectedFrom')
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
@@ -51,6 +56,11 @@ export function NHomeAuthForm() {
             <div className="text-xs text-gray-400">Founded by Natalie O'Kelly ï¿½ Algarve, Portugal</div>
           </div>
 
+          {redirectedFrom && (
+            <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              Please sign in to access this page.
+            </div>
+          )}
           {message && (
             <div className="rounded-md border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">{message}</div>
           )}
