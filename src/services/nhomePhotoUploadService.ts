@@ -90,7 +90,7 @@ export class NHomePhotoUploadService {
 
       if (error) throw error
 
-      const publicUrls = (data ?? []).map(f => ({
+      const publicUrls = (data ?? []).map((f: any) => ({
         name: f.name,
         url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET_ID}/sessions/${sessionId}/${f.name}`,
       }))
