@@ -17,15 +17,19 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from("users")
       .select("id, email, role, full_name")
-      .eq("id", userId)
-      .single();
+      .eq("id", userId);
 
     if (error) {
       console.error("Error fetching user role:", error);
       return NextResponse.json({ error: "Failed to fetch user role" }, { status: 500 });
     }
 
-    return NextResponse.json({ user: data });
+    if (!data || data.length === 0) {
+      console.warn("No user found for ID:", userId);
+      return NextResponse.json({ user: null, message: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ user: data[0] });
   } catch (err: any) {
     console.error("Unexpected error fetching user role:", err);
     return NextResponse.json({ error: "Unexpected server error" }, { status: 500 });
