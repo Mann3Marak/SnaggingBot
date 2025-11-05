@@ -71,6 +71,7 @@ create table if not exists inspection_sessions (
   started_at timestamp with time zone default timezone('utc', now()),
   completed_at timestamp with time zone,
   current_item_index integer default 0,
+  active_item_id uuid references checklist_templates(id) on delete set null,
   nhome_quality_score integer check (nhome_quality_score >= 1 and nhome_quality_score <= 10),
   client_satisfaction_notes text
 );
@@ -79,7 +80,7 @@ create table if not exists inspection_results (
   id uuid primary key default gen_random_uuid(),
   session_id uuid references inspection_sessions(id) on delete cascade,
   item_id uuid references checklist_templates(id) on delete cascade,
-  status text check (status in ('good', 'issue', 'critical')) not null,
+  status text check (status in ('good', 'issue', 'critical', 'skipped', 'not_applicable')) not null,
   notes text,
   enhanced_notes text,
   photo_urls text[],
@@ -94,6 +95,7 @@ create index if not exists idx_projects_created_by on projects(created_by);
 create index if not exists idx_apartments_project on apartments(project_id);
 create index if not exists idx_inspection_sessions_apartment on inspection_sessions(apartment_id);
 create index if not exists idx_inspection_sessions_inspector on inspection_sessions(inspector_id);
+create index if not exists idx_inspection_sessions_active_item on inspection_sessions(active_item_id);
 create index if not exists idx_inspection_results_session on inspection_results(session_id);
 create index if not exists idx_inspection_results_item on inspection_results(item_id);
 create unique index if not exists uq_projects_company_name on projects (company_id, lower(name));

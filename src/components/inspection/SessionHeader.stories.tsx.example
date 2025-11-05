@@ -1,0 +1,337 @@
+import type { Meta, StoryObj } from '@storybook/react'
+import { SessionHeader, StatusCounts } from './SessionHeader'
+
+/**
+ * SessionHeader Component Stories
+ *
+ * Reusable header displaying:
+ * - Session metadata (project, apartment, inspector)
+ * - Progress summary with circular progress indicator
+ * - Status chips showing item counts
+ * - Active item display
+ * - Last updated timestamp
+ *
+ * To enable these stories:
+ * 1. Install Storybook: npm install --save-dev @storybook/react @storybook/nextjs
+ * 2. Rename this file to SessionHeader.stories.tsx
+ * 3. Run: npm run storybook
+ */
+
+const meta = {
+  title: 'Inspection/SessionHeader',
+  component: SessionHeader,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  tags: ['autodocs'],
+} satisfies Meta<typeof SessionHeader>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+// ==================== MOCK DATA ====================
+
+const mockCountsInProgress: StatusCounts = {
+  good: 15,
+  issue: 3,
+  critical: 1,
+  skipped: 2,
+  notApplicable: 4,
+  pending: 10,
+}
+
+const mockCountsComplete: StatusCounts = {
+  good: 28,
+  issue: 5,
+  critical: 2,
+  skipped: 0,
+  notApplicable: 3,
+  pending: 0,
+}
+
+const mockCountsEarly: StatusCounts = {
+  good: 2,
+  issue: 0,
+  critical: 0,
+  skipped: 0,
+  notApplicable: 0,
+  pending: 48,
+}
+
+const mockCountsCritical: StatusCounts = {
+  good: 10,
+  issue: 8,
+  critical: 7,
+  skipped: 1,
+  notApplicable: 2,
+  pending: 12,
+}
+
+// ==================== STORIES ====================
+
+/**
+ * Default inspection session in progress
+ */
+export const Default: Story = {
+  args: {
+    projectName: 'Sunset Gardens Phase 2',
+    apartmentNumber: 'A-204',
+    inspectorName: 'Maria Silva',
+    lastUpdated: new Date(Date.now() - 15 * 60000), // 15 minutes ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Kitchen',
+    activeItemLabel: 'Check cabinet door alignment',
+  },
+}
+
+/**
+ * Session with collaborator updating
+ */
+export const WithUpdatedBy: Story = {
+  args: {
+    projectName: 'Marina Bay Residences',
+    apartmentNumber: 'B-301',
+    inspectorName: 'John Chen',
+    lastUpdated: new Date(Date.now() - 5 * 60000), // 5 minutes ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Living Room',
+    activeItemLabel: 'Inspect window seals',
+    lastUpdatedBy: 'Alex Martinez',
+  },
+}
+
+/**
+ * Completed inspection (100%)
+ */
+export const Completed: Story = {
+  args: {
+    projectName: 'Riverside Tower',
+    apartmentNumber: 'C-105',
+    inspectorName: 'Sarah Johnson',
+    lastUpdated: new Date(Date.now() - 2 * 3600000), // 2 hours ago
+    counts: mockCountsComplete,
+    activeRoomLabel: null,
+    activeItemLabel: null,
+  },
+}
+
+/**
+ * Just started (early stage)
+ */
+export const JustStarted: Story = {
+  args: {
+    projectName: 'Urban Lofts Development',
+    apartmentNumber: 'D-502',
+    inspectorName: 'Michael Brown',
+    lastUpdated: new Date(Date.now() - 30000), // 30 seconds ago
+    counts: mockCountsEarly,
+    activeRoomLabel: 'Entrance Hall',
+    activeItemLabel: 'Check door lock mechanism',
+  },
+}
+
+/**
+ * Session with many critical issues
+ */
+export const WithCriticalIssues: Story = {
+  args: {
+    projectName: 'Greenfield Apartments',
+    apartmentNumber: 'E-108',
+    inspectorName: 'Emma Wilson',
+    lastUpdated: new Date(Date.now() - 45 * 60000), // 45 minutes ago
+    counts: mockCountsCritical,
+    activeRoomLabel: 'Bathroom',
+    activeItemLabel: 'Water leak under sink',
+  },
+}
+
+/**
+ * No active item selected
+ */
+export const NoActiveItem: Story = {
+  args: {
+    projectName: 'Lakeside View',
+    apartmentNumber: 'F-203',
+    inspectorName: 'David Lee',
+    lastUpdated: new Date(Date.now() - 3 * 3600000), // 3 hours ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: null,
+    activeItemLabel: null,
+  },
+}
+
+/**
+ * Recent update (just now)
+ */
+export const JustUpdated: Story = {
+  args: {
+    projectName: 'City Center Plaza',
+    apartmentNumber: 'G-401',
+    inspectorName: 'Lisa Taylor',
+    lastUpdated: new Date(), // Now
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Master Bedroom',
+    activeItemLabel: 'Check closet door tracks',
+  },
+}
+
+/**
+ * Old session (days ago)
+ */
+export const OldSession: Story = {
+  args: {
+    projectName: 'Mountain View Estates',
+    apartmentNumber: 'H-106',
+    inspectorName: 'Robert Garcia',
+    lastUpdated: new Date(Date.now() - 5 * 86400000), // 5 days ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Kitchen',
+    activeItemLabel: 'Test dishwasher connection',
+  },
+}
+
+/**
+ * Only good items (perfect inspection)
+ */
+export const AllGood: Story = {
+  args: {
+    projectName: 'Premium Heights',
+    apartmentNumber: 'I-701',
+    inspectorName: 'Jennifer White',
+    lastUpdated: new Date(Date.now() - 60 * 60000), // 1 hour ago
+    counts: {
+      good: 40,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    },
+    activeRoomLabel: null,
+    activeItemLabel: null,
+  },
+}
+
+/**
+ * With skipped and N/A items
+ */
+export const WithSkippedAndNA: Story = {
+  args: {
+    projectName: 'Coastal Breeze',
+    apartmentNumber: 'J-309',
+    inspectorName: 'Kevin Martinez',
+    lastUpdated: new Date(Date.now() - 25 * 60000), // 25 minutes ago
+    counts: {
+      good: 12,
+      issue: 2,
+      critical: 0,
+      skipped: 8,
+      notApplicable: 6,
+      pending: 15,
+    },
+    activeRoomLabel: 'Balcony',
+    activeItemLabel: 'Check railing stability',
+  },
+}
+
+/**
+ * Long project name and item label
+ */
+export const LongTexts: Story = {
+  args: {
+    projectName: 'The Grand Metropolitan Luxury Residential Development Phase 3',
+    apartmentNumber: 'TOWER-A-PH-2001',
+    inspectorName: 'Alexandra Rodriguez-Smith',
+    lastUpdated: new Date(Date.now() - 90 * 60000), // 90 minutes ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Master Bedroom Walk-in Closet',
+    activeItemLabel: 'Inspect custom built-in shelving unit alignment and finish quality',
+    lastUpdatedBy: 'Christopher Thompson-Williams',
+  },
+}
+
+/**
+ * Mobile viewport (responsive test)
+ */
+export const Mobile: Story = {
+  args: {
+    projectName: 'Harbor View',
+    apartmentNumber: 'K-205',
+    inspectorName: 'Tom Anderson',
+    lastUpdated: new Date(Date.now() - 10 * 60000), // 10 minutes ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Kitchen',
+    activeItemLabel: 'Check sink faucet',
+  },
+  parameters: {
+    viewport: {
+      defaultViewport: 'mobile1',
+    },
+  },
+}
+
+/**
+ * Tablet viewport (responsive test)
+ */
+export const Tablet: Story = {
+  args: {
+    projectName: 'Parkside Residences',
+    apartmentNumber: 'L-404',
+    inspectorName: 'Nancy Clark',
+    lastUpdated: new Date(Date.now() - 20 * 60000), // 20 minutes ago
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Living Room',
+    activeItemLabel: 'Test electrical outlets',
+  },
+  parameters: {
+    viewport: {
+      defaultViewport: 'tablet',
+    },
+  },
+}
+
+/**
+ * Accessibility testing view
+ */
+export const AccessibilityTest: Story = {
+  args: {
+    projectName: 'Accessibility Demo',
+    apartmentNumber: 'TEST-001',
+    inspectorName: 'Test Inspector',
+    lastUpdated: new Date(Date.now() - 5 * 60000),
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Test Room',
+    activeItemLabel: 'Test Item',
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Test screen reader announcements for progress chips and verify that all interactive elements have proper ARIA labels.',
+      },
+    },
+  },
+}
+
+/**
+ * Interactive demo
+ */
+export const Interactive: Story = {
+  args: {
+    projectName: 'Interactive Demo',
+    apartmentNumber: 'DEMO-100',
+    inspectorName: 'Demo User',
+    lastUpdated: new Date(),
+    counts: mockCountsInProgress,
+    activeRoomLabel: 'Demo Room',
+    activeItemLabel: 'Demo Item',
+  },
+  parameters: {
+    docs: {
+      description: {
+        story:
+          'Try changing the window size to see responsive behavior. The layout stacks vertically on screens narrower than 768px.',
+      },
+    },
+  },
+}

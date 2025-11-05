@@ -1,0 +1,400 @@
+import { render, screen, fireEvent } from '@testing-library/react'
+import { RoomItemList, Item, StatusCounts } from './RoomItemList'
+
+/**
+ * RoomItemList Component Unit Tests
+ *
+ * To enable these tests:
+ * 1. Install dependencies:
+ *    npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event
+ * 2. Configure Jest for Next.js (create jest.config.js)
+ * 3. Rename this file to RoomItemList.test.tsx
+ * 4. Run: npm test RoomItemList
+ */
+
+// ==================== MOCK DATA ====================
+
+const mockItems: Item[] = [
+  { id: '1', label: 'Check cabinet doors', status: 'good', order: 1 },
+  { id: '2', label: 'Inspect countertop', status: 'issue', order: 2 },
+  { id: '3', label: 'Test faucets', status: 'critical', order: 3 },
+  { id: '4', label: 'Check sink', status: 'skipped', order: 4 },
+  { id: '5', label: 'Inspect appliances', status: 'not_applicable', order: 5 },
+  { id: '6', label: 'Check outlets', status: 'pending', order: 6 },
+]
+
+const mockCounts: StatusCounts = {
+  good: 1,
+  issue: 1,
+  critical: 1,
+  skipped: 1,
+  notApplicable: 1,
+  pending: 1,
+}
+
+const defaultProps = {
+  items: mockItems,
+  activeItemId: '2',
+  onSelectItem: jest.fn(),
+  onJumpNextPending: jest.fn(),
+  roomName: 'Kitchen',
+  counts: mockCounts,
+}
+
+// ==================== TESTS ====================
+
+describe('RoomItemList', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  // ==================== RENDERING ====================
+
+  describe('Rendering', () => {
+    test('renders room name in header', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Kitchen')).toBeInTheDocument()
+    })
+
+    test('renders all items in the list', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Check cabinet doors')).toBeInTheDocument()
+      expect(screen.getByText('Inspect countertop')).toBeInTheDocument()
+      expect(screen.getByText('Test faucets')).toBeInTheDocument()
+      expect(screen.getByText('Check sink')).toBeInTheDocument()
+      expect(screen.getByText('Inspect appliances')).toBeInTheDocument()
+      expect(screen.getByText('Check outlets')).toBeInTheDocument()
+    })
+
+    test('renders item order numbers', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('#1')).toBeInTheDocument()
+      expect(screen.getByText('#6')).toBeInTheDocument()
+    })
+
+    test('renders without optional props', () => {
+      render(
+        <RoomItemList
+          items={mockItems}
+          activeItemId={null}
+          onSelectItem={jest.fn()}
+          onJumpNextPending={jest.fn()}
+        />
+      )
+      expect(screen.getByText('Room Items')).toBeInTheDocument() // Default room name
+    })
+  })
+
+  // ==================== STATUS DISPLAY ====================
+
+  describe('Status Display', () => {
+    test('displays correct status badge for good status', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Good')).toBeInTheDocument()
+    })
+
+    test('displays correct status badge for issue status', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Issue')).toBeInTheDocument()
+    })
+
+    test('displays correct status badge for critical status', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Critical')).toBeInTheDocument()
+    })
+
+    test('displays correct status badge for skipped status', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Skipped')).toBeInTheDocument()
+    })
+
+    test('displays correct status badge for not_applicable status', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('N/A')).toBeInTheDocument()
+    })
+
+    test('displays correct status badge for pending status', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Pending')).toBeInTheDocument()
+    })
+
+    test('displays status icons correctly', () => {
+      const { container } = render(<RoomItemList {...defaultProps} />)
+      expect(container.textContent).toContain('✓') // Good icon
+      expect(container.textContent).toContain('⚠') // Issue icon
+      expect(container.textContent).toContain('✗') // Critical icon
+      expect(container.textContent).toContain('⊘') // Skipped icon
+      expect(container.textContent).toContain('−') // N/A icon
+      expect(container.textContent).toContain('○') // Pending icon
+    })
+  })
+
+  // ==================== STATUS SUMMARY ====================
+
+  describe('Status Summary in Header', () => {
+    test('displays status counts when provided', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('1 Good')).toBeInTheDocument()
+      expect(screen.getByText('1 Issue')).toBeInTheDocument()
+      expect(screen.getByText('1 Critical')).toBeInTheDocument()
+      expect(screen.getByText('1 Skipped')).toBeInTheDocument()
+      expect(screen.getByText('1 N/A')).toBeInTheDocument()
+      expect(screen.getByText('1 Pending')).toBeInTheDocument()
+    })
+
+    test('does not display zero counts', () => {
+      const zeroCounts: StatusCounts = {
+        good: 5,
+        issue: 0,
+        critical: 0,
+        skipped: 0,
+        notApplicable: 0,
+        pending: 0,
+      }
+      render(<RoomItemList {...defaultProps} counts={zeroCounts} />)
+      expect(screen.getByText('5 Good')).toBeInTheDocument()
+      expect(screen.queryByText('0 Issue')).not.toBeInTheDocument()
+      expect(screen.queryByText('0 Critical')).not.toBeInTheDocument()
+    })
+
+    test('does not display counts when not provided', () => {
+      render(
+        <RoomItemList
+          {...defaultProps}
+          counts={undefined}
+        />
+      )
+      expect(screen.queryByText(/Good$/)).not.toBeInTheDocument()
+    })
+  })
+
+  // ==================== ITEM SELECTION ====================
+
+  describe('Item Selection', () => {
+    test('calls onSelectItem with correct id when item is clicked', () => {
+      const mockOnSelect = jest.fn()
+      render(<RoomItemList {...defaultProps} onSelectItem={mockOnSelect} />)
+
+      const item = screen.getByText('Check cabinet doors')
+      fireEvent.click(item.closest('button')!)
+
+      expect(mockOnSelect).toHaveBeenCalledWith('1')
+      expect(mockOnSelect).toHaveBeenCalledTimes(1)
+    })
+
+    test('highlights active item with correct styling', () => {
+      const { container } = render(<RoomItemList {...defaultProps} activeItemId="2" />)
+
+      const activeButton = screen.getByText('Inspect countertop').closest('button')!
+      expect(activeButton.className).toContain('bg-blue-50')
+      expect(activeButton.className).toContain('border-l-blue-500')
+    })
+
+    test('does not highlight inactive items', () => {
+      const { container } = render(<RoomItemList {...defaultProps} activeItemId="2" />)
+
+      const inactiveButton = screen.getByText('Check cabinet doors').closest('button')!
+      expect(inactiveButton.className).toContain('border-l-transparent')
+      expect(inactiveButton.className).not.toContain('bg-blue-50')
+    })
+
+    test('handles no active item gracefully', () => {
+      render(<RoomItemList {...defaultProps} activeItemId={null} />)
+
+      const buttons = screen.getAllByRole('listitem')
+      buttons.forEach((button) => {
+        expect(button.className).toContain('border-l-transparent')
+      })
+    })
+  })
+
+  // ==================== JUMP TO NEXT PENDING ====================
+
+  describe('Jump to Next Pending', () => {
+    test('displays jump button when pending items exist', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Jump to Next Pending')).toBeInTheDocument()
+    })
+
+    test('calls onJumpNextPending when button is clicked', () => {
+      const mockJump = jest.fn()
+      render(<RoomItemList {...defaultProps} onJumpNextPending={mockJump} />)
+
+      const jumpButton = screen.getByText('Jump to Next Pending')
+      fireEvent.click(jumpButton)
+
+      expect(mockJump).toHaveBeenCalledTimes(1)
+    })
+
+    test('does not display jump button when no pending items exist', () => {
+      const noPendingItems: Item[] = [
+        { id: '1', label: 'Item 1', status: 'good', order: 1 },
+        { id: '2', label: 'Item 2', status: 'issue', order: 2 },
+      ]
+      render(<RoomItemList {...defaultProps} items={noPendingItems} />)
+
+      expect(screen.queryByText('Jump to Next Pending')).not.toBeInTheDocument()
+    })
+  })
+
+  // ==================== EMPTY STATE ====================
+
+  describe('Empty State', () => {
+    test('displays empty state when no items provided', () => {
+      render(<RoomItemList {...defaultProps} items={[]} />)
+      expect(screen.getByText('No items in this room')).toBeInTheDocument()
+      expect(screen.getByText(/Select a different room/)).toBeInTheDocument()
+    })
+
+    test('does not display jump button in empty state', () => {
+      render(<RoomItemList {...defaultProps} items={[]} />)
+      expect(screen.queryByText('Jump to Next Pending')).not.toBeInTheDocument()
+    })
+
+    test('does not display footer in empty state', () => {
+      render(<RoomItemList {...defaultProps} items={[]} />)
+      expect(screen.queryByText(/Total Items:/)).not.toBeInTheDocument()
+    })
+  })
+
+  // ==================== FOOTER ====================
+
+  describe('Footer', () => {
+    test('displays total item count', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Total Items: 6')).toBeInTheDocument()
+    })
+
+    test('displays outstanding count when counts provided', () => {
+      render(<RoomItemList {...defaultProps} />)
+      expect(screen.getByText('Outstanding: 5')).toBeInTheDocument() // All except 1 good
+    })
+
+    test('calculates outstanding correctly (excludes good items)', () => {
+      const counts: StatusCounts = {
+        good: 3,
+        issue: 2,
+        critical: 1,
+        skipped: 1,
+        notApplicable: 1,
+        pending: 2,
+      }
+      render(<RoomItemList {...defaultProps} counts={counts} />)
+      expect(screen.getByText('Outstanding: 7')).toBeInTheDocument() // 2+1+1+1+2 = 7
+    })
+
+    test('does not display outstanding when counts not provided', () => {
+      render(<RoomItemList {...defaultProps} counts={undefined} />)
+      expect(screen.queryByText(/Outstanding:/)).not.toBeInTheDocument()
+    })
+  })
+
+  // ==================== ACCESSIBILITY ====================
+
+  describe('Accessibility', () => {
+    test('has proper role for list container', () => {
+      render(<RoomItemList {...defaultProps} />)
+      const list = screen.getByRole('list')
+      expect(list).toBeInTheDocument()
+    })
+
+    test('has proper role for list items', () => {
+      render(<RoomItemList {...defaultProps} />)
+      const items = screen.getAllByRole('listitem')
+      expect(items).toHaveLength(6)
+    })
+
+    test('sets aria-current on active item', () => {
+      render(<RoomItemList {...defaultProps} activeItemId="2" />)
+      const activeItem = screen.getByText('Inspect countertop').closest('button')!
+      expect(activeItem.getAttribute('aria-current')).toBe('true')
+    })
+
+    test('does not set aria-current on inactive items', () => {
+      render(<RoomItemList {...defaultProps} activeItemId="2" />)
+      const inactiveItem = screen.getByText('Check cabinet doors').closest('button')!
+      expect(inactiveItem.getAttribute('aria-current')).toBeNull()
+    })
+
+    test('includes status in aria-label', () => {
+      render(<RoomItemList {...defaultProps} />)
+      const item = screen.getByLabelText(/Check cabinet doors, status: Good/)
+      expect(item).toBeInTheDocument()
+    })
+
+    test('has aria-label on jump button', () => {
+      render(<RoomItemList {...defaultProps} />)
+      const button = screen.getByLabelText('Jump to next pending item')
+      expect(button).toBeInTheDocument()
+    })
+
+    test('icons are hidden from screen readers', () => {
+      const { container } = render(<RoomItemList {...defaultProps} />)
+      const icons = container.querySelectorAll('[aria-hidden="true"]')
+      expect(icons.length).toBeGreaterThan(0)
+    })
+  })
+
+  // ==================== EDGE CASES ====================
+
+  describe('Edge Cases', () => {
+    test('handles single item correctly', () => {
+      const singleItem: Item[] = [
+        { id: '1', label: 'Only item', status: 'good', order: 1 },
+      ]
+      render(<RoomItemList {...defaultProps} items={singleItem} />)
+      expect(screen.getByText('Only item')).toBeInTheDocument()
+      expect(screen.getByText('Total Items: 1')).toBeInTheDocument()
+    })
+
+    test('handles very long item labels', () => {
+      const longLabel = 'This is a very long item description that should be truncated or wrapped appropriately in the UI'
+      const items: Item[] = [
+        { id: '1', label: longLabel, status: 'good', order: 1 },
+      ]
+      render(<RoomItemList {...defaultProps} items={items} />)
+      expect(screen.getByText(longLabel)).toBeInTheDocument()
+    })
+
+    test('handles large order numbers', () => {
+      const items: Item[] = [
+        { id: '1', label: 'Item', status: 'good', order: 999 },
+      ]
+      render(<RoomItemList {...defaultProps} items={items} />)
+      expect(screen.getByText('#999')).toBeInTheDocument()
+    })
+
+    test('handles all items with same status', () => {
+      const allGood: Item[] = [
+        { id: '1', label: 'Item 1', status: 'good', order: 1 },
+        { id: '2', label: 'Item 2', status: 'good', order: 2 },
+        { id: '3', label: 'Item 3', status: 'good', order: 3 },
+      ]
+      render(<RoomItemList {...defaultProps} items={allGood} />)
+      const badges = screen.getAllByText('Good')
+      expect(badges).toHaveLength(3)
+    })
+
+    test('handles active item id that does not exist', () => {
+      render(<RoomItemList {...defaultProps} activeItemId="non-existent-id" />)
+      const buttons = screen.getAllByRole('listitem')
+      buttons.forEach((button) => {
+        expect(button.className).toContain('border-l-transparent')
+      })
+    })
+  })
+
+  // ==================== SNAPSHOT ====================
+
+  describe('Snapshot', () => {
+    test('matches snapshot for default state', () => {
+      const { container } = render(<RoomItemList {...defaultProps} />)
+      expect(container).toMatchSnapshot()
+    })
+
+    test('matches snapshot for empty state', () => {
+      const { container } = render(<RoomItemList {...defaultProps} items={[]} />)
+      expect(container).toMatchSnapshot()
+    })
+  })
+})

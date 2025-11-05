@@ -1,0 +1,402 @@
+/**
+ * RoomNavigator Component Tests
+ *
+ * Note: This file contains tests ready for Jest/React Testing Library.
+ * To run these tests, you'll need to:
+ * 1. Install dependencies: npm install --save-dev jest @testing-library/react @testing-library/jest-dom @testing-library/user-event
+ * 2. Configure Jest for Next.js: https://nextjs.org/docs/testing#jest-and-react-testing-library
+ * 3. Run: npm test
+ */
+
+import { render, screen, fireEvent } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { RoomNavigator, RoomItem } from './RoomNavigator'
+
+// ==================== MOCK DATA ====================
+
+const mockRooms: RoomItem[] = [
+  {
+    roomId: 'kitchen',
+    label: 'Kitchen',
+    counts: {
+      good: 5,
+      issue: 2,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 1,
+    },
+  },
+  {
+    roomId: 'living-room',
+    label: 'Living Room',
+    counts: {
+      good: 8,
+      issue: 0,
+      critical: 0,
+      skipped: 1,
+      notApplicable: 0,
+      pending: 0,
+    },
+  },
+  {
+    roomId: 'bedroom',
+    label: 'Bedroom',
+    counts: {
+      good: 3,
+      issue: 1,
+      critical: 1,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 2,
+    },
+  },
+]
+
+const defaultProps = {
+  rooms: mockRooms,
+  activeRoomId: 'kitchen',
+  onSelectRoom: jest.fn(),
+  searchTerm: '',
+  onSearch: jest.fn(),
+}
+
+// ==================== TESTS ====================
+
+describe('RoomNavigator', () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  describe('Rendering', () => {
+    it('should render component with navigation role', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const nav = screen.getByRole('navigation', { name: /room navigation/i })
+      expect(nav).toBeInTheDocument()
+    })
+
+    it('should render all rooms', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      expect(screen.getByText('Kitchen')).toBeInTheDocument()
+      expect(screen.getByText('Living Room')).toBeInTheDocument()
+      expect(screen.getByText('Bedroom')).toBeInTheDocument()
+    })
+
+    it('should display search input', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const searchInput = screen.getByPlaceholderText(/search rooms/i)
+      expect(searchInput).toBeInTheDocument()
+    })
+
+    it('should display total rooms count in footer', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      expect(screen.getByText('Total Rooms:')).toBeInTheDocument()
+      expect(screen.getByText('3')).toBeInTheDocument()
+    })
+
+    it('should highlight active room', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const kitchenButton = screen.getByRole('listitem', { current: 'location' })
+      expect(kitchenButton).toBeInTheDocument()
+      expect(kitchenButton).toHaveTextContent('Kitchen')
+    })
+
+    it('should match snapshot', () => {
+      const { container } = render(<RoomNavigator {...defaultProps} />)
+      expect(container).toMatchSnapshot()
+    })
+  })
+
+  describe('Status Counts', () => {
+    it('should display critical count badge', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      // Bedroom has 1 critical
+      expect(screen.getByText('✗ 1')).toBeInTheDocument()
+    })
+
+    it('should display issue count badge', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      // Kitchen has 2 issues, Bedroom has 1 issue
+      const issueBadges = screen.getAllByText(/⚠/)
+      expect(issueBadges.length).toBeGreaterThan(0)
+    })
+
+    it('should display skipped count badge', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      // Living Room has 1 skipped
+      expect(screen.getByText('⊘ 1')).toBeInTheDocument()
+    })
+
+    it('should display outstanding items count', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      // Kitchen: 2 issues + 1 pending = 3 outstanding
+      const kitchenOutstanding = screen.getByLabelText('3 outstanding items')
+      expect(kitchenOutstanding).toBeInTheDocument()
+    })
+
+    it('should show "All good" when no outstanding items', () => {
+      const goodRooms: RoomItem[] = [
+        {
+          roomId: 'perfect-room',
+          label: 'Perfect Room',
+          counts: {
+            good: 10,
+            issue: 0,
+            critical: 0,
+            skipped: 0,
+            notApplicable: 0,
+            pending: 0,
+          },
+        },
+      ]
+      render(<RoomNavigator {...defaultProps} rooms={goodRooms} activeRoomId="perfect-room" />)
+      expect(screen.getByText('✓ All good')).toBeInTheDocument()
+    })
+  })
+
+  describe('Search Functionality', () => {
+    it('should filter rooms based on search term (case-insensitive)', () => {
+      render(<RoomNavigator {...defaultProps} searchTerm="bed" />)
+      expect(screen.getByText('Bedroom')).toBeInTheDocument()
+      expect(screen.queryByText('Kitchen')).not.toBeInTheDocument()
+      expect(screen.queryByText('Living Room')).not.toBeInTheDocument()
+    })
+
+    it('should call onSearch when typing in search input', async () => {
+      const user = userEvent.setup()
+      render(<RoomNavigator {...defaultProps} />)
+      const searchInput = screen.getByPlaceholderText(/search rooms/i)
+
+      await user.type(searchInput, 'k')
+      expect(defaultProps.onSearch).toHaveBeenCalledWith('k')
+    })
+
+    it('should show filtered count when searching', () => {
+      render(<RoomNavigator {...defaultProps} searchTerm="room" />)
+      expect(screen.getByText('Filtered:')).toBeInTheDocument()
+      expect(screen.getByText('2')).toBeInTheDocument() // Living Room + Bedroom
+    })
+
+    it('should show clear button when search term is present', () => {
+      render(<RoomNavigator {...defaultProps} searchTerm="kitchen" />)
+      const clearButton = screen.getByLabelText(/clear search/i)
+      expect(clearButton).toBeInTheDocument()
+    })
+
+    it('should call onSearch with empty string when clear button clicked', () => {
+      render(<RoomNavigator {...defaultProps} searchTerm="kitchen" />)
+      const clearButton = screen.getByLabelText(/clear search/i)
+      fireEvent.click(clearButton)
+      expect(defaultProps.onSearch).toHaveBeenCalledWith('')
+    })
+
+    it('should show "No rooms found" when search has no results', () => {
+      render(<RoomNavigator {...defaultProps} searchTerm="nonexistent" />)
+      expect(screen.getByText('No rooms found')).toBeInTheDocument()
+    })
+  })
+
+  describe('Room Selection', () => {
+    it('should call onSelectRoom when room is clicked', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const bedroomButton = screen.getByText('Bedroom').closest('button')
+      fireEvent.click(bedroomButton!)
+      expect(defaultProps.onSelectRoom).toHaveBeenCalledWith('bedroom')
+    })
+
+    it('should call onSelectRoom with correct room ID for multiple rooms', () => {
+      render(<RoomNavigator {...defaultProps} />)
+
+      const kitchenButton = screen.getByText('Kitchen').closest('button')
+      fireEvent.click(kitchenButton!)
+      expect(defaultProps.onSelectRoom).toHaveBeenLastCalledWith('kitchen')
+
+      const livingRoomButton = screen.getByText('Living Room').closest('button')
+      fireEvent.click(livingRoomButton!)
+      expect(defaultProps.onSelectRoom).toHaveBeenLastCalledWith('living-room')
+    })
+  })
+
+  describe('Keyboard Navigation', () => {
+    it('should focus next room when ArrowDown is pressed', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const firstButton = screen.getByText('Kitchen').closest('button')!
+
+      firstButton.focus()
+      fireEvent.keyDown(firstButton, { key: 'ArrowDown' })
+
+      // Second room should be focused
+      const secondButton = screen.getByText('Living Room').closest('button')!
+      expect(document.activeElement).toBe(secondButton)
+    })
+
+    it('should focus previous room when ArrowUp is pressed', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const secondButton = screen.getByText('Living Room').closest('button')!
+
+      secondButton.focus()
+      fireEvent.keyDown(secondButton, { key: 'ArrowUp' })
+
+      // First room should be focused
+      const firstButton = screen.getByText('Kitchen').closest('button')!
+      expect(document.activeElement).toBe(firstButton)
+    })
+
+    it('should select focused room when Enter is pressed', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const button = screen.getByText('Bedroom').closest('button')!
+
+      button.focus()
+      fireEvent.keyDown(button, { key: 'Enter' })
+
+      expect(defaultProps.onSelectRoom).toHaveBeenCalledWith('bedroom')
+    })
+
+    it('should select focused room when Space is pressed', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const button = screen.getByText('Living Room').closest('button')!
+
+      button.focus()
+      fireEvent.keyDown(button, { key: ' ' })
+
+      expect(defaultProps.onSelectRoom).toHaveBeenCalledWith('living-room')
+    })
+
+    it('should wrap to first room when ArrowDown pressed on last room', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const lastButton = screen.getByText('Bedroom').closest('button')!
+
+      lastButton.focus()
+      fireEvent.keyDown(lastButton, { key: 'ArrowDown' })
+
+      // Should wrap to first room
+      const firstButton = screen.getByText('Kitchen').closest('button')!
+      expect(document.activeElement).toBe(firstButton)
+    })
+
+    it('should wrap to last room when ArrowUp pressed on first room', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const firstButton = screen.getByText('Kitchen').closest('button')!
+
+      firstButton.focus()
+      fireEvent.keyDown(firstButton, { key: 'ArrowUp' })
+
+      // Should wrap to last room
+      const lastButton = screen.getByText('Bedroom').closest('button')!
+      expect(document.activeElement).toBe(lastButton)
+    })
+
+    it('should focus first room when Home is pressed', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const lastButton = screen.getByText('Bedroom').closest('button')!
+
+      lastButton.focus()
+      fireEvent.keyDown(lastButton, { key: 'Home' })
+
+      const firstButton = screen.getByText('Kitchen').closest('button')!
+      expect(document.activeElement).toBe(firstButton)
+    })
+
+    it('should focus last room when End is pressed', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const firstButton = screen.getByText('Kitchen').closest('button')!
+
+      firstButton.focus()
+      fireEvent.keyDown(firstButton, { key: 'End' })
+
+      const lastButton = screen.getByText('Bedroom').closest('button')!
+      expect(document.activeElement).toBe(lastButton)
+    })
+  })
+
+  describe('Accessibility', () => {
+    it('should have proper ARIA labels', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      expect(screen.getByRole('navigation', { name: /room navigation/i })).toBeInTheDocument()
+      expect(screen.getByLabelText(/search rooms/i)).toBeInTheDocument()
+    })
+
+    it('should mark active room with aria-current', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const activeRoom = screen.getByRole('listitem', { current: 'location' })
+      expect(activeRoom).toBeInTheDocument()
+    })
+
+    it('should have list role', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      expect(screen.getByRole('list')).toBeInTheDocument()
+    })
+
+    it('should have listitem role for each room', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const listitems = screen.getAllByRole('listitem')
+      expect(listitems).toHaveLength(3)
+    })
+
+    it('should have aria-label for outstanding items badge', () => {
+      render(<RoomNavigator {...defaultProps} />)
+      const badge = screen.getByLabelText(/outstanding items/i)
+      expect(badge).toBeInTheDocument()
+    })
+  })
+
+  describe('Empty State', () => {
+    it('should show "No rooms available" when rooms array is empty', () => {
+      render(<RoomNavigator {...defaultProps} rooms={[]} />)
+      expect(screen.getByText('No rooms available')).toBeInTheDocument()
+    })
+
+    it('should display 0 in footer when no rooms', () => {
+      render(<RoomNavigator {...defaultProps} rooms={[]} />)
+      expect(screen.getByText('Total Rooms:')).toBeInTheDocument()
+      expect(screen.getByText('0')).toBeInTheDocument()
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should handle room with all zero counts', () => {
+      const emptyRoom: RoomItem[] = [
+        {
+          roomId: 'empty',
+          label: 'Empty Room',
+          counts: {
+            good: 0,
+            issue: 0,
+            critical: 0,
+            skipped: 0,
+            notApplicable: 0,
+            pending: 0,
+          },
+        },
+      ]
+      render(<RoomNavigator {...defaultProps} rooms={emptyRoom} activeRoomId="empty" />)
+      expect(screen.getByText('Empty Room')).toBeInTheDocument()
+    })
+
+    it('should handle very long room names', () => {
+      const longNameRoom: RoomItem[] = [
+        {
+          roomId: 'long',
+          label: 'Very Long Room Name That Should Truncate With Ellipsis',
+          counts: {
+            good: 5,
+            issue: 0,
+            critical: 0,
+            skipped: 0,
+            notApplicable: 0,
+            pending: 0,
+          },
+        },
+      ]
+      render(<RoomNavigator {...defaultProps} rooms={longNameRoom} activeRoomId="long" />)
+      expect(screen.getByText(/Very Long Room Name/)).toBeInTheDocument()
+    })
+
+    it('should handle null activeRoomId', () => {
+      render(<RoomNavigator {...defaultProps} activeRoomId={null} />)
+      // Should not throw error and no room should be marked as active
+      const currentRoom = screen.queryByRole('listitem', { current: 'location' })
+      expect(currentRoom).not.toBeInTheDocument()
+    })
+  })
+})

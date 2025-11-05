@@ -1,0 +1,294 @@
+import type { Meta, StoryObj } from '@storybook/react'
+import { RoomItemList, Item, StatusCounts } from './RoomItemList'
+
+/**
+ * RoomItemList Component Stories
+ *
+ * Displays a list of inspection items for a selected room with:
+ * - Status badges (good, issue, critical, skipped, not_applicable, pending)
+ * - Active item highlighting
+ * - Sticky header with room name and status summary
+ * - "Jump to next pending" quick navigation
+ * - Item selection callbacks
+ *
+ * To enable these stories:
+ * 1. Install Storybook: npm install --save-dev @storybook/react @storybook/nextjs
+ * 2. Rename this file to RoomItemList.stories.tsx
+ * 3. Run: npm run storybook
+ */
+
+const meta = {
+  title: 'Inspection/RoomItemList',
+  component: RoomItemList,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  tags: ['autodocs'],
+  argTypes: {
+    onSelectItem: { action: 'item-selected' },
+    onJumpNextPending: { action: 'jump-to-pending' },
+  },
+} satisfies Meta<typeof RoomItemList>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+// ==================== MOCK DATA ====================
+
+const kitchenItems: Item[] = [
+  { id: '1', label: 'Check cabinet doors align properly', status: 'good', order: 1 },
+  { id: '2', label: 'Inspect countertop for damage', status: 'good', order: 2 },
+  { id: '3', label: 'Test all faucets for leaks', status: 'issue', order: 3 },
+  { id: '4', label: 'Check sink drainage', status: 'good', order: 4 },
+  { id: '5', label: 'Inspect appliance installation', status: 'critical', order: 5 },
+  { id: '6', label: 'Check electrical outlets', status: 'pending', order: 6 },
+  { id: '7', label: 'Inspect flooring condition', status: 'pending', order: 7 },
+]
+
+const kitchenCounts: StatusCounts = {
+  good: 3,
+  issue: 1,
+  critical: 1,
+  skipped: 0,
+  notApplicable: 0,
+  pending: 2,
+}
+
+// ==================== STORIES ====================
+
+/**
+ * Default kitchen inspection with mixed statuses
+ */
+export const Default: Story = {
+  args: {
+    items: kitchenItems,
+    activeItemId: '3',
+    roomName: 'Kitchen',
+    counts: kitchenCounts,
+  },
+}
+
+/**
+ * All items marked as good (ideal state)
+ */
+export const AllGood: Story = {
+  args: {
+    items: [
+      { id: '1', label: 'Check cabinet doors', status: 'good', order: 1 },
+      { id: '2', label: 'Inspect countertop', status: 'good', order: 2 },
+      { id: '3', label: 'Test faucets', status: 'good', order: 3 },
+      { id: '4', label: 'Check sink', status: 'good', order: 4 },
+      { id: '5', label: 'Inspect appliances', status: 'good', order: 5 },
+    ],
+    activeItemId: '1',
+    roomName: 'Living Room',
+    counts: {
+      good: 5,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    },
+  },
+}
+
+/**
+ * Multiple critical issues requiring attention
+ */
+export const WithCriticalIssues: Story = {
+  args: {
+    items: [
+      { id: '1', label: 'Structural crack in ceiling', status: 'critical', order: 1 },
+      { id: '2', label: 'Water damage on wall', status: 'critical', order: 2 },
+      { id: '3', label: 'Electrical wiring exposed', status: 'critical', order: 3 },
+      { id: '4', label: 'Floor tiles loose', status: 'issue', order: 4 },
+      { id: '5', label: 'Paint chipping', status: 'issue', order: 5 },
+    ],
+    activeItemId: '1',
+    roomName: 'Bathroom',
+    counts: {
+      good: 0,
+      issue: 2,
+      critical: 3,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    },
+  },
+}
+
+/**
+ * Items with skipped and not applicable statuses
+ */
+export const WithSkippedAndNA: Story = {
+  args: {
+    items: [
+      { id: '1', label: 'Check balcony railing', status: 'not_applicable', order: 1 },
+      { id: '2', label: 'Inspect window screens', status: 'good', order: 2 },
+      { id: '3', label: 'Test sliding door', status: 'skipped', order: 3 },
+      { id: '4', label: 'Check ceiling fan', status: 'not_applicable', order: 4 },
+      { id: '5', label: 'Inspect light fixtures', status: 'good', order: 5 },
+      { id: '6', label: 'Check closet doors', status: 'skipped', order: 6 },
+    ],
+    activeItemId: '3',
+    roomName: 'Master Bedroom',
+    counts: {
+      good: 2,
+      issue: 0,
+      critical: 0,
+      skipped: 2,
+      notApplicable: 2,
+      pending: 0,
+    },
+  },
+}
+
+/**
+ * All items pending inspection (start state)
+ */
+export const AllPending: Story = {
+  args: {
+    items: [
+      { id: '1', label: 'Inspect door frames', status: 'pending', order: 1 },
+      { id: '2', label: 'Check window locks', status: 'pending', order: 2 },
+      { id: '3', label: 'Test light switches', status: 'pending', order: 3 },
+      { id: '4', label: 'Inspect walls', status: 'pending', order: 4 },
+      { id: '5', label: 'Check flooring', status: 'pending', order: 5 },
+    ],
+    activeItemId: '1',
+    roomName: 'Hallway',
+    counts: {
+      good: 0,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 5,
+    },
+  },
+}
+
+/**
+ * Long list of items requiring scroll
+ */
+export const LongList: Story = {
+  args: {
+    items: [
+      { id: '1', label: 'Check cabinet door 1', status: 'good', order: 1 },
+      { id: '2', label: 'Check cabinet door 2', status: 'good', order: 2 },
+      { id: '3', label: 'Check cabinet door 3', status: 'issue', order: 3 },
+      { id: '4', label: 'Inspect drawer 1', status: 'good', order: 4 },
+      { id: '5', label: 'Inspect drawer 2', status: 'good', order: 5 },
+      { id: '6', label: 'Inspect drawer 3', status: 'good', order: 6 },
+      { id: '7', label: 'Check countertop section A', status: 'good', order: 7 },
+      { id: '8', label: 'Check countertop section B', status: 'issue', order: 8 },
+      { id: '9', label: 'Check countertop section C', status: 'good', order: 9 },
+      { id: '10', label: 'Test faucet hot water', status: 'good', order: 10 },
+      { id: '11', label: 'Test faucet cold water', status: 'good', order: 11 },
+      { id: '12', label: 'Check sink basin', status: 'critical', order: 12 },
+      { id: '13', label: 'Inspect backsplash', status: 'good', order: 13 },
+      { id: '14', label: 'Check electrical outlet 1', status: 'pending', order: 14 },
+      { id: '15', label: 'Check electrical outlet 2', status: 'pending', order: 15 },
+      { id: '16', label: 'Check electrical outlet 3', status: 'pending', order: 16 },
+      { id: '17', label: 'Inspect light fixture', status: 'pending', order: 17 },
+      { id: '18', label: 'Check ventilation fan', status: 'pending', order: 18 },
+      { id: '19', label: 'Inspect floor tiles', status: 'pending', order: 19 },
+      { id: '20', label: 'Check baseboards', status: 'pending', order: 20 },
+    ],
+    activeItemId: '12',
+    roomName: 'Kitchen',
+    counts: {
+      good: 11,
+      issue: 2,
+      critical: 1,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 7,
+    },
+  },
+}
+
+/**
+ * Empty state - no items in room
+ */
+export const EmptyState: Story = {
+  args: {
+    items: [],
+    activeItemId: null,
+    roomName: 'Storage Room',
+    counts: {
+      good: 0,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    },
+  },
+}
+
+/**
+ * No active item selected
+ */
+export const NoActiveItem: Story = {
+  args: {
+    items: kitchenItems,
+    activeItemId: null,
+    roomName: 'Kitchen',
+    counts: kitchenCounts,
+  },
+}
+
+/**
+ * No counts provided (minimal props)
+ */
+export const NoCounts: Story = {
+  args: {
+    items: [
+      { id: '1', label: 'Check window', status: 'good', order: 1 },
+      { id: '2', label: 'Check door', status: 'issue', order: 2 },
+      { id: '3', label: 'Check floor', status: 'pending', order: 3 },
+    ],
+    activeItemId: '1',
+    roomName: 'Bedroom 2',
+  },
+}
+
+/**
+ * Interactive demo showing selection behavior
+ */
+export const Interactive: Story = {
+  args: {
+    items: kitchenItems,
+    activeItemId: '3',
+    roomName: 'Kitchen',
+    counts: kitchenCounts,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Click on any item to see the selection callback in the Actions panel. Click "Jump to Next Pending" to trigger the navigation callback.',
+      },
+    },
+  },
+}
+
+/**
+ * Accessibility testing view
+ */
+export const AccessibilityTest: Story = {
+  args: {
+    items: kitchenItems,
+    activeItemId: '3',
+    roomName: 'Kitchen',
+    counts: kitchenCounts,
+  },
+  parameters: {
+    docs: {
+      description: {
+        story: 'Test keyboard navigation, screen reader announcements, and focus indicators. Each item has proper ARIA labels and role attributes.',
+      },
+    },
+  },
+}

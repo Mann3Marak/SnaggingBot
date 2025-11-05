@@ -6,6 +6,13 @@ import { NHomeLogo } from '@/components/NHomeLogo'
 import { useNHomePhotoCapture } from '@/hooks/useNHomePhotoCapture'
 import { NHomePhotoUploadService } from '@/services/nhomePhotoUploadService'
 import { NHomeCameraCapture } from '@/components/camera/NHomeCameraCapture'
+import { SessionHeader } from './SessionHeader'
+import { RoomNavigator } from './RoomNavigator'
+import { RoomItemList } from './RoomItemList'
+import { VoiceWorkspace } from './VoiceWorkspace'
+import { MobileRoomSelector } from './MobileRoomSelector'
+import { MobileItemSelector } from './MobileItemSelector'
+import { StatusLegend } from './StatusLegend'
 
 interface NHomeVoiceInspectionProps {
   sessionId: string
@@ -131,7 +138,20 @@ function determinePriority(status: InspectionStatus): number {
 }
 
 export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceInspectionProps) {
-  const { session, currentItem, nhomeProgress, saveNHomeResult, reload } = useNHomeInspectionSession(sessionId)
+  const {
+    session,
+    currentItem,
+    currentResult,
+    nhomeProgress,
+    activeRoomId,
+    activeItemId,
+    roomGroups,
+    itemToRoomMap,
+    setActiveRoom,
+    setActiveItem,
+    saveNHomeResult,
+    reload
+  } = useNHomeInspectionSession(sessionId)
   const currentIndex = session?.current_item_index ?? 0
 
   const goToNext = async () => {
@@ -441,6 +461,19 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   } = useNHomePhotoCapture(sessionId)
   const uploader = useRef(new NHomePhotoUploadService()).current
 
+  // Responsive breakpoint detection
+  const [isMobile, setIsMobile] = useState(false)
+  const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 1023px)')
+    setIsMobile(mediaQuery.matches)
+
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mediaQuery.addEventListener('change', handler)
+    return () => mediaQuery.removeEventListener('change', handler)
+  }, [])
+
   useEffect(() => {
     return () => {
       if (isRecording || mediaRecorderRef.current) {
@@ -448,6 +481,153 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
       }
     }
   }, [])
+
+  // Helper: Calculate status counts for a room
+  const calculateRoomCounts = useCallback((room: any, results: any[]) => {
+    const counts = {
+      good: 0,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    }
+    room.items.forEach((item: any) => {
+      const result = results?.find((r: any) => r.item_id === item.id)
+      if (result) {
+        switch (result.status) {
+          case 'good':
+            counts.good++
+            break
+          case 'issue':
+            counts.issue++
+            break
+          case 'critical':
+            counts.critical++
+            break
+          case 'skipped':
+            counts.skipped++
+            break
+          case 'not_applicable':
+            counts.notApplicable++
+            break
+        }
+      } else {
+        counts.pending++
+      }
+    })
+    return counts
+  }, [])
+
+  // Helper: Get item status from results
+  const getItemStatus = useCallback((itemId: string, results?: any[]) => {
+    if (!results) return 'pending'
+    const result = results.find((r: any) => r.item_id === itemId)
+    return result?.status ?? 'pending'
+  }, [])
+
+  // Helper: Jump to next pending item
+  const handleJumpToPending = useCallback(() => {
+    const activeRoom = roomGroups.find((r: any) => r.roomId === activeRoomId)
+    if (!activeRoom) return
+    const pendingItem = activeRoom.items.find((item: any) => {
+      const result = session?.results?.find((r: any) => r.item_id === item.id)
+      return !result || result.status === 'pending'
+    })
+    if (pendingItem) {
+      setActiveItem(pendingItem.id)
+    }
+  }, [roomGroups, activeRoomId, session, setActiveItem])
+
+  // Transform data for components
+  const roomsForNav = useMemo(() => {
+    return roomGroups.map((group: any) => ({
+      roomId: group.roomId,
+      label: group.roomLabel,
+      counts: calculateRoomCounts(group, session?.results || []),
+    }))
+  }, [roomGroups, session?.results, calculateRoomCounts])
+
+  const activeRoom = useMemo(() => {
+    return roomGroups.find((r: any) => r.roomId === activeRoomId)
+  }, [roomGroups, activeRoomId])
+
+  const itemsForList = useMemo(() => {
+    return (
+      activeRoom?.items.map((item: any) => ({
+        id: item.id,
+        label: item.item_description,
+        status: getItemStatus(item.id, session?.results),
+        order: item.order_sequence,
+      })) ?? []
+    )
+  }, [activeRoom, session?.results, getItemStatus])
+
+  const roomCounts = useMemo(() => {
+    return activeRoom
+      ? calculateRoomCounts(activeRoom, session?.results || [])
+      : {
+          good: 0,
+          issue: 0,
+          critical: 0,
+          skipped: 0,
+          notApplicable: 0,
+          pending: 0,
+        }
+  }, [activeRoom, session?.results, calculateRoomCounts])
+
+  // Calculate overall status counts for SessionHeader
+  const overallCounts = useMemo(() => {
+    const counts = {
+      good: 0,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    }
+
+    // Count all checklist items
+    const allItems = session?.checklist_items || []
+    const results = session?.results || []
+
+    allItems.forEach((item: any) => {
+      const result = results.find((r: any) => r.item_id === item.id)
+      if (result) {
+        switch (result.status) {
+          case 'good':
+            counts.good++
+            break
+          case 'issue':
+            counts.issue++
+            break
+          case 'critical':
+            counts.critical++
+            break
+          case 'skipped':
+            counts.skipped++
+            break
+          case 'not_applicable':
+            counts.notApplicable++
+            break
+        }
+      } else {
+        counts.pending++
+      }
+    })
+
+    return counts
+  }, [session?.checklist_items, session?.results])
+
+  // Convert results array to Map for MobileItemSelector
+  const resultsMap = useMemo(() => {
+    const map = new Map()
+    const results = session?.results || []
+    results.forEach((result: any) => {
+      map.set(result.item_id, result)
+    })
+    return map
+  }, [session?.results])
 
   const enhanceNHomeDescription = useCallback(async (userInput: string, item = currentItem) => {
     const trimmed = userInput.trim()
@@ -815,378 +995,235 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
     )
   }
 
+  // Desktop Layout (≥1024px): Three-column grid with SessionHeader, RoomNavigator, RoomItemList, VoiceWorkspace
+  // Mobile Layout (<1024px): Single column with dropdown selectors
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+        {/* SessionHeader */}
+        <SessionHeader
+          projectName={session.project?.name ?? 'NHome Project'}
+          apartmentNumber={session.apartment?.unit_number ?? 'N/A'}
+          inspectorName="NHome Inspector"
+          lastUpdated={session.updated_at ?? new Date()}
+          counts={overallCounts}
+          activeRoomLabel={activeRoom?.roomLabel ?? null}
+          activeItemLabel={currentItem?.item_description ?? null}
+        />
+
+        {/* Three-column grid layout */}
+        <div className="grid grid-cols-[240px_1fr_360px] h-[calc(100vh-80px)]">
+          {/* Left Column: RoomNavigator */}
+          <div className="border-r border-gray-200 bg-white overflow-y-auto">
+            <RoomNavigator
+              rooms={roomsForNav}
+              activeRoomId={activeRoomId}
+              onSelectRoom={setActiveRoom}
+              searchTerm={searchTerm}
+              onSearch={setSearchTerm}
+            />
+          </div>
+
+          {/* Middle Column: RoomItemList */}
+          <div className="bg-gray-50 overflow-y-auto">
+            <RoomItemList
+              roomName={activeRoom?.roomLabel ?? 'Select a room'}
+              items={itemsForList}
+              activeItemId={activeItemId}
+              onSelectItem={setActiveItem}
+              counts={roomCounts}
+              onJumpNextPending={handleJumpToPending}
+            />
+          </div>
+
+          {/* Right Column: VoiceWorkspace */}
+          <div className="border-l border-gray-200 bg-white overflow-y-auto">
+            <VoiceWorkspace
+              currentItem={currentItem}
+              currentResult={currentResult}
+              isRecording={isRecording}
+              isPlaying={isPlaying}
+              status={status}
+              activeStatus={activeStatus}
+              userTranscriptSegments={userTranscriptSegments}
+              assistantMessages={assistantMessages}
+              lastResponse={lastResponse}
+              onToggleRecording={handleToggleAssistant}
+              onCapturePhoto={() => currentItem && openNHomeCamera(currentItem.id)}
+              onNavigatePrevious={goToPrevious}
+              onNavigateNext={goToNext}
+              photos={currentItem ? getNHomePhotosForItem(currentItem.id) : []}
+              uploadProgress={uploadProgress}
+              onRemovePhoto={removeNHomePhoto}
+              onUploadPhoto={async (photoId: string, photoBlob: Blob, metadata: any) => {
+                try {
+                  updateUploadProgress(photoId, 1)
+                  const fileName = generateNHomeFileName(metadata)
+                  const res = await uploader.uploadNHomeInspectionPhoto(
+                    photoBlob,
+                    metadata,
+                    sessionId,
+                    metadata.itemId || currentItem?.id,
+                    fileName,
+                    session,
+                    (p) => updateUploadProgress(photoId, p)
+                  )
+                  if (res.success && res.supabase_url) {
+                    markPhotoUploaded(photoId, res.supabase_url, res.photo)
+                  }
+                } catch (e) {
+                  console.error('Photo upload failed', e)
+                  updateUploadProgress(photoId, 0)
+                }
+              }}
+              generatePhotoFileName={generateNHomeFileName}
+              sessionId={sessionId}
+              session={session}
+            />
+          </div>
+        </div>
+
+        {/* Status Legend - Fixed at bottom */}
+        <div className="fixed bottom-4 right-4 max-w-md">
+          <StatusLegend compact />
+        </div>
+
+        {/* Camera Modal */}
+        <NHomeCameraCapture
+          isOpen={isCameraOpen}
+          onClose={closeNHomeCamera}
+          inspectionItem={
+            currentItem
+              ? {
+                  id: currentItem.id,
+                  room_type: currentItem.room_type,
+                  item_description: currentItem.item_description,
+                  nhome_standard_notes: currentItem.nhome_standard_notes ?? undefined,
+                }
+              : undefined
+          }
+          sessionData={
+            session
+              ? {
+                  project_name: session.project?.name,
+                  apartment_unit: session.apartment?.unit_number,
+                  apartment_type: session.apartment?.apartment_type,
+                  inspector_name: 'NHome Inspector',
+                }
+              : undefined
+          }
+          onPhotoTaken={(blob, url, metadata) => {
+            addNHomePhoto(blob, url, metadata)
+          }}
+        />
+      </div>
+    )
+  }
+
+  // Mobile Layout
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#f9fafb] via-white to-[#f3f4f6] text-gray-900">
-      <div className="bg-gradient-to-r from-nhome-primary to-nhome-secondary text-white p-4 shadow-lg">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <NHomeLogo variant="white" size="md" />
-            <div>
-              <h1 className="font-bold text-lg">NHome Professional Inspection</h1>
-              <p className="text-sm opacity-90">{session.project.name}</p>
-            </div>
-          </div>
-          <div className="text-right text-sm">
-            <div className="font-medium">Unit {session.apartment.unit_number}</div>
-            <div className="opacity-90">{session.apartment.apartment_type}</div>
-          </div>
-        </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100">
+      {/* SessionHeader */}
+      <SessionHeader
+        projectName={session.project?.name ?? 'NHome Project'}
+        apartmentNumber={session.apartment?.unit_number ?? 'N/A'}
+        inspectorName="NHome Inspector"
+        lastUpdated={session.updated_at ?? new Date()}
+        counts={overallCounts}
+        activeRoomLabel={activeRoom?.roomLabel ?? null}
+        activeItemLabel={currentItem?.item_description ?? null}
+      />
+
+      {/* Mobile Selectors */}
+      <div className="bg-white border-b border-gray-200 p-4 space-y-3">
+        <MobileRoomSelector
+          rooms={roomGroups}
+          activeRoomId={activeRoomId}
+          onSelectRoom={setActiveRoom}
+        />
+        <MobileItemSelector
+          items={activeRoom?.items ?? []}
+          activeItemId={activeItemId}
+          onSelectItem={setActiveItem}
+          results={resultsMap}
+        />
       </div>
 
-      <div className="p-4 space-y-6">
-        <div className="bg-white rounded-3xl shadow-lg border border-gray-100 p-10 text-center">
-          <div className="text-center mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-nhome-primary to-nhome-secondary rounded-full flex items-center justify-center mx-auto mb-4">
-              <svg className="w-10 h-10 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12,17.27L18.18,21L16.54,13.97L22,9.24L14.81,8.62L12,2L9.19,8.62L2,9.24L7.45,13.97L5.82,21L12,17.27Z" />
-              </svg>
-            </div>
-
-            <h2 className="text-2xl font-bold text-nhome-primary mb-2">
-              {currentItem.room_type}
-            </h2>
-            <p className="text-lg text-gray-700 mb-4">
-              {currentItem.item_description}
-            </p>
-
-            {currentItem.nhome_standard_notes && (
-              <div className="bg-nhome-primary/10 border border-nhome-primary/20 rounded-lg p-3 text-sm text-nhome-primary">
-                <strong>NHome Standards:</strong> {currentItem.nhome_standard_notes}
-              </div>
-            )}
-
-            <div className="mt-4 flex flex-col items-center gap-4">
-              <div className="flex justify-center gap-4">
-                <button
-                  onClick={async () => {
-                    setSelectedStatus('good');
-                    await saveNHomeResult(currentItem.id, 'good', 'Meets NHome standards', 1, [], true);
-                    onRefreshReport?.();
-                  }}
-                  className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
-                    selectedStatus === 'good'
-                      ? 'bg-green-700 ring-2 ring-green-300'
-                      : 'bg-green-500 hover:bg-green-600'
-                  }`}
-                >
-                  Good
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedStatus('issue');
-                    setShowNotes({ type: 'issue' });
-                  }}
-                  className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
-                    selectedStatus === 'issue'
-                      ? 'bg-yellow-600 ring-2 ring-yellow-300'
-                      : 'bg-yellow-400 hover:bg-yellow-500'
-                  }`}
-                >
-                  Issue
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedStatus('critical');
-                    setShowNotes({ type: 'critical' });
-                  }}
-                  className={`px-6 py-2 rounded-full text-white text-sm font-semibold shadow-md transition-all ${
-                    selectedStatus === 'critical'
-                      ? 'bg-red-700 ring-2 ring-red-300'
-                      : 'bg-red-500 hover:bg-red-600'
-                  }`}
-                >
-                  Critical
-                </button>
-              </div>
-
-              {showNotes && (
-                <div className="w-full max-w-md bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm">
-                  <textarea
-                    value={notesText}
-                    onChange={(e) => setNotesText(e.target.value)}
-                    placeholder="Describe the issue..."
-                    className="w-full border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-nhome-primary"
-                    rows={3}
-                  />
-                  <div className="flex justify-end gap-2 mt-3">
-                    <button
-                      onClick={async () => {
-                        if (!notesText.trim()) {
-                          alert("Please add a comment before saving an issue or critical item.");
-                          return;
-                        }
-                        await saveNHomeResult(
-                          currentItem.id,
-                          showNotes.type,
-                          notesText.trim(),
-                          determinePriority(showNotes.type),
-                          [],
-                          true
-                        );
-                        setShowNotes(null);
-                        setNotesText('');
-                        onRefreshReport?.();
-                      }}
-                      disabled={!notesText.trim()}
-                      className={`px-4 py-1.5 rounded-md text-white text-sm transition-all ${
-                        notesText.trim()
-                          ? "bg-nhome-primary hover:bg-nhome-secondary"
-                          : "bg-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setShowNotes(null)
-                        setNotesText('')
-                      }}
-                      className="px-4 py-1.5 rounded-md bg-gray-200 text-gray-700 text-sm hover:bg-gray-300"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <div className="flex justify-between text-sm text-gray-600 mb-2">
-              <span>Inspection Progress</span>
-              <span>{currentIndex + 1} of {nhomeProgress.total} items</span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3">
-              <div
-                className="bg-gradient-to-r from-nhome-primary to-nhome-secondary h-3 rounded-full transition-all duration-500"
-                style={{ width: `${((currentIndex + 1) / (nhomeProgress.total || 1)) * 100}%` }}
-              />
-            </div>
-
-            <div className="flex justify-between mt-2 text-xs text-gray-500">
-              <span>Quality Score: {nhomeProgress.quality_score}/10</span>
-              <span>Issues Found: {nhomeProgress.issues_found}</span>
-            </div>
-          </div>
-
-          <div className="text-center space-y-2 mt-6">
-            <div className="flex justify-center items-center gap-6">
-              <button
-                onClick={goToPrevious}
-                className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
-              >
-                ← Previous Item
-              </button>
-              <button
-                onClick={handleToggleAssistant}
-                className={`w-16 h-16 flex items-center justify-center rounded-full text-white font-semibold shadow-md transition-all duration-200 ${
-                  isPlaying
-                    ? 'bg-blue-500 hover:bg-blue-600 scale-105'
-                    : isRecording
-                      ? 'bg-red-500 hover:bg-red-600 scale-105 animate-pulse'
-                      : 'bg-green-500 hover:bg-green-600 scale-105'
-                }`}
-              >
-                <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                  {isPlaying ? (
-                    <path d="M8 5v14l11-7z" />
-                  ) : isRecording ? (
-                    <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                  ) : (
-                    <path d="M12 14c1.66 0 2.99-1.34 2.99-3L15 5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z" />
-                  )}
-                </svg>
-              </button>
-              <button
-                onClick={goToNext}
-                className="px-5 py-2 rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 text-sm font-semibold shadow-sm transition-all"
-              >
-                Next Item →
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-lg font-medium text-gray-900">{activeStatus}</p>
-              <p className="text-sm text-gray-600">{status}</p>
-            </div>
-          </div>
-
-          {lastResponse && (
-            <div className="mt-6 bg-nhome-primary/5 rounded-lg p-3 border-l-4 border-nhome-primary">
-              <h4 className="font-medium text-nhome-primary mb-1">NHome Assistant Update</h4>
-              <p className="text-gray-700">{lastResponse}</p>
-            </div>
-          )}
-
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-left">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Inspector Transcript</h4>
-              {userTranscriptSegments.length ? (
-                <div className="space-y-2 text-sm text-gray-700">
-                  {userTranscriptSegments.map((segment, index) => (
-                    <p key={`${segment}-${index}`} className={segment.startsWith('Listening:') ? 'italic text-gray-500' : ''}>
-                      {segment}
-                    </p>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">Awaiting inspector input...</p>
-              )}
-            </div>
-            <div className="bg-gray-50 rounded-lg border border-gray-200 p-4 text-left">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Assistant Transcript</h4>
-              {assistantMessages.length ? (
-                <div className="space-y-2 text-sm text-gray-700">
-                  {assistantMessages.map((message, index) => (
-                    <p key={`${message}-${index}`}>{message}</p>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-sm text-gray-500">Assistant responses will appear here.</p>
-              )}
-            </div>
-          </div>
-
-        </div>
-
-        <div className="mt-8 flex flex-wrap justify-center gap-6">
-          <button
-            onClick={() => currentItem && openNHomeCamera(currentItem.id)}
-            className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-accent transition-all"
-          >
-            <div className="text-center">
-              <div className="w-12 h-12 bg-nhome-accent rounded-lg flex items-center justify-center mx-auto mb-2">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M12 2C13.1 2 14 2.9 14 4C14 5.1 13.1 6 12 6C10.9 6 10 5.1 10 4C10 2.9 10.9 2 12 2ZM21 9V7L15 1H5C3.89 1 3 1.89 3 3V19A2 2 0 0 0 5 21H19A2 2 0 0 0 21 19V9M19 19H5V3H13V9H19Z" />
-                </svg>
-              </div>
-              <p className="font-medium text-gray-900">Capture Photo Evidence</p>
-              <p className="text-xs text-gray-600">Attach visuals for the current item</p>
-            </div>
-          </button>
-
-          {/* <button
-            onClick={handleToggleAssistant}
-            className="bg-white rounded-xl shadow-md border border-gray-200 p-4 hover:shadow-lg hover:border-nhome-secondary transition-all"
-          >
-            <div className="text-center">
-              <div className="w-12 h-12 bg-nhome-secondary rounded-lg flex items-center justify-center mx-auto mb-2">
-                <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9 21H7V3H9V21M17 3H15V21H17V3Z" />
-                </svg>
-              </div>
-              <p className="font-medium text-gray-900">Record Voice Notes</p>
-              <p className="text-xs text-gray-600">Use assistant prompts for detailed notes</p>
-            </div>
-          </button> */}
-        </div>
-
-        {currentItem && (
-          <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">Photos for this item</h3>
-            <div className="grid grid-cols-3 gap-3">
-              {/* ✅ Display photos from inspection_results.photo_urls */}
-              {currentItem.photo_urls?.length > 0 && currentItem.photo_urls.map((url: string, index: number) => (
-                <div key={`db-photo-${index}`} className="relative border rounded-lg overflow-hidden group">
-                  <img src={url} alt={`Inspection photo ${index + 1}`} className="w-full h-24 object-cover" />
-                  <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
-                    Saved
-                  </div>
-                </div>
-              ))}
-
-              {/* ✅ Display locally captured photos (not yet uploaded) */}
-              {getNHomePhotosForItem(currentItem.id).map(photo => {
-                const displayName = photo.file_name ?? generateNHomeFileName(photo.metadata);
-                return (
-                  <div key={photo.id} className="relative border rounded-lg overflow-hidden group">
-                    <img src={photo.url} alt={photo.metadata.item} className="w-full h-24 object-cover" />
-                    <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
-                      {photo.uploaded ? 'Uploaded' : uploadProgress[photo.id] ? `${Math.round(uploadProgress[photo.id])}%` : ''}
-                    </div>
-                    <button
-                      onClick={() => removeNHomePhoto(photo.id)}
-                      type="button"
-                      className="absolute top-1 right-1 bg-black/60 z-10 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                      title="Remove photo"
-                    >
-                      Remove
-                    </button>
-                    {!photo.uploaded && (
-                      <button
-                        onClick={async () => {
-                          try {
-                            updateUploadProgress(photo.id, 1);
-                            const fileName = generateNHomeFileName(photo.metadata);
-                            const res = await uploader.uploadNHomeInspectionPhoto(
-                              photo.blob as Blob,
-                              photo.metadata,
-                              sessionId,
-                              photo.itemId || currentItem.id,
-                              fileName,
-                              session,
-                              (p) => updateUploadProgress(photo.id, p),
-                            );
-                            if (res.success && res.supabase_url) {
-                              markPhotoUploaded(photo.id, res.supabase_url, res.photo);
-                            }
-                          } catch (e) {
-                            console.error('NHome photo upload failed', e);
-                            updateUploadProgress(photo.id, 0);
-                          }
-                        }}
-                        type="button"
-                        className="absolute bottom-1 right-1 bg-nhome-secondary z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
-                        title="Upload to NHome cloud storage"
-                      >
-                        Upload
-                      </button>
-                    )}
-                    <div className="p-2 text-[10px] text-gray-600 truncate" title={displayName}>
-                      {displayName}
-                      {photo.uploaded && photo.storage_url && (
-                        <a
-                          href={photo.storage_url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block px-2 pb-2 -mt-1 text-[10px] text-nhome-primary hover:underline truncate"
-                          title={photo.storage_url}
-                        >
-                          {photo.storage_url}
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="mt-3">
-              <button
-                onClick={() => currentItem && openNHomeCamera(currentItem.id)}
-                className="text-sm text-nhome-primary hover:underline"
-              >
-                + Add another photo
-              </button>
-            </div>
-          </div>
-        )}
-
+      {/* VoiceWorkspace */}
+      <div className="bg-white">
+        <VoiceWorkspace
+          currentItem={currentItem}
+          currentResult={currentResult}
+          isRecording={isRecording}
+          isPlaying={isPlaying}
+          status={status}
+          activeStatus={activeStatus}
+          userTranscriptSegments={userTranscriptSegments}
+          assistantMessages={assistantMessages}
+          lastResponse={lastResponse}
+          onToggleRecording={handleToggleAssistant}
+          onCapturePhoto={() => currentItem && openNHomeCamera(currentItem.id)}
+          onNavigatePrevious={goToPrevious}
+          onNavigateNext={goToNext}
+          photos={currentItem ? getNHomePhotosForItem(currentItem.id) : []}
+          uploadProgress={uploadProgress}
+          onRemovePhoto={removeNHomePhoto}
+          onUploadPhoto={async (photoId: string, photoBlob: Blob, metadata: any) => {
+            try {
+              updateUploadProgress(photoId, 1)
+              const fileName = generateNHomeFileName(metadata)
+              const res = await uploader.uploadNHomeInspectionPhoto(
+                photoBlob,
+                metadata,
+                sessionId,
+                metadata.itemId || currentItem?.id,
+                fileName,
+                session,
+                (p) => updateUploadProgress(photoId, p)
+              )
+              if (res.success && res.supabase_url) {
+                markPhotoUploaded(photoId, res.supabase_url, res.photo)
+              }
+            } catch (e) {
+              console.error('Photo upload failed', e)
+              updateUploadProgress(photoId, 0)
+            }
+          }}
+          generatePhotoFileName={generateNHomeFileName}
+          sessionId={sessionId}
+          session={session}
+        />
       </div>
+
+      {/* Status Legend - Compact horizontal */}
+      <div className="bg-white border-t border-gray-200 p-4">
+        <StatusLegend compact />
+      </div>
+
+      {/* Camera Modal */}
       <NHomeCameraCapture
         isOpen={isCameraOpen}
         onClose={closeNHomeCamera}
-        inspectionItem={currentItem ? {
-          id: currentItem.id,
-          room_type: currentItem.room_type,
-          item_description: currentItem.item_description,
-          nhome_standard_notes: currentItem.nhome_standard_notes,
-        } : undefined}
-        sessionData={session ? {
-          project_name: session.project?.name,
-          apartment_unit: session.apartment?.unit_number,
-          apartment_type: session.apartment?.apartment_type,
-          inspector_name: 'NHome Inspector',
-        } : undefined}
+        inspectionItem={
+          currentItem
+            ? {
+                id: currentItem.id,
+                room_type: currentItem.room_type,
+                item_description: currentItem.item_description,
+                nhome_standard_notes: currentItem.nhome_standard_notes ?? undefined,
+              }
+            : undefined
+        }
+        sessionData={
+          session
+            ? {
+                project_name: session.project?.name,
+                apartment_unit: session.apartment?.unit_number,
+                apartment_type: session.apartment?.apartment_type,
+                inspector_name: 'NHome Inspector',
+              }
+            : undefined
+        }
         onPhotoTaken={(blob, url, metadata) => {
           addNHomePhoto(blob, url, metadata)
         }}

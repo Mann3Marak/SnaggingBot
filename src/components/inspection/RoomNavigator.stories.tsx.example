@@ -1,0 +1,393 @@
+import type { Meta, StoryObj } from '@storybook/react'
+import { useState } from 'react'
+import { RoomNavigator, RoomItem } from './RoomNavigator'
+
+/**
+ * RoomNavigator Component Stories
+ *
+ * The RoomNavigator is a sidebar component for navigating between rooms
+ * during an inspection. It displays room status counts, supports search
+ * filtering, and provides full keyboard navigation.
+ *
+ * ## Features
+ * - Visual status indicators (critical, issue, skipped, pending, good)
+ * - Search with case-insensitive filtering
+ * - Keyboard navigation (Arrow keys, Enter, Space, Home, End)
+ * - ARIA labels for accessibility
+ * - Focus management
+ * - Outstanding items badge
+ */
+
+const meta: Meta<typeof RoomNavigator> = {
+  title: 'Inspection/RoomNavigator',
+  component: RoomNavigator,
+  parameters: {
+    layout: 'fullscreen',
+  },
+  tags: ['autodocs'],
+  argTypes: {
+    rooms: {
+      description: 'Array of rooms with status counts',
+      control: 'object',
+    },
+    activeRoomId: {
+      description: 'Currently active room ID',
+      control: 'text',
+    },
+    onSelectRoom: {
+      description: 'Callback when room is selected',
+      action: 'room selected',
+    },
+    searchTerm: {
+      description: 'Current search term',
+      control: 'text',
+    },
+    onSearch: {
+      description: 'Callback when search term changes',
+      action: 'search changed',
+    },
+  },
+}
+
+export default meta
+type Story = StoryObj<typeof RoomNavigator>
+
+// ==================== MOCK DATA ====================
+
+const defaultRooms: RoomItem[] = [
+  {
+    roomId: 'kitchen',
+    label: 'Kitchen',
+    counts: {
+      good: 5,
+      issue: 2,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 1,
+    },
+  },
+  {
+    roomId: 'living-room',
+    label: 'Living Room',
+    counts: {
+      good: 8,
+      issue: 0,
+      critical: 0,
+      skipped: 1,
+      notApplicable: 0,
+      pending: 0,
+    },
+  },
+  {
+    roomId: 'bedroom-1',
+    label: 'Bedroom 1',
+    counts: {
+      good: 3,
+      issue: 1,
+      critical: 1,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 2,
+    },
+  },
+  {
+    roomId: 'bathroom',
+    label: 'Bathroom',
+    counts: {
+      good: 10,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 0,
+      pending: 0,
+    },
+  },
+  {
+    roomId: 'balcony',
+    label: 'Balcony',
+    counts: {
+      good: 0,
+      issue: 0,
+      critical: 0,
+      skipped: 0,
+      notApplicable: 3,
+      pending: 0,
+    },
+  },
+]
+
+const manyRooms: RoomItem[] = [
+  ...defaultRooms,
+  {
+    roomId: 'bedroom-2',
+    label: 'Bedroom 2',
+    counts: { good: 5, issue: 1, critical: 0, skipped: 0, notApplicable: 0, pending: 1 },
+  },
+  {
+    roomId: 'bedroom-3',
+    label: 'Bedroom 3',
+    counts: { good: 4, issue: 2, critical: 0, skipped: 1, notApplicable: 0, pending: 0 },
+  },
+  {
+    roomId: 'hallway',
+    label: 'Hallway',
+    counts: { good: 3, issue: 0, critical: 0, skipped: 0, notApplicable: 0, pending: 2 },
+  },
+  {
+    roomId: 'storage',
+    label: 'Storage',
+    counts: { good: 2, issue: 0, critical: 0, skipped: 0, notApplicable: 1, pending: 0 },
+  },
+  {
+    roomId: 'laundry',
+    label: 'Laundry Room',
+    counts: { good: 4, issue: 1, critical: 0, skipped: 0, notApplicable: 0, pending: 0 },
+  },
+  {
+    roomId: 'garage',
+    label: 'Garage',
+    counts: { good: 0, issue: 0, critical: 0, skipped: 0, notApplicable: 5, pending: 0 },
+  },
+  {
+    roomId: 'patio',
+    label: 'Patio',
+    counts: { good: 2, issue: 0, critical: 1, skipped: 0, notApplicable: 0, pending: 1 },
+  },
+]
+
+// ==================== INTERACTIVE WRAPPER ====================
+
+function InteractiveRoomNavigator({ rooms }: { rooms: RoomItem[] }) {
+  const [activeRoomId, setActiveRoomId] = useState<string>(rooms[0]?.roomId || '')
+  const [searchTerm, setSearchTerm] = useState<string>('')
+
+  return (
+    <div className="h-screen flex">
+      <div className="w-80">
+        <RoomNavigator
+          rooms={rooms}
+          activeRoomId={activeRoomId}
+          onSelectRoom={setActiveRoomId}
+          searchTerm={searchTerm}
+          onSearch={setSearchTerm}
+        />
+      </div>
+      <div className="flex-1 p-8 bg-gray-50">
+        <div className="max-w-2xl">
+          <h2 className="text-2xl font-bold mb-4">Selected Room</h2>
+          <div className="bg-white rounded-lg shadow p-6">
+            {activeRoomId ? (
+              <>
+                <p className="text-lg mb-2">
+                  <span className="font-semibold">Room ID:</span> {activeRoomId}
+                </p>
+                <p className="text-sm text-gray-600">
+                  Room content would be displayed here...
+                </p>
+              </>
+            ) : (
+              <p className="text-gray-500">No room selected</p>
+            )}
+          </div>
+          {searchTerm && (
+            <div className="mt-4 p-4 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <span className="font-semibold">Search Term:</span> "{searchTerm}"
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ==================== STORIES ====================
+
+/**
+ * Default state showing a typical apartment inspection with 5 rooms.
+ * Kitchen has 2 issues and 1 pending, Bedroom 1 has a critical issue,
+ * Bathroom is all good, and Balcony has items marked as N/A.
+ */
+export const Default: Story = {
+  render: () => <InteractiveRoomNavigator rooms={defaultRooms} />,
+}
+
+/**
+ * Shows the component with search pre-filtered to "bedroom".
+ * Demonstrates case-insensitive search and filtered results.
+ */
+export const WithSearch: Story = {
+  render: () => {
+    const [activeRoomId, setActiveRoomId] = useState<string>('bedroom-1')
+    const [searchTerm, setSearchTerm] = useState<string>('bedroom')
+
+    return (
+      <div className="h-screen flex">
+        <div className="w-80">
+          <RoomNavigator
+            rooms={defaultRooms}
+            activeRoomId={activeRoomId}
+            onSelectRoom={setActiveRoomId}
+            searchTerm={searchTerm}
+            onSearch={setSearchTerm}
+          />
+        </div>
+        <div className="flex-1 p-8 bg-gray-50">
+          <div className="bg-white rounded-lg shadow p-6">
+            <h3 className="font-semibold mb-2">Instructions:</h3>
+            <ul className="text-sm text-gray-600 space-y-1">
+              <li>• Search is case-insensitive</li>
+              <li>• Clear search by clicking the ✕ button</li>
+              <li>• Filtered count shown in footer</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    )
+  },
+}
+
+/**
+ * Shows the component with many rooms (12 total).
+ * Demonstrates scrolling behavior and room variety.
+ * Useful for testing performance and layout with larger datasets.
+ */
+export const ManyRooms: Story = {
+  render: () => <InteractiveRoomNavigator rooms={manyRooms} />,
+}
+
+/**
+ * All rooms marked as complete (all good, no outstanding items).
+ * Shows the success state with green status indicators.
+ */
+export const AllComplete: Story = {
+  render: () => {
+    const completeRooms: RoomItem[] = defaultRooms.map((room) => ({
+      ...room,
+      counts: {
+        good: 10,
+        issue: 0,
+        critical: 0,
+        skipped: 0,
+        notApplicable: 0,
+        pending: 0,
+      },
+    }))
+
+    return <InteractiveRoomNavigator rooms={completeRooms} />
+  },
+}
+
+/**
+ * Shows critical issues in multiple rooms.
+ * Demonstrates the red status indicators and high outstanding counts.
+ */
+export const WithCriticalIssues: Story = {
+  render: () => {
+    const criticalRooms: RoomItem[] = [
+      {
+        roomId: 'kitchen',
+        label: 'Kitchen',
+        counts: { good: 3, issue: 2, critical: 3, skipped: 0, notApplicable: 0, pending: 2 },
+      },
+      {
+        roomId: 'bathroom',
+        label: 'Bathroom',
+        counts: { good: 5, issue: 1, critical: 2, skipped: 0, notApplicable: 0, pending: 1 },
+      },
+      {
+        roomId: 'bedroom',
+        label: 'Bedroom',
+        counts: { good: 2, issue: 0, critical: 1, skipped: 1, notApplicable: 0, pending: 3 },
+      },
+    ]
+
+    return <InteractiveRoomNavigator rooms={criticalRooms} />
+  },
+}
+
+/**
+ * Empty state - no rooms available.
+ * Shows the empty message.
+ */
+export const EmptyState: Story = {
+  render: () => <InteractiveRoomNavigator rooms={[]} />,
+}
+
+/**
+ * Search with no results.
+ * Demonstrates the "No rooms found" message.
+ */
+export const NoSearchResults: Story = {
+  render: () => {
+    const [activeRoomId, setActiveRoomId] = useState<string>('')
+    const [searchTerm, setSearchTerm] = useState<string>('nonexistent')
+
+    return (
+      <div className="h-screen flex">
+        <div className="w-80">
+          <RoomNavigator
+            rooms={defaultRooms}
+            activeRoomId={activeRoomId}
+            onSelectRoom={setActiveRoomId}
+            searchTerm={searchTerm}
+            onSearch={setSearchTerm}
+          />
+        </div>
+      </div>
+    )
+  },
+}
+
+/**
+ * Keyboard navigation demo.
+ * Use Arrow keys, Enter, Space, Home, End to navigate.
+ */
+export const KeyboardNavigation: Story = {
+  render: () => (
+    <div className="h-screen flex">
+      <div className="w-80">
+        <InteractiveRoomNavigator rooms={defaultRooms} />
+      </div>
+      <div className="flex-1 p-8 bg-gray-50">
+        <div className="bg-white rounded-lg shadow p-6">
+          <h3 className="font-semibold mb-4">Keyboard Navigation Guide:</h3>
+          <ul className="space-y-2 text-sm">
+            <li className="flex items-start gap-2">
+              <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+                ↑ ↓
+              </kbd>
+              <span>Navigate between rooms</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+                Enter
+              </kbd>
+              <span>Select focused room</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+                Space
+              </kbd>
+              <span>Select focused room</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+                Home
+              </kbd>
+              <span>Jump to first room</span>
+            </li>
+            <li className="flex items-start gap-2">
+              <kbd className="px-2 py-1 bg-gray-100 border border-gray-300 rounded text-xs font-mono">
+                End
+              </kbd>
+              <span>Jump to last room</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  ),
+}

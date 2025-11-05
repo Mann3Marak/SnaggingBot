@@ -3,7 +3,11 @@
     "allow": [
       "Bash(supabase db push:*)",
       "Bash(cat:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(test:*)",
+      "Bash(supabase db reset:*)",
+      "Bash(npx supabase:*)",
+      "Bash(npm run dev)"
     ],
     "deny": [],
     "ask": []
