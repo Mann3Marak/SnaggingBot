@@ -179,10 +179,11 @@ async function queryDatabase() {
       }, {} as Record<string, any[]>)
 
       Object.entries(bySession || {}).forEach(([sessionId, items]) => {
+        const typedItems = items as any[]
         const session = activeOrInProgress?.find(s => s.id === sessionId)
         console.log(`\n  Session: ${session?.apartments?.unit_number || sessionId}`)
-        console.log(`  Items: ${items.length}`)
-        console.log(`  Status breakdown: ${items.reduce((acc, item) => {
+        console.log(`  Items: ${typedItems.length}`)
+        console.log(`  Status breakdown: ${typedItems.reduce((acc, item) => {
           acc[item.status] = (acc[item.status] || 0) + 1
           return acc
         }, {} as Record<string, number>)}`)
