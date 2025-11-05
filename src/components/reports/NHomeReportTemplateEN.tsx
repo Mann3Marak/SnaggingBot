@@ -57,12 +57,16 @@ export const NHomeReportTemplateEN = ({ data }: { data: any }) => {
 
         <View style={styles.grid}>
           <View style={styles.cell}>
-            <Text style={styles.label}>{L.client}:</Text>
-            <Text style={styles.value}>{data.project.developer_name}</Text>
-          </View>
-          <View style={styles.cell}>
             <Text style={styles.label}>{L.property}:</Text>
             <Text style={styles.value}>{data.project.name}</Text>
+          </View>
+          <View style={styles.cell}>
+            <Text style={styles.label}>{L.client}:</Text>
+            <Text style={styles.value}>
+              {data.apartment?.client_name && data.apartment?.client_surname
+                ? `${data.apartment.client_name} ${data.apartment.client_surname}`
+                : data.apartment?.client_name || data.apartment?.client_surname || 'No Client Assigned'}
+            </Text>
           </View>
           <View style={styles.cell}>
             <Text style={styles.label}>{L.apartment}:</Text>

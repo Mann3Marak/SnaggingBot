@@ -145,13 +145,18 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
       <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-lg p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <h4 className="font-semibold text-nhome-primary">{sessionData.project.name}</h4>
-            <p className="text-gray-700">
-              Unit {sessionData.apartment.unit_number} ({sessionData.apartment.apartment_type})
+            <h4 className="font-semibold text-nhome-primary">
+              {sessionData.project?.name || "NHome Project"}
+            </h4>
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">Apartment:</span> {sessionData.apartment?.unit_number} ({sessionData.apartment?.apartment_type})
             </p>
-            {sessionData.project.developer_name && (
-              <p className="text-sm text-gray-500">Developer: {sessionData.project.developer_name}</p>
-            )}
+            <p className="text-sm text-gray-700">
+              <span className="font-medium">Client:</span>{' '}
+              {sessionData.apartment?.client_name && sessionData.apartment?.client_surname
+                ? `${sessionData.apartment.client_name} ${sessionData.apartment.client_surname}`
+                : sessionData.apartment?.client_name || sessionData.apartment?.client_surname || 'No Client Assigned'}
+            </p>
           </div>
           <div>
             <p className="text-sm text-gray-600">
@@ -229,7 +234,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
 
       {reportUrls.portuguese && (
         <>
-          <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-lg p-4 border border-nhome-primary/10 mb-6">
+          {/* <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-lg p-4 border border-nhome-primary/10 mb-6">
             <h5 className="font-medium text-nhome-primary mb-3">📧 Send Professional Package to Client</h5>
             <div className="flex space-x-3">
               <input
@@ -250,7 +255,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
             {emailSent && (
               <p className="text-sm text-green-600 mt-2">✅ Professional package sent successfully to {clientEmail}</p>
             )}
-          </div>
+          </div> */}
 
           <div className="pt-4 border-t border-gray-200">
             <h5 className="font-medium mb-3">🚀 Quick Actions</h5>

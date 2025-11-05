@@ -4,7 +4,7 @@
 UPDATE inspection_sessions
 SET
   status = 'completed',
-  completed_at = COALESCE(completed_at, updated_at, now())
+  completed_at = COALESCE(completed_at, now())
 WHERE
   status != 'completed'
   AND id IN (

@@ -16,7 +16,7 @@ export interface StatusCounts {
 export interface SessionHeaderProps {
   projectName: string
   apartmentNumber: string
-  inspectorName: string
+  clientName: string
   lastUpdated: Date | string
   counts: StatusCounts
   activeRoomLabel?: string | null
@@ -104,7 +104,7 @@ function calculateProgress(counts: StatusCounts): number {
 export function SessionHeader({
   projectName,
   apartmentNumber,
-  inspectorName,
+  clientName,
   lastUpdated,
   counts,
   activeRoomLabel,
@@ -130,8 +130,8 @@ export function SessionHeader({
               </div>
               <span className="text-gray-300">•</span>
               <div className="inline-flex items-center gap-1.5">
-                <span className="font-semibold">Inspector:</span>
-                <span>{inspectorName}</span>
+                <span className="font-semibold">Client:</span>
+                <span>{clientName}</span>
               </div>
             </div>
           </div>

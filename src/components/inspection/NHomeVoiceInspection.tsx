@@ -22,12 +22,14 @@ interface NHomeVoiceInspectionProps {
 // Legacy classification retained for reference; no current references.
 // type VoiceAssessment = 'good' | 'issue' | 'critical'
 
-type InspectionStatus = 'good' | 'issue' | 'critical'
+type InspectionStatus = 'good' | 'issue' | 'critical' | 'skipped' | 'not_applicable'
 
 const STATUS_SEVERITY: Record<InspectionStatus, number> = {
   good: 0,
   issue: 1,
   critical: 2,
+  skipped: 0,
+  not_applicable: 0,
 }
 
 const GOOD_PATTERNS = [
@@ -155,41 +157,63 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
   const currentIndex = session?.current_item_index ?? 0
 
   const goToNext = async () => {
-    if (!session) return;
+    if (!session || !session.checklist_items?.length || !currentItem) return;
     const supabase = (await import("@/lib/supabase")).getSupabase();
-    const nextIndex = (session.current_item_index ?? 0) + 1;
-    const totalItems = session?.checklist_items?.length ?? 0;
 
-    // Removed auto-marking as good when navigating
+    // Sort items by order_sequence to ensure correct navigation order
+    const sortedItems = [...session.checklist_items].sort(
+      (a, b) => (a.order_sequence ?? 0) - (b.order_sequence ?? 0)
+    );
 
-    const updates: any = { current_item_index: nextIndex };
+    // Find current index based on currentItem.id to avoid desync
+    const currentIndex = sortedItems.findIndex((i) => i.id === currentItem.id);
+    const nextIndex = currentIndex + 1;
 
-    // Check if we've completed all items
-    if (totalItems > 0 && nextIndex >= totalItems) {
-      updates.status = 'completed';
-      updates.completed_at = new Date().toISOString();
-      console.info('[NHomeInspection] Manual navigation completed inspection', {
-        sessionId,
-        totalItems,
-        finalIndex: nextIndex,
-      });
+    if (nextIndex >= sortedItems.length) {
+      // End of list — mark as completed
+      await supabase
+        .from("inspection_sessions")
+        .update({
+          status: "completed",
+          completed_at: new Date().toISOString(),
+          current_item_index: nextIndex,
+        })
+        .eq("id", sessionId);
+      return;
     }
 
-    await supabase
-      .from("inspection_sessions")
-      .update(updates)
-      .eq("id", sessionId);
-
-    await reload();
+    const nextItem = sortedItems[nextIndex];
+    if (nextItem) {
+      await supabase
+        .from("inspection_sessions")
+        .update({ current_item_index: nextIndex })
+        .eq("id", sessionId);
+      setActiveItem(nextItem.id);
+    }
   };
 
   const goToPrevious = async () => {
-    if (!session) return
-    const supabase = (await import("@/lib/supabase")).getSupabase()
-    const prevIndex = Math.max(0, (session.current_item_index ?? 0) - 1)
-    await supabase.from("inspection_sessions").update({ current_item_index: prevIndex }).eq("id", sessionId)
-    await reload()
-  }
+    if (!session || !session.checklist_items?.length || !currentItem) return;
+    const supabase = (await import("@/lib/supabase")).getSupabase();
+
+    // Sort items by order_sequence to ensure correct navigation order
+    const sortedItems = [...session.checklist_items].sort(
+      (a, b) => (a.order_sequence ?? 0) - (b.order_sequence ?? 0)
+    );
+
+    // Find current index based on currentItem.id
+    const currentIndex = sortedItems.findIndex((i) => i.id === currentItem.id);
+    const prevIndex = Math.max(0, currentIndex - 1);
+
+    const prevItem = sortedItems[prevIndex];
+    if (prevItem) {
+      await supabase
+        .from("inspection_sessions")
+        .update({ current_item_index: prevIndex })
+        .eq("id", sessionId);
+      setActiveItem(prevItem.id);
+    }
+  };
   const [processing, setProcessing] = useState(false)
   const [lastResponse, setLastResponse] = useState('')
   const [pendingStatus, setPendingStatus] = useState<InspectionStatus | null>(null)
@@ -541,12 +565,19 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
 
   // Transform data for components
   const roomsForNav = useMemo(() => {
-    return roomGroups.map((group: any) => ({
+    // Sort rooms by the lowest item order_sequence in each room
+    const sortedGroups = [...roomGroups].sort((a: any, b: any) => {
+      const aMin = Math.min(...(a.items?.map((i: any) => i.order_sequence ?? Infinity) || [Infinity]));
+      const bMin = Math.min(...(b.items?.map((i: any) => i.order_sequence ?? Infinity) || [Infinity]));
+      return aMin - bMin;
+    });
+
+    return sortedGroups.map((group: any) => ({
       roomId: group.roomId,
       label: group.roomLabel,
       counts: calculateRoomCounts(group, session?.results || []),
-    }))
-  }, [roomGroups, session?.results, calculateRoomCounts])
+    }));
+  }, [roomGroups, session?.results, calculateRoomCounts]);
 
   const activeRoom = useMemo(() => {
     return roomGroups.find((r: any) => r.roomId === activeRoomId)
@@ -933,6 +964,14 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               <div className="opacity-90">{session.apartment.apartment_type}</div>
             </div>
           </div>
+          <div className="inline-flex items-center gap-1.5">
+            <span className="font-semibold">Client:</span>
+            <span>
+              {session.project?.client_name && session.project?.client_surname
+                ? `${session.project.client_name} ${session.project.client_surname}`
+                : session.project?.client_name ?? "Name and Surname"}
+            </span>
+          </div>
         </div>
 
         <div className="p-4 space-y-6">
@@ -967,16 +1006,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               </div>
             </div>
 
-            <p className="text-gray-600 mb-4">
-              You can now generate and download your professional NHome reports.
-            </p>
-
-            <button
-              onClick={() => window.location.reload()}
-              className="px-6 py-3 rounded-full bg-gradient-to-r from-nhome-primary to-nhome-secondary text-white font-semibold shadow-md hover:shadow-lg transition-all"
-            >
-              View Report Section
-            </button>
+            {/* Removed "Send professional report to client" section for layout consistency */}
           </div>
         </div>
       </div>
@@ -1004,7 +1034,11 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
         <SessionHeader
           projectName={session.project?.name ?? 'NHome Project'}
           apartmentNumber={session.apartment?.unit_number ?? 'N/A'}
-          inspectorName="NHome Inspector"
+          clientName={
+            session.apartment?.client_name && session.apartment?.client_surname
+              ? `${session.apartment.client_name} ${session.apartment.client_surname}`
+              : session.apartment?.client_name || session.apartment?.client_surname || 'No Client Assigned'
+          }
           lastUpdated={session.updated_at ?? new Date()}
           counts={overallCounts}
           activeRoomLabel={activeRoom?.roomLabel ?? null}
@@ -1080,6 +1114,176 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               sessionId={sessionId}
               session={session}
             />
+
+            {/* Manual Status Buttons */}
+            <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+              {/* First row: Good, Issue, Critical */}
+              <div className="flex justify-center gap-3">
+                {(['good', 'issue', 'critical'] as const).map((status) => {
+                  const isSelected = selectedStatus === status;
+                  const label =
+                    status === 'good'
+                      ? '✓ Good'
+                      : status === 'issue'
+                      ? '⚠ Issue'
+                      : '✗ Critical';
+                  const colorClasses = isSelected
+                    ? status === 'good'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : status === 'issue'
+                      ? 'bg-orange-600 text-white hover:bg-orange-700'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                    : status === 'good'
+                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                    : status === 'issue'
+                    ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+                    : 'bg-red-100 text-red-700 hover:bg-red-200';
+                  return (
+                    <button
+                      key={status}
+                      onClick={async () => {
+                        if (!currentItem) return;
+                        const newStatus = isSelected ? null : status;
+
+                        if (newStatus === 'issue' || newStatus === 'critical') {
+                          setShowNotes({ type: newStatus });
+                          setSelectedStatus(newStatus);
+                          return;
+                        }
+
+                        if (newStatus) {
+                          await saveNHomeResult(
+                            currentItem.id,
+                            newStatus,
+                            `${currentItem.item_description || 'Item'} marked as ${newStatus}`,
+                            determinePriority(newStatus as any),
+                            [],
+                            true
+                          );
+                          setSelectedStatus(newStatus);
+                          await reload();
+                        } else {
+                          const supabase = (await import("@/lib/supabase")).getSupabase();
+                          await supabase
+                            .from("inspection_results")
+                            .update({ status: "pending" })
+                            .eq("item_id", currentItem.id)
+                            .eq("session_id", sessionId);
+                          setSelectedStatus(null);
+                          setShowNotes(null);
+                          await reload();
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-full font-semibold shadow-sm transition ${colorClasses}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Notes Section for Issue/Critical */}
+              {showNotes && (
+                <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+                  <h3 className="font-semibold text-gray-800 mb-2">
+                    {showNotes.type === 'issue' ? 'Describe the issue:' : 'Describe the critical problem:'}
+                  </h3>
+                  <textarea
+                    value={notesText}
+                    onChange={(e) => setNotesText(e.target.value)}
+                    placeholder="Enter detailed notes here..."
+                    className="w-full p-2 border rounded-md text-gray-800 focus:ring-2 focus:ring-nhome-primary focus:outline-none"
+                    rows={3}
+                  />
+                  <div className="flex justify-end gap-2 mt-3">
+                    <button
+                      onClick={() => {
+                        setShowNotes(null);
+                        setNotesText('');
+                        setSelectedStatus(null);
+                      }}
+                      className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      disabled={!notesText.trim()}
+                      onClick={async () => {
+                        if (!currentItem || !notesText.trim()) return;
+                        await saveNHomeResult(
+                          currentItem.id,
+                          showNotes.type,
+                          notesText.trim(),
+                          determinePriority(showNotes.type),
+                          [],
+                          true
+                        );
+                        setShowNotes(null);
+                        setNotesText('');
+                        setSelectedStatus(showNotes.type);
+                        await reload();
+                      }}
+                      className={`px-4 py-2 rounded-md font-semibold transition ${
+                        notesText.trim()
+                          ? 'bg-nhome-primary text-white hover:bg-nhome-secondary'
+                          : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                      }`}
+                    >
+                      Save Notes
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Second row: Skipped, Not Applicable */}
+              <div className="flex justify-center gap-3">
+                {(['skipped', 'not_applicable'] as const).map((status) => {
+                  const isSelected = selectedStatus === status;
+                  const label =
+                    status === 'skipped' ? '⏭ Skipped' : '🚫 Not Applicable';
+                  const colorClasses = isSelected
+                    ? status === 'skipped'
+                      ? 'bg-gray-600 text-white hover:bg-gray-700'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    : status === 'skipped'
+                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-blue-100 text-blue-700 hover:bg-blue-200';
+                  return (
+                    <button
+                      key={status}
+                      onClick={async () => {
+                        if (!currentItem) return;
+                        const newStatus = isSelected ? null : status;
+                        if (newStatus) {
+                          await saveNHomeResult(
+                            currentItem.id,
+                            newStatus,
+                            `${currentItem.item_description || 'Item'} marked as ${newStatus}`,
+                            determinePriority(newStatus as any),
+                            [],
+                            true
+                          );
+                          setSelectedStatus(newStatus);
+                          await reload();
+                        } else {
+                          const supabase = (await import("@/lib/supabase")).getSupabase();
+                          await supabase
+                            .from("inspection_results")
+                            .update({ status: "pending" })
+                            .eq("item_id", currentItem.id)
+                            .eq("session_id", sessionId);
+                          setSelectedStatus(null);
+                          await reload();
+                        }
+                      }}
+                      className={`px-4 py-2 rounded-full font-semibold shadow-sm transition ${colorClasses}`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1112,8 +1316,30 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 }
               : undefined
           }
-          onPhotoTaken={(blob, url, metadata) => {
-            addNHomePhoto(blob, url, metadata)
+          onPhotoTaken={async (blob, url, metadata) => {
+            // Add photo locally first and get its ID
+            const newPhoto = addNHomePhoto(blob, url, metadata);
+            const photoId = typeof newPhoto === "string" ? newPhoto : newPhoto.id;
+
+            try {
+              updateUploadProgress(photoId, 1);
+              const fileName = generateNHomeFileName(metadata);
+              const res = await uploader.uploadNHomeInspectionPhoto(
+                blob,
+                metadata,
+                sessionId,
+                (metadata as any).item || currentItem?.id,
+                fileName,
+                session,
+                (p) => updateUploadProgress(photoId, p)
+              );
+              if (res.success && res.supabase_url) {
+                markPhotoUploaded(photoId, res.supabase_url, res.photo?.id || "");
+              }
+            } catch (e) {
+              console.error("Auto-upload failed", e);
+              updateUploadProgress(photoId, 0);
+            }
           }}
         />
       </div>
@@ -1127,7 +1353,11 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       <SessionHeader
         projectName={session.project?.name ?? 'NHome Project'}
         apartmentNumber={session.apartment?.unit_number ?? 'N/A'}
-        inspectorName="NHome Inspector"
+        clientName={
+          session.apartment?.client_name && session.apartment?.client_surname
+            ? `${session.apartment.client_name} ${session.apartment.client_surname}`
+            : session.apartment?.client_name || session.apartment?.client_surname || 'No Client Assigned'
+        }
         lastUpdated={session.updated_at ?? new Date()}
         counts={overallCounts}
         activeRoomLabel={activeRoom?.roomLabel ?? null}
@@ -1137,7 +1367,13 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
       {/* Mobile Selectors */}
       <div className="bg-white border-b border-gray-200 p-4 space-y-3">
         <MobileRoomSelector
-          rooms={roomGroups}
+          rooms={roomGroups
+            .slice()
+            .sort((a: any, b: any) => {
+              const aMin = Math.min(...(a.items?.map((i: any) => i.order_sequence ?? Infinity) || [Infinity]));
+              const bMin = Math.min(...(b.items?.map((i: any) => i.order_sequence ?? Infinity) || [Infinity]));
+              return aMin - bMin;
+            })}
           activeRoomId={activeRoomId}
           onSelectRoom={setActiveRoom}
         />
@@ -1151,48 +1387,226 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
 
       {/* VoiceWorkspace */}
       <div className="bg-white">
-        <VoiceWorkspace
-          currentItem={currentItem}
-          currentResult={currentResult}
-          isRecording={isRecording}
-          isPlaying={isPlaying}
-          status={status}
-          activeStatus={activeStatus}
-          userTranscriptSegments={userTranscriptSegments}
-          assistantMessages={assistantMessages}
-          lastResponse={lastResponse}
-          onToggleRecording={handleToggleAssistant}
-          onCapturePhoto={() => currentItem && openNHomeCamera(currentItem.id)}
-          onNavigatePrevious={goToPrevious}
-          onNavigateNext={goToNext}
-          photos={currentItem ? getNHomePhotosForItem(currentItem.id) : []}
-          uploadProgress={uploadProgress}
-          onRemovePhoto={removeNHomePhoto}
-          onUploadPhoto={async (photoId: string, photoBlob: Blob, metadata: any) => {
-            try {
-              updateUploadProgress(photoId, 1)
-              const fileName = generateNHomeFileName(metadata)
-              const res = await uploader.uploadNHomeInspectionPhoto(
-                photoBlob,
-                metadata,
-                sessionId,
-                metadata.itemId || currentItem?.id,
-                fileName,
-                session,
-                (p) => updateUploadProgress(photoId, p)
-              )
-              if (res.success && res.supabase_url) {
-                markPhotoUploaded(photoId, res.supabase_url, res.photo)
-              }
-            } catch (e) {
-              console.error('Photo upload failed', e)
-              updateUploadProgress(photoId, 0)
-            }
-          }}
-          generatePhotoFileName={generateNHomeFileName}
-          sessionId={sessionId}
-          session={session}
-        />
+        {(() => {
+          const items = activeRoom?.items ?? [];
+          const currentIndex = items.findIndex((i: any) => i.id === currentItem?.id);
+          const nextItem = currentIndex >= 0 && currentIndex + 1 < items.length ? items[currentIndex + 1] : currentItem;
+
+          return (
+            <VoiceWorkspace
+              currentItem={nextItem}
+              currentResult={currentResult}
+              isRecording={isRecording}
+              isPlaying={isPlaying}
+              status={status}
+              activeStatus={activeStatus}
+              userTranscriptSegments={userTranscriptSegments}
+              assistantMessages={assistantMessages}
+              lastResponse={lastResponse}
+              onToggleRecording={handleToggleAssistant}
+              onCapturePhoto={() => currentItem && openNHomeCamera(currentItem.id)}
+              onNavigatePrevious={goToPrevious}
+              onNavigateNext={goToNext}
+              photos={currentItem ? getNHomePhotosForItem(currentItem.id) : []}
+              uploadProgress={uploadProgress}
+              onRemovePhoto={removeNHomePhoto}
+              onUploadPhoto={async (photoId: string, photoBlob: Blob, metadata: any) => {
+                try {
+                  updateUploadProgress(photoId, 1);
+                  const fileName = generateNHomeFileName(metadata);
+                  const res = await uploader.uploadNHomeInspectionPhoto(
+                    photoBlob,
+                    metadata,
+                    sessionId,
+                    metadata.itemId || currentItem?.id,
+                    fileName,
+                    session,
+                    (p) => updateUploadProgress(photoId, p)
+                  );
+                  if (res.success && res.supabase_url) {
+                    markPhotoUploaded(photoId, res.supabase_url, res.photo);
+                  }
+                } catch (e) {
+                  console.error("Photo upload failed", e);
+                  updateUploadProgress(photoId, 0);
+                }
+              }}
+              generatePhotoFileName={generateNHomeFileName}
+              sessionId={sessionId}
+              session={session}
+            />
+          );
+        })()}
+      </div>
+
+      {/* Manual Status Buttons for Mobile */}
+      <div className="p-4 border-t border-gray-200 bg-white space-y-3">
+        {/* First row: Good, Issue, Critical */}
+        <div className="flex justify-center gap-3">
+          {(['good', 'issue', 'critical'] as const).map((status) => {
+            const isSelected = selectedStatus === status;
+            const label =
+              status === 'good'
+                ? '✓ Good'
+                : status === 'issue'
+                ? '⚠ Issue'
+                : '✗ Critical';
+            const colorClasses = isSelected
+              ? status === 'good'
+                ? 'bg-green-600 text-white hover:bg-green-700'
+                : status === 'issue'
+                ? 'bg-orange-600 text-white hover:bg-orange-700'
+                : 'bg-red-600 text-white hover:bg-red-700'
+              : status === 'good'
+              ? 'bg-green-100 text-green-700 hover:bg-green-200'
+              : status === 'issue'
+              ? 'bg-orange-100 text-orange-700 hover:bg-orange-200'
+              : 'bg-red-100 text-red-700 hover:bg-red-200';
+            return (
+              <button
+                key={status}
+                onClick={async () => {
+                  if (!currentItem) return;
+                  const newStatus = isSelected ? null : status;
+
+                  if (newStatus === 'issue' || newStatus === 'critical') {
+                    setShowNotes({ type: newStatus });
+                    setSelectedStatus(newStatus);
+                    return;
+                  }
+
+                  if (newStatus) {
+                    await saveNHomeResult(
+                      currentItem.id,
+                      newStatus,
+                      `${currentItem.item_description || 'Item'} marked as ${newStatus}`,
+                      determinePriority(newStatus as any),
+                      [],
+                      true
+                    );
+                    setSelectedStatus(newStatus);
+                    await reload();
+                  } else {
+                    const supabase = (await import("@/lib/supabase")).getSupabase();
+                    await supabase
+                      .from("inspection_results")
+                      .update({ status: "pending" })
+                      .eq("item_id", currentItem.id)
+                      .eq("session_id", sessionId);
+                    setSelectedStatus(null);
+                    setShowNotes(null);
+                    await reload();
+                  }
+                }}
+                className={`px-4 py-2 rounded-full font-semibold shadow-sm transition ${colorClasses}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Notes Section for Issue/Critical */}
+        {showNotes && (
+          <div className="mt-4 p-4 border rounded-lg bg-gray-50">
+            <h3 className="font-semibold text-gray-800 mb-2">
+              {showNotes.type === 'issue' ? 'Describe the issue:' : 'Describe the critical problem:'}
+            </h3>
+            <textarea
+              value={notesText}
+              onChange={(e) => setNotesText(e.target.value)}
+              placeholder="Enter detailed notes here..."
+              className="w-full p-2 border rounded-md text-gray-800 focus:ring-2 focus:ring-nhome-primary focus:outline-none"
+              rows={3}
+            />
+            <div className="flex justify-end gap-2 mt-3">
+              <button
+                onClick={() => {
+                  setShowNotes(null);
+                  setNotesText('');
+                  setSelectedStatus(null);
+                }}
+                className="px-4 py-2 rounded-md bg-gray-200 text-gray-700 hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={!notesText.trim()}
+                onClick={async () => {
+                  if (!currentItem || !notesText.trim()) return;
+                  await saveNHomeResult(
+                    currentItem.id,
+                    showNotes.type,
+                    notesText.trim(),
+                    determinePriority(showNotes.type),
+                    [],
+                    true
+                  );
+                  setShowNotes(null);
+                  setNotesText('');
+                  setSelectedStatus(showNotes.type);
+                  await reload();
+                }}
+                className={`px-4 py-2 rounded-md font-semibold transition ${
+                  notesText.trim()
+                    ? 'bg-nhome-primary text-white hover:bg-nhome-secondary'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                }`}
+              >
+                Save Notes
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Second row: Skipped, Not Applicable */}
+        <div className="flex justify-center gap-3">
+          {(['skipped', 'not_applicable'] as const).map((status) => {
+            const isSelected = selectedStatus === status;
+            const label =
+              status === 'skipped' ? '⏭ Skipped' : '🚫 Not Applicable';
+            const colorClasses = isSelected
+              ? status === 'skipped'
+                ? 'bg-gray-600 text-white hover:bg-gray-700'
+                : 'bg-blue-600 text-white hover:bg-blue-700'
+              : status === 'skipped'
+              ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-blue-100 text-blue-700 hover:bg-blue-200';
+            return (
+              <button
+                key={status}
+                onClick={async () => {
+                  if (!currentItem) return;
+                  const newStatus = isSelected ? null : status;
+                  if (newStatus) {
+                    await saveNHomeResult(
+                      currentItem.id,
+                      newStatus,
+                      `${currentItem.item_description || 'Item'} marked as ${newStatus}`,
+                      determinePriority(newStatus as any),
+                      [],
+                      true
+                    );
+                    setSelectedStatus(newStatus);
+                    await reload();
+                  } else {
+                    const supabase = (await import("@/lib/supabase")).getSupabase();
+                    await supabase
+                      .from("inspection_results")
+                      .update({ status: "pending" })
+                      .eq("item_id", currentItem.id)
+                      .eq("session_id", sessionId);
+                    setSelectedStatus(null);
+                    await reload();
+                  }
+                }}
+                className={`px-4 py-2 rounded-full font-semibold shadow-sm transition ${colorClasses}`}
+              >
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Status Legend - Compact horizontal */}

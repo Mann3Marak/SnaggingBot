@@ -76,7 +76,7 @@ export async function GET(
     // 3) Load results joined with checklist templates for item metadata
     const { data: results, error: resultsError } = await supabase
       .from('inspection_results')
-      .select('*, checklist_templates:item_id(*)')
+      .select('*, checklist_templates:item_id(id, room_type, room_type_pt, item_description, item_description_pt), inspection_results_pt:inspection_results_pt(enhanced_notes_pt)')
       .eq('session_id', sessionId)
       .order('created_at', { ascending: true })
 
@@ -185,7 +185,9 @@ export async function GET(
         name: clean(apartment.projects?.name),
         developer_name: clean(apartment.projects?.developer_name),
       },
-      developer: { name: clean(apartment.projects?.developer_name) },
+      client: {
+        name: clean(`${apartment.client_name ?? ''} ${apartment.client_surname ?? ''}`.trim()),
+      },
       results: resultsWithPhotos.map(r => ({
         ...r,
         checklist_templates: {
@@ -193,7 +195,7 @@ export async function GET(
           item_description: clean(r.checklist_templates?.item_description),
           room_type: clean(r.checklist_templates?.room_type),
         },
-        notes: clean(r.notes),
+        notes: clean(r.enhanced_notes || r.notes),
       })),
       photos: signedPhotos,
       inspector: null,

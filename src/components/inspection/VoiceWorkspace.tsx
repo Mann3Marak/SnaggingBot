@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from 'react'
 import { ChecklistItem, InspectionResult } from '@/hooks/useNHomeInspectionSession'
 
 // ==================== TYPE DEFINITIONS ====================
@@ -62,6 +63,7 @@ export function VoiceWorkspace({
   sessionId,
   session,
 }: VoiceWorkspaceProps) {
+  const [previewPhoto, setPreviewPhoto] = useState<{ url: string; alt: string } | null>(null)
   return (
     <div className="p-6 space-y-6">
       {/* Voice Recording Button */}
@@ -179,10 +181,13 @@ export function VoiceWorkspace({
           <div className="grid grid-cols-2 gap-3">
             {/* Display photos from inspection_results.photo_urls */}
             {currentResult?.photo_urls?.length && currentResult.photo_urls.length > 0 && currentResult.photo_urls.map((url: string, index: number) => (
-              <div key={`db-photo-${index}`} className="relative border rounded-lg overflow-hidden group">
+              <div key={`db-photo-${index}`} className="relative border rounded-lg overflow-hidden group cursor-pointer" onClick={() => setPreviewPhoto({ url, alt: `Inspection photo ${index + 1}` })}>
                 <img src={url} alt={`Inspection photo ${index + 1}`} className="w-full h-24 object-cover" />
                 <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
                   Saved
+                </div>
+                <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                  <span className="text-white text-xs bg-black/60 px-2 py-1 rounded">Click to view</span>
                 </div>
               </div>
             ))}
@@ -192,12 +197,20 @@ export function VoiceWorkspace({
               const displayName = photo.file_name ?? generatePhotoFileName(photo.metadata)
               return (
                 <div key={photo.id} className="relative border rounded-lg overflow-hidden group">
-                  <img src={photo.url} alt={photo.metadata.item} className="w-full h-24 object-cover" />
-                  <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
+                  <img
+                    src={photo.url}
+                    alt={photo.metadata.item}
+                    className="w-full h-24 object-cover cursor-pointer"
+                    onClick={() => setPreviewPhoto({ url: photo.url, alt: photo.metadata.item })}
+                  />
+                  <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1 pointer-events-none">
                     {photo.uploaded ? 'Uploaded' : uploadProgress[photo.id] ? `${Math.round(uploadProgress[photo.id])}%` : ''}
                   </div>
                   <button
-                    onClick={() => onRemovePhoto(photo.id)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onRemovePhoto(photo.id)
+                    }}
                     type="button"
                     className="absolute top-1 right-1 bg-black/60 z-10 hover:bg-black/80 text-white text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity"
                     title="Remove photo"
@@ -206,7 +219,10 @@ export function VoiceWorkspace({
                   </button>
                   {!photo.uploaded && (
                     <button
-                      onClick={() => onUploadPhoto(photo.id, photo.blob as Blob, photo.metadata)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onUploadPhoto(photo.id, photo.blob as Blob, photo.metadata)
+                      }}
                       type="button"
                       className="absolute bottom-1 right-1 bg-blue-500 z-10 hover:opacity-90 text-white text-[10px] px-2 py-1 rounded"
                       title="Upload to NHome cloud storage"
@@ -214,15 +230,16 @@ export function VoiceWorkspace({
                       Upload
                     </button>
                   )}
-                  <div className="p-2 text-[10px] text-gray-600 truncate" title={displayName}>
+                  <div className="p-2 text-[10px] text-gray-600 truncate pointer-events-none" title={displayName}>
                     {displayName}
                     {photo.uploaded && photo.storage_url && (
                       <a
                         href={photo.storage_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="block px-2 pb-2 -mt-1 text-[10px] text-blue-600 hover:underline truncate"
+                        className="block px-2 pb-2 -mt-1 text-[10px] text-blue-600 hover:underline truncate pointer-events-auto"
                         title={photo.storage_url}
+                        onClick={(e) => e.stopPropagation()}
                       >
                         View
                       </a>
@@ -244,6 +261,33 @@ export function VoiceWorkspace({
             >
               + Add another photo
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Photo Preview Lightbox */}
+      {previewPhoto && (
+        <div
+          className="fixed inset-0 bg-black/90 z-[100] flex items-center justify-center p-4"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <button
+            onClick={() => setPreviewPhoto(null)}
+            className="absolute top-4 right-4 text-white hover:text-gray-300 text-4xl leading-none p-2"
+            aria-label="Close preview"
+          >
+            ✕
+          </button>
+          <div className="relative max-w-7xl max-h-[90vh] w-full h-full flex items-center justify-center">
+            <img
+              src={previewPhoto.url}
+              alt={previewPhoto.alt}
+              className="max-w-full max-h-full object-contain"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+          <div className="absolute bottom-4 left-0 right-0 text-center text-white text-sm bg-black/50 py-2">
+            {previewPhoto.alt}
           </div>
         </div>
       )}

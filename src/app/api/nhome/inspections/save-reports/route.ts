@@ -25,10 +25,10 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from('inspection_sessions')
       .update({
-        report_url_pt: reportUrlPt ?? null,
-        report_url_en: reportUrlEn ?? null,
-        photo_package_url: photoPackageUrl ?? null,
-        report_generated_at: new Date().toISOString(),
+        // report_url_pt: reportUrlPt ?? null,
+        // report_url_en: reportUrlEn ?? null,
+        // photo_package_url: photoPackageUrl ?? null, // temporarily disabled to test report generation without this field
+        // report_generated_at: new Date().toISOString(),
       })
       .eq('id', sessionId)
       .select('*')

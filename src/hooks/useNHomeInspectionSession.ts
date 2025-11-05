@@ -233,8 +233,10 @@ export function useNHomeInspectionSession(sessionId: string): UseNHomeInspection
 
       const { data: results, error: resultsError } = await supabase
         .from('inspection_results')
-        .select('*')
+        .select('*', { head: false })
         .eq('session_id', sessionId)
+        .order('created_at', { ascending: false })
+        .throwOnError()
 
       if (resultsError) {
         console.error('[NHomeSession] Error loading inspection results', {
@@ -257,7 +259,8 @@ export function useNHomeInspectionSession(sessionId: string): UseNHomeInspection
         project: sessionData?.apartments?.projects,
         roomGroups: groups
       }
-      setSession(enhanced)
+      // Force new object reference to trigger re-render in dependent components
+      setSession({ ...enhanced })
 
       // Calculate progress with detailed status counts
       const resultsList = results ?? []
@@ -477,15 +480,29 @@ export function useNHomeInspectionSession(sessionId: string): UseNHomeInspection
       payload.notes = notes
     }
 
-    const { error: upsertError } = await supabase.from('inspection_results').upsert(payload)
+    const { error: upsertError } = await supabase.from('inspection_results').upsert(payload);
     if (upsertError) {
       console.error('[NHomeSession] Failed to upsert inspection result', {
         sessionId,
         itemId,
         error: upsertError.message,
         code: upsertError.code,
-      })
-      throw upsertError
+      });
+      throw upsertError;
+    }
+
+    // Immediately re-fetch updated results to ensure latest data is loaded
+    const { data: refreshedResults, error: refreshError } = await supabase
+      .from('inspection_results')
+      .select('*', { head: false })
+      .eq('session_id', sessionId)
+      .order('created_at', { ascending: false })
+      .throwOnError();
+
+    if (refreshError) {
+      console.warn('[NHomeSession] Warning: could not refresh results after save', refreshError);
+    } else {
+      console.info('[NHomeSession] Refreshed results after save', { count: refreshedResults?.length });
     }
 
     // Update session progress incrementally

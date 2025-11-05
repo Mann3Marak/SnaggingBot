@@ -8,6 +8,10 @@ interface NHomeInspectionData {
   apartment: any
   project: any
   developer: any
+  client?: {
+    first_name?: string
+    last_name?: string
+  }
   results: any[]
   photos: any[]
   inspector: any
@@ -244,7 +248,7 @@ export class NHomeReportGenerationService {
     const reports = await this.generateNHomeBilingualReports(sessionId)
     const photoUploadService = new (await import('@/services/nhomePhotoUploadService')).NHomePhotoUploadService()
     const { package_url: photoPackageUrl } = await photoUploadService.shareInspectionWithClient(sessionId, data.session)
-    const documentationSummary = `NHome Professional Inspection Summary: ${data.project.name} - ${data.apartment.unit_number}`
+    const documentationSummary = `NHome Professional Inspection Summary: ${data.client?.first_name ?? data.project.client_first_name ?? 'Client'} ${data.client?.last_name ?? data.project.client_last_name ?? ''} - ${data.apartment.unit_number}`
     return { reports, photoPackage: photoPackageUrl ?? '', documentationSummary }
   }
 }

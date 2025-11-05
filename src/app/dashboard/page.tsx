@@ -62,7 +62,7 @@ export default async function DashboardPage() {
     if (apartmentIds.length > 0) {
       const { data: apartmentsData, error: apartmentsError } = await svc
         .from('apartments')
-        .select('id, unit_number, apartment_type, projects(id, name, developer_name)')
+        .select('id, unit_number, apartment_type, client_name, client_surname, projects(id, name, developer_name)')
         .in('id', apartmentIds);
       if (apartmentsError) throw apartmentsError;
       apartmentMap = new Map((apartmentsData || []).map((apt) => [apt.id, apt]));
@@ -107,16 +107,16 @@ export default async function DashboardPage() {
           {inProgress.map((s) => {
             const apt = (s as any).apartment
             const proj = apt?.projects
+            const clientName = apt?.client_name && apt?.client_surname
+              ? `${apt.client_name} ${apt.client_surname}`
+              : apt?.client_name || apt?.client_surname || 'No Client Assigned'
             return (
               <a key={s.id} href={`/inspection/nhome/${s.id}`} className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition block'>
-                <div className='text-xs uppercase tracking-wide text-slate-500 mb-1'>
-                  {proj?.developer_name}
-                </div>
                 <h3 className='font-semibold text-nhome-primary'>
                   {proj?.name}
                 </h3>
                 <p className='text-sm text-slate-700 mt-1'>
-                  Unit {apt?.unit_number} - {apt?.apartment_type}
+                  Apartment: {apt?.unit_number} • Client: {clientName}
                 </p>
                 <p className='text-xs text-slate-500 mt-2'>
                   Started {new Date(s.started_at).toLocaleString()}
@@ -144,20 +144,20 @@ export default async function DashboardPage() {
             followUpInspections.map((s) => {
               const apt = (s as any).apartment
               const proj = apt?.projects
+              const clientName = apt?.client_name && apt?.client_surname
+                ? `${apt.client_name} ${apt.client_surname}`
+                : apt?.client_name || apt?.client_surname || 'No Client Assigned'
               return (
                 <a
                   key={s.id}
                   href={`/inspection/follow-up?sessionId=${s.id}`}
                   className='rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition block'
                 >
-                  <div className='text-xs uppercase tracking-wide text-slate-500 mb-1'>
-                    {proj?.developer_name}
-                  </div>
                   <h3 className='font-semibold text-nhome-primary'>
                     {proj?.name}
                   </h3>
                   <p className='text-sm text-slate-700 mt-1'>
-                    Unit {apt?.unit_number} - {apt?.apartment_type}
+                    Apartment: {apt?.unit_number} • Client: {clientName}
                   </p>
                   <p className='text-xs text-slate-500 mt-2'>
                     Completed {s.completed_at ? new Date(s.completed_at).toLocaleString() : 'Unknown'}
