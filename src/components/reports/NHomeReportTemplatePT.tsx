@@ -48,28 +48,25 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        <View style={[styles.header, { flexDirection: "row", alignItems: "center" }]}>
-          <View style={{ flex: 1, alignItems: "center" }}>
-            <Text style={styles.title}>{L.title}</Text>
-            <Text style={styles.sub}>{L.company_title}</Text>
-          </View>
-          <View
-            style={{
-              position: "absolute",
-              right: 0,
-              top: 0,
-              width: 100,
-              height: 80,
-              justifyContent: "center",
-              alignItems: "flex-end",
-            }}
-          >
-            <Image
-              src="https://www.nhomesetup.com/branding/logos/nhome-logo-primary.png"
-              style={{ width: 80, height: 80, objectFit: "contain" }}
-            />
-          </View>
-        </View>
+<View
+  style={[
+    styles.header,
+    {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+    },
+  ]}
+>
+  <View style={{ flex: 1 }}>
+    <Text style={[styles.title, { textAlign: "left" }]}>{L.title}</Text>
+    <Text style={[styles.sub, { textAlign: "left" }]}>{L.company_title}</Text>
+  </View>
+  <Image
+    src="/branding/logos/NHome_V4__Logo.png"
+    style={{ width: 80, height: 80, objectFit: "contain" }}
+  />
+</View>
 
         <View style={styles.grid}>
           <View style={styles.cell}>
