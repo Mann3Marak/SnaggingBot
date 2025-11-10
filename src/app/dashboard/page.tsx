@@ -1,34 +1,19 @@
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
 import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions'
+import { requireAuth } from '@/lib/server/requireAuth'
 
 export const dynamic = 'force-dynamic'
 export const fetchCache = 'force-no-store'
 export const revalidate = 0
 
 export default async function DashboardPage() {
-  const cookieStore = cookies()
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get: (name: string) => cookieStore.get(name)?.value,
-        set: () => {},
-        remove: () => {},
-      },
-    }
-  )
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
+  // Server-side authentication guard
+  const { session, supabase } = await requireAuth('/dashboard')
 
   const { data: me } = await supabase
     .from('users')
     .select('email, full_name, role')
-    .eq('id', session?.user.id)
+    .eq('id', session.user.id)
     .maybeSingle()
 
   const { data: projects } = await supabase
