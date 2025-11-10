@@ -218,14 +218,11 @@ export function RoomItemList({
                   <div className="flex items-start justify-between gap-4">
                     {/* Item Label */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-sm text-gray-500 font-mono">
-                          #{item.order}
-                        </span>
-                        <h3 className="font-medium text-gray-900 truncate">
-                          {item.label}
-                        </h3>
-                      </div>
+<div className="flex items-center gap-2 mb-1">
+  <h3 className="font-medium text-gray-900 truncate">
+    {item.label}
+  </h3>
+</div>
                     </div>
 
                     {/* Status Badge */}

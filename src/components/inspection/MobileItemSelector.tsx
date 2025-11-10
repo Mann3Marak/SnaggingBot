@@ -85,9 +85,9 @@ export function MobileItemSelector({
               const description = truncateText(item.item_description, 60)
 
               return (
-                <option key={item.id} value={item.id}>
-                  {icon} #{item.order_sequence} {description}
-                </option>
+<option key={item.id} value={item.id}>
+  {icon} {description}
+</option>
               )
             })}
           </select>
@@ -134,10 +134,9 @@ export function MobileItemSelector({
               </span>
             </div>
             <div className="flex-1 text-xs text-gray-600">
-              <div className="font-medium text-gray-900">
-                Item #{activeItem.order_sequence}
-              </div>
-              <div className="line-clamp-2">{activeItem.item_description}</div>
+<div className="font-medium text-gray-900">
+  {activeItem.item_description}
+</div>
             </div>
           </div>
         )}
