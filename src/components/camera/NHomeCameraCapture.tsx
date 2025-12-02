@@ -432,7 +432,6 @@ export function NHomeCameraCapture({
           ref={fileInputRef}
           type="file"
           accept="image/*"
-          capture="environment"
           onChange={handleFileSelect}
           className="hidden"
           aria-label="Upload photo from gallery"
