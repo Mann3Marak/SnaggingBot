@@ -65,16 +65,67 @@ export async function GET(
       );
     }
 
-    // 3) Shape the response
-    const followUpItems = (results ?? []).map((r) => ({
-      id: r.id,
-      item_id: r.item_id,
-      description: r.checklist_templates?.item_description || "Unknown Item",
-      status: r.status,
-      notes: r.notes,
-      fixed: r.follow_up_fixed || false,
-      comment: r.follow_up_comment || r.notes || "",
-    }));
+    // 3) Fetch photos for all results
+    const resultIds = (results ?? []).map((r) => r.id);
+    let photosByResultId: Record<string, any[]> = {};
+
+    if (resultIds.length > 0) {
+      const { data: photos, error: photosError } = await supabase
+        .from("nhome_photos")
+        .select("*")
+        .eq("session_id", sessionId)
+        .in("result_id", resultIds);
+
+      if (!photosError && photos) {
+        // Group photos by result_id
+        photosByResultId = photos.reduce((acc, photo) => {
+          const resultId = photo.result_id;
+          if (!acc[resultId]) {
+            acc[resultId] = [];
+          }
+          acc[resultId].push(photo);
+          return acc;
+        }, {} as Record<string, any[]>);
+      }
+    }
+
+    // 4) Generate signed URLs for photos and shape the response
+    const followUpItems = await Promise.all(
+      (results ?? []).map(async (r) => {
+        const resultPhotos = photosByResultId[r.id] || [];
+
+        // Generate signed URLs for photos
+        const photosWithUrls = await Promise.all(
+          resultPhotos.map(async (photo) => {
+            const path = photo.supabase_url || `sessions/${sessionId}/${photo.file_name}`;
+            const cleanPath = path.split("?")[0]; // Remove query params
+
+            const { data: signed, error: signedError } = await supabase.storage
+              .from("nhome_photos")
+              .createSignedUrl(cleanPath, 60 * 60 * 24); // 24 hours
+
+            return {
+              id: photo.id,
+              url: signed?.signedUrl || null,
+              file_name: photo.file_name,
+              created_at: photo.created_at,
+            };
+          })
+        );
+
+        return {
+          id: r.id,
+          item_id: r.item_id,
+          description: r.checklist_templates?.item_description || "Unknown Item",
+          room_type: r.checklist_templates?.room_type || "Unknown Room",
+          status: r.status,
+          notes: r.notes,
+          fixed: r.follow_up_fixed || false,
+          comment: r.follow_up_comment || r.notes || "",
+          photos: photosWithUrls.filter((p) => p.url !== null),
+        };
+      })
+    );
 
     const apartment = Array.isArray(session.apartments)
       ? session.apartments[0]

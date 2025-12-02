@@ -3,15 +3,25 @@ import { useState, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import { NHomeLogo } from "@/components/NHomeLogo";
 
+interface FollowUpPhoto {
+  id: string;
+  url: string;
+  file_name: string;
+  created_at: string;
+}
+
 interface FollowUpItem {
   id: string;
   unit_number?: string;
   apartment_type?: string;
   description: string;
+  room_type: string;
   status: "issue" | "critical";
   fixed: boolean;
   comment?: string;
+  photos: FollowUpPhoto[];
   showComment?: boolean;
+  showPhotos?: boolean;
   changed?: boolean; // Track if item was modified
 }
 
@@ -33,7 +43,9 @@ export default function NHomeFollowUpInspection() {
         ...item,
         fixed: Boolean(item.fixed),
         comment: item.comment || "",
+        photos: item.photos || [],
         showComment: false,
+        showPhotos: false,
       }));
       setItems(clonedItems);
       setSessionInfo(data.session || null);
@@ -87,6 +99,16 @@ export default function NHomeFollowUpInspection() {
     );
   };
 
+  const togglePhotos = (id: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? { ...item, showPhotos: !item.showPhotos }
+          : item
+      )
+    );
+  };
+
   const updateComment = (id: string, value: string) => {
     setItems((prev) =>
       prev.map((item) =>
@@ -133,22 +155,28 @@ export default function NHomeFollowUpInspection() {
                 key={item.id}
                 className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm"
               >
-                <div className="flex justify-between items-center">
-                  <div>
-                    <h3 className="font-semibold text-gray-900">
+                <div className="flex justify-between items-start gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-nhome-primary/10 text-nhome-primary">
+                        {item.room_type}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 text-xs rounded-full font-medium ${
+                          item.status === "critical"
+                            ? "bg-red-100 text-red-700"
+                            : "bg-yellow-100 text-yellow-700"
+                        }`}
+                      >
+                        {item.status.toUpperCase()}
+                      </span>
+                    </div>
+
+                    <h3 className="font-semibold text-gray-900 mb-2">
                       {item.description}
                     </h3>
-                    <span
-                      className={`inline-block mt-1 px-2 py-0.5 text-xs rounded-full ${
-                        item.status === "critical"
-                          ? "bg-red-100 text-red-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {item.status.toUpperCase()}
-                    </span>
 
-                    {item.comment && (
+                    {item.comment && !item.showComment && (
                       <div className="mt-2 bg-gray-50 border-l-4 border-nhome-primary p-2 rounded text-sm text-gray-700">
                         <strong>Comment:</strong> {item.comment}
                       </div>
@@ -158,7 +186,7 @@ export default function NHomeFollowUpInspection() {
                   <div className="flex flex-col items-end gap-2">
                     <button
                       onClick={() => toggleFixed(item.id)}
-                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all ${
+                      className={`px-4 py-1.5 rounded-md text-sm font-medium transition-all whitespace-nowrap ${
                         item.fixed
                           ? "bg-green-500 text-white hover:bg-green-600"
                           : "bg-gray-200 text-gray-700 hover:bg-gray-300"
@@ -167,17 +195,52 @@ export default function NHomeFollowUpInspection() {
                       {item.fixed ? "Fixed ✓" : "Mark Fixed"}
                     </button>
 
+                    {item.photos && item.photos.length > 0 && (
+                      <button
+                        onClick={() => togglePhotos(item.id)}
+                        className="px-4 py-1.5 rounded-md bg-blue-500 text-white text-sm hover:bg-blue-600 whitespace-nowrap"
+                      >
+                        {item.showPhotos ? "Hide Photos" : `View Photos (${item.photos.length})`}
+                      </button>
+                    )}
+
                     <button
                       onClick={() => toggleComment(item.id)}
-                      className="px-4 py-1.5 rounded-md bg-nhome-primary text-white text-sm hover:bg-nhome-secondary"
+                      className="px-4 py-1.5 rounded-md bg-nhome-primary text-white text-sm hover:bg-nhome-secondary whitespace-nowrap"
                     >
                       {item.showComment ? "Hide Comment" : "Add Comment"}
                     </button>
                   </div>
                 </div>
 
+                {item.showPhotos && item.photos && item.photos.length > 0 && (
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <h4 className="text-sm font-medium text-gray-700 mb-2">Issue Photos:</h4>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                      {item.photos.map((photo) => (
+                        <div key={photo.id} className="relative group">
+                          <img
+                            src={photo.url}
+                            alt={photo.file_name}
+                            className="w-full h-32 object-cover rounded-lg border border-gray-200 cursor-pointer hover:opacity-90 transition-opacity"
+                            onClick={() => window.open(photo.url, '_blank')}
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-30 transition-all rounded-lg flex items-center justify-center">
+                            <span className="text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity">
+                              Click to enlarge
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {item.showComment && (
-                  <div className="mt-3">
+                  <div className="mt-4 border-t border-gray-200 pt-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Add/Edit Comment:
+                    </label>
                     <textarea
                       value={item.comment || ""}
                       onChange={(e) =>
