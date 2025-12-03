@@ -1638,8 +1638,30 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               }
             : undefined
         }
-        onPhotoTaken={(blob, url, metadata) => {
-          addNHomePhoto(blob, url, metadata)
+        onPhotoTaken={async (blob, url, metadata) => {
+          // Add photo locally first and get its ID
+          const newPhoto = addNHomePhoto(blob, url, metadata);
+          const photoId = typeof newPhoto === "string" ? newPhoto : newPhoto.id;
+
+          try {
+            updateUploadProgress(photoId, 1);
+            const fileName = generateNHomeFileName(metadata);
+            const res = await uploader.uploadNHomeInspectionPhoto(
+              blob,
+              metadata,
+              sessionId,
+              (metadata as any).item || currentItem?.id,
+              fileName,
+              session,
+              (p) => updateUploadProgress(photoId, p)
+            );
+            if (res.success && res.supabase_url) {
+              markPhotoUploaded(photoId, res.supabase_url, res.photo?.id || "");
+            }
+          } catch (e) {
+            console.error("Auto-upload failed", e);
+            updateUploadProgress(photoId, 0);
+          }
         }}
       />
     </div>
