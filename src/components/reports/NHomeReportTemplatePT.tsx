@@ -3,8 +3,13 @@ import { Document, Page, Text, View, StyleSheet, Image } from "@react-pdf/render
 import { format } from "date-fns";
 import { pt } from "date-fns/locale";
 
+// Use absolute URL for logo - relative paths don't work in @react-pdf/renderer
+const LOGO_URL = typeof window !== 'undefined'
+  ? `${window.location.origin}/branding/logos/NHome_V4__Logo.png`
+  : '/branding/logos/NHome_V4__Logo.png';
+
 const styles = StyleSheet.create({
-  page: { padding: 40, fontFamily: "Roboto" },
+  page: { padding: 40, fontFamily: "Helvetica" },
   header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: "#d29d54", paddingBottom: 10 },
   title: { fontSize: 20, color: "#8f8552", textAlign: "center" },
   sub: { fontSize: 12, color: "#475569", textAlign: "center", marginTop: 6 },
@@ -63,7 +68,7 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
     <Text style={[styles.sub, { textAlign: "left" }]}>{L.company_title}</Text>
   </View>
   <Image
-    src="/branding/logos/NHome_V4__Logo.png"
+    src={LOGO_URL}
     style={{ width: 80, height: 80, objectFit: "contain" }}
   />
 </View>
@@ -127,14 +132,14 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
                         {`Observação: ${it.pt_notes || it.translated_note || it.notes}`}
                       </Text>
                     )}
-                    {/* ✅ Use photo_urls from inspection_results if available */}
-                    {it.photo_urls?.length
-                      ? it.photo_urls.slice(0, 2).map((url: string, j: number) => (
-                          <Image key={j} style={styles.photo} src={url} />
-                        ))
-                      : it.preview_photos?.slice(0, 2).map((p: any, j: number) => (
-                          <Image key={j} style={styles.photo} src={p.url} />
+                    {/* Photos - pre-fetched as base64 for client-side rendering */}
+                    {it.photo_base64_urls?.length > 0 && (
+                      <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
+                        {it.photo_base64_urls.slice(0, 2).map((base64Url: string, j: number) => (
+                          <Image key={`photo-${j}`} src={base64Url} style={{ ...styles.photo, marginRight: 4 }} />
                         ))}
+                      </View>
+                    )}
                   </>
                 )}
               </View>

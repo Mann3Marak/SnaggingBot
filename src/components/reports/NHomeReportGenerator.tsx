@@ -1,12 +1,39 @@
 "use client"
 import { useState } from 'react'
-import { NHomeReportGenerationService } from '@/services/nhomeReportGenerationService'
 import { uploadNHomeReportToSupabase } from '@/lib/nhome-supabase-reports'
 import { NHomeLogo } from '@/components/NHomeLogo'
+import { pdf } from '@react-pdf/renderer'
+import { NHomeReportTemplateEN } from '@/components/reports/NHomeReportTemplateEN'
+import { NHomeReportTemplatePT } from '@/components/reports/NHomeReportTemplatePT'
 
 interface NHomeReportGeneratorProps {
   sessionId: string
   sessionData: any
+}
+
+// Fetch image from URL and convert to base64 data URL
+async function fetchImageAsBase64(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return null
+    const blob = await response.blob()
+
+    // Skip very large images (over 1MB)
+    if (blob.size > 1024 * 1024) {
+      console.warn(`[ReportGenerator] Skipping large image: ${(blob.size / 1024).toFixed(0)}KB`)
+      return null
+    }
+
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onloadend = () => resolve(reader.result as string)
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(blob)
+    })
+  } catch (e) {
+    console.warn('[ReportGenerator] Failed to fetch image:', e)
+    return null
+  }
 }
 
 export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeReportGeneratorProps) {
@@ -17,40 +44,125 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
   const [clientEmail, setClientEmail] = useState('')
   const [emailSent, setEmailSent] = useState(false)
 
-  const reportService = new NHomeReportGenerationService()
+  // Fetch report data including photos from API
+  const fetchReportData = async () => {
+    const response = await fetch(`/api/nhome/inspections/${sessionId}/report-data`)
+    if (!response.ok) {
+      throw new Error('Failed to fetch report data')
+    }
+    return response.json()
+  }
+
+  // Pre-fetch all images as base64 and attach to results
+  const prepareReportDataWithImages = async (reportData: any, onProgress?: (pct: number) => void): Promise<any> => {
+    const results = reportData.results || []
+    const totalPhotos = results.reduce((sum: number, r: any) => sum + (r.preview_photos?.length || 0), 0)
+    let processedPhotos = 0
+
+    console.log(`[ReportGenerator] Pre-fetching ${totalPhotos} images as base64...`)
+
+    const resultsWithBase64 = await Promise.all(
+      results.map(async (result: any) => {
+        const photos = result.preview_photos || []
+        const base64Urls: string[] = []
+
+        for (const photo of photos) {
+          if (photo.url) {
+            const base64 = await fetchImageAsBase64(photo.url)
+            if (base64) {
+              base64Urls.push(base64)
+            }
+          }
+          processedPhotos++
+          if (onProgress && totalPhotos > 0) {
+            onProgress(Math.round((processedPhotos / totalPhotos) * 100))
+          }
+        }
+
+        return {
+          ...result,
+          photo_base64_urls: base64Urls,
+        }
+      })
+    )
+
+    console.log(`[ReportGenerator] Pre-fetched ${resultsWithBase64.filter(r => r.photo_base64_urls.length > 0).length} items with images`)
+
+    return {
+      ...reportData,
+      results: resultsWithBase64,
+    }
+  }
+
+  // Client-side PDF generation - works reliably with images
+  const generatePDFClientSide = async (lang: 'en' | 'pt', reportData: any): Promise<Blob> => {
+    console.log(`[ReportGenerator] Generating ${lang} PDF client-side...`)
+    const Template = lang === 'pt' ? NHomeReportTemplatePT : NHomeReportTemplateEN
+    const doc = <Template data={reportData} />
+    const blob = await pdf(doc).toBlob()
+    console.log(`[ReportGenerator] ${lang} PDF generated: ${(blob.size / 1024).toFixed(1)}KB`)
+    return blob
+  }
 
   const generateNHomeReports = async () => {
+    console.log('[ReportGenerator] Button clicked! Starting client-side PDF generation...')
+    console.log('[ReportGenerator] Session ID:', sessionId)
+
     setGenerating(true)
     setProgress(0)
     setError('')
 
     try {
-      // Step 1: Generate professional PDFs (40%)
+      // Step 1: Fetch report data including photos
+      console.log('[ReportGenerator] Step 1: Fetching report data with photos...')
+      setProgress(5)
+      const rawReportData = await fetchReportData()
+      console.log(`[ReportGenerator] Report data fetched: ${rawReportData.results?.length || 0} items`)
+
+      // Step 2: Pre-fetch all images as base64
+      console.log('[ReportGenerator] Step 2: Pre-fetching images as base64...')
+      setProgress(10)
+      const reportData = await prepareReportDataWithImages(rawReportData, (imgProgress) => {
+        // Map image progress (0-100) to overall progress (10-35)
+        setProgress(10 + Math.round(imgProgress * 0.25))
+      })
+
+      // Step 3: Generate PDFs client-side (sequential)
+      console.log('[ReportGenerator] Step 3: Generating Portuguese PDF...')
       setProgress(40)
-      const { reports, photoPackage } = await reportService.generateNHomeClientPackage(sessionId)
+
+      const portugueseBlob = await generatePDFClientSide('pt', reportData)
+      console.log(`[ReportGenerator] Portuguese PDF: ${(portugueseBlob.size / 1024).toFixed(1)}KB`)
+
+      setProgress(55)
+      console.log('[ReportGenerator] Step 4: Generating English PDF...')
+
+      const englishBlob = await generatePDFClientSide('en', reportData)
+      console.log(`[ReportGenerator] English PDF: ${(englishBlob.size / 1024).toFixed(1)}KB`)
+
+      console.log('[ReportGenerator] PDFs generated successfully')
 
       // Step 2: Upload to Supabase (70%)
       setProgress(70)
 
-      // Use fixed filenames to ensure overwriting in Supabase
       const portugalFilename = "portuguese.pdf"
       const englishFilename = "english.pdf"
 
-      // Upload both reports to Supabase
       const [ptUrl, enUrl] = await Promise.all([
-        uploadNHomeReportToSupabase(reports.portuguese, portugalFilename, sessionId),
-        uploadNHomeReportToSupabase(reports.english, englishFilename, sessionId),
+        uploadNHomeReportToSupabase(portugueseBlob, portugalFilename, sessionId),
+        uploadNHomeReportToSupabase(englishBlob, englishFilename, sessionId),
       ])
 
-      // Step 3: Save to database and create sharing links (100%)
-      await saveNHomeReportUrls(ptUrl, enUrl, photoPackage)
+      // Step 3: Save to database (100%)
+      const photoPackageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/nhome_photos/sessions/${sessionId}/`
+      await saveNHomeReportUrls(ptUrl, enUrl, photoPackageUrl)
       setProgress(100)
 
-      setReportUrls({ portuguese: ptUrl, english: enUrl, photoPackage })
+      setReportUrls({ portuguese: ptUrl, english: enUrl, photoPackage: photoPackageUrl })
 
-      // Auto-download for immediate client use
-      downloadBlob(reports.portuguese, portugalFilename)
-      downloadBlob(reports.english, englishFilename)
+      // Auto-download
+      downloadBlob(portugueseBlob, portugalFilename)
+      downloadBlob(englishBlob, englishFilename)
     } catch (err: any) {
       console.error('NHome report generation error:', err)
       setError(err?.message || 'Professional report generation failed')
@@ -191,8 +303,10 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
             />
           </div>
           <div className="mt-2 text-xs text-gray-500">
-            {progress < 40 && 'Preparing NHome professional templates...'}
-            {progress >= 40 && progress < 70 && 'Generating bilingual reports...'}
+            {progress > 0 && progress < 10 && 'Fetching report data...'}
+            {progress >= 10 && progress < 35 && 'Processing images for PDF...'}
+            {progress >= 35 && progress < 55 && 'Generating Portuguese report...'}
+            {progress >= 55 && progress < 70 && 'Generating English report...'}
             {progress >= 70 && progress < 100 && 'Uploading to secure NHome storage...'}
             {progress === 100 && 'Professional reports ready!'}
           </div>

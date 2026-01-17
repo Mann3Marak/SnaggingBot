@@ -141,27 +141,68 @@ const createRemotePhoto = (
 const mergePhotos = (existing: NHomePhoto[], incoming: NHomePhoto[]) => {
   if (incoming.length === 0) return existing
 
+  // Build lookup maps from incoming remote photos
   const bySupabaseId = new Map<string, NHomePhoto>()
+  const byItemAndFile = new Map<string, NHomePhoto>()
+
   for (const photo of incoming) {
     if (photo.supabase_photo_id) {
       bySupabaseId.set(photo.supabase_photo_id, photo)
     }
+    // Also key by itemId + file_name for fallback matching
+    if (photo.itemId && photo.file_name) {
+      byItemAndFile.set(`${photo.itemId}:${photo.file_name}`, photo)
+    }
   }
 
-  const merged = existing.map(photo => {
+  // Process existing (local) photos - replace with remote if matched
+  const merged: NHomePhoto[] = []
+  const usedSupabaseIds = new Set<string>()
+
+  for (const photo of existing) {
+    // Try to match by supabase_photo_id first
     if (photo.supabase_photo_id && bySupabaseId.has(photo.supabase_photo_id)) {
       const remote = bySupabaseId.get(photo.supabase_photo_id)!
-      bySupabaseId.delete(photo.supabase_photo_id)
-      return { ...photo, ...remote, uploaded: true }
+      usedSupabaseIds.add(photo.supabase_photo_id)
+      merged.push({ ...photo, ...remote, uploaded: true })
+      continue
     }
-    return photo
-  })
 
-  const existingKeys = new Set(merged.map(deriveKey))
-  for (const photo of bySupabaseId.values()) {
-    const key = deriveKey(photo)
-    if (!existingKeys.has(key)) {
-      merged.push(photo)
+    // Try to match by itemId + file_name as fallback
+    const itemFileKey = photo.itemId && photo.file_name ? `${photo.itemId}:${photo.file_name}` : null
+    if (itemFileKey && byItemAndFile.has(itemFileKey)) {
+      const remote = byItemAndFile.get(itemFileKey)!
+      if (remote.supabase_photo_id) {
+        usedSupabaseIds.add(remote.supabase_photo_id)
+      }
+      merged.push({ ...photo, ...remote, uploaded: true })
+      continue
+    }
+
+    // If photo is marked uploaded but doesn't have a remote match, skip it
+    // (it may be stale data in IndexedDB)
+    if (photo.uploaded && photo.supabase_photo_id) {
+      // Check if there's a remote photo with same supabase_photo_id
+      if (!bySupabaseId.has(photo.supabase_photo_id)) {
+        // Remote doesn't have it anymore, still include local version
+        merged.push(photo)
+      }
+      // If remote has it, we already handled it above
+      continue
+    }
+
+    // Keep unmatched local photos (not yet uploaded)
+    merged.push(photo)
+  }
+
+  // Add any remaining remote photos that weren't matched
+  for (const photo of incoming) {
+    if (photo.supabase_photo_id && !usedSupabaseIds.has(photo.supabase_photo_id)) {
+      const key = deriveKey(photo)
+      const existingKeys = new Set(merged.map(deriveKey))
+      if (!existingKeys.has(key)) {
+        merged.push(photo)
+      }
     }
   }
 

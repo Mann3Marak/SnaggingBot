@@ -179,20 +179,8 @@ export function VoiceWorkspace({
         <div className="bg-white rounded-xl shadow-md border border-gray-200 p-4">
           <h3 className="font-semibold text-gray-900 mb-3 text-sm">Photos for this item</h3>
           <div className="grid grid-cols-2 gap-3">
-            {/* Display photos from inspection_results.photo_urls */}
-            {currentResult?.photo_urls?.length && currentResult.photo_urls.length > 0 && currentResult.photo_urls.map((url: string, index: number) => (
-              <div key={`db-photo-${index}`} className="relative border rounded-lg overflow-hidden group cursor-pointer" onClick={() => setPreviewPhoto({ url, alt: `Inspection photo ${index + 1}` })}>
-                <img src={url} alt={`Inspection photo ${index + 1}`} className="w-full h-24 object-cover" />
-                <div className="absolute top-1 left-1 text-[10px] bg-black/50 text-white rounded px-1">
-                  Saved
-                </div>
-                <div className="absolute inset-0 bg-black/0 hover:bg-black/10 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                  <span className="text-white text-xs bg-black/60 px-2 py-1 rounded">Click to view</span>
-                </div>
-              </div>
-            ))}
-
-            {/* Display locally captured photos (not yet uploaded) */}
+            {/* Display photos from nhome_photos table (via useNHomePhotoCapture hook) */}
+            {/* Note: We no longer display currentResult.photo_urls separately as nhome_photos is the authoritative source */}
             {photos.map(photo => {
               const displayName = photo.file_name ?? generatePhotoFileName(photo.metadata)
               return (
@@ -250,7 +238,7 @@ export function VoiceWorkspace({
             })}
           </div>
 
-          {photos.length === 0 && (!currentResult?.photo_urls || currentResult.photo_urls.length === 0) && (
+          {photos.length === 0 && (
             <p className="text-sm text-gray-500 text-center py-4">No photos yet. Capture photos to document issues.</p>
           )}
 
