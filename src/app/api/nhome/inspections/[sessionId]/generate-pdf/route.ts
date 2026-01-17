@@ -9,13 +9,12 @@ import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { ServerPDFTemplateEN } from '@/components/reports/ServerPDFTemplateEN';
 import { ServerPDFTemplatePT } from '@/components/reports/ServerPDFTemplatePT';
-import sharp from 'sharp';
 
 const BUCKET_ID = 'nhome_photos';
 const MAX_IMAGE_SIZE_BYTES = 500 * 1024; // 500KB max per image for PDF embedding
-const PDF_IMAGE_WIDTH = 400; // Max width for images in PDF
 
-// Pre-fetch image, process with sharp, and convert to base64 PNG data URL
+// Pre-fetch image and convert to base64 data URL
+// Note: This server-side route is a fallback - client-side PDF generation is preferred
 async function fetchImageAsBase64(url: string): Promise<string | null> {
   try {
     const response = await fetch(url, {
@@ -32,21 +31,13 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
       return null;
     }
 
-    // Use sharp to process the image - resize and convert to PNG
-    // PNG format works better with react-pdf in server environments
-    const processedBuffer = await sharp(Buffer.from(arrayBuffer))
-      .resize(PDF_IMAGE_WIDTH, undefined, {
-        fit: 'inside',
-        withoutEnlargement: true
-      })
-      .png({ quality: 80 })
-      .toBuffer();
-
-    const base64 = processedBuffer.toString('base64');
-    console.log(`[generate-pdf] Image processed: ${(originalSize / 1024).toFixed(0)}KB -> ${(processedBuffer.length / 1024).toFixed(0)}KB PNG`);
-    return `data:image/png;base64,${base64}`;
+    // Detect content type from response or default to jpeg
+    const contentType = response.headers.get('content-type') || 'image/jpeg';
+    const base64 = Buffer.from(arrayBuffer).toString('base64');
+    console.log(`[generate-pdf] Image loaded: ${(originalSize / 1024).toFixed(0)}KB, type: ${contentType}`);
+    return `data:${contentType};base64,${base64}`;
   } catch (e) {
-    console.warn('[generate-pdf] Failed to process image:', url, e);
+    console.warn('[generate-pdf] Failed to load image:', url, e);
     return null;
   }
 }
