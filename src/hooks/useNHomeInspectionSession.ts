@@ -212,7 +212,6 @@ export function useNHomeInspectionSession(sessionId: string): UseNHomeInspection
         .from('checklist_templates')
         .select('*')
         .eq('apartment_type', sessionData?.apartments?.apartment_type)
-        .order('room_type')
         .order('order_sequence');
 
       if (checklistError) {
@@ -470,8 +469,11 @@ export function useNHomeInspectionSession(sessionId: string): UseNHomeInspection
       item_id: itemId,
       status,
       priority_level: priority,
-      photo_urls: photos.length > 0 ? photos : undefined,
-      created_at: new Date().toISOString(),
+    }
+
+    // Only set photo_urls if provided (to avoid overwriting existing photos)
+    if (photos.length > 0) {
+      payload.photo_urls = photos
     }
 
     // Include notes for non-good statuses (optional for all statuses)
@@ -480,7 +482,13 @@ export function useNHomeInspectionSession(sessionId: string): UseNHomeInspection
       payload.notes = notes
     }
 
-    const { error: upsertError } = await supabase.from('inspection_results').upsert(payload);
+    // Upsert with conflict on (session_id, item_id) - updates existing record or inserts new one
+    const { error: upsertError } = await supabase
+      .from('inspection_results')
+      .upsert(payload, {
+        onConflict: 'session_id,item_id',
+        ignoreDuplicates: false, // We want to update on conflict, not ignore
+      });
     if (upsertError) {
       console.error('[NHomeSession] Failed to upsert inspection result', {
         sessionId,
