@@ -80,6 +80,8 @@ export function NHomeCameraCapture({
           inspectionItem?.nhome_standard_notes || "NHome Professional Standards",
       };
       onPhotoTaken(blob, photo, metadata);
+      // Auto-close camera after successful capture
+      onClose();
     } catch (err) {
       console.error("Camera capture error:", err);
       setError("Failed to capture photo.");
@@ -155,6 +157,9 @@ export function NHomeCameraCapture({
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
       }
+
+      // Auto-close camera after successful upload
+      onClose();
     } catch (err) {
       console.error("File upload error:", err);
       setError("Failed to upload photo.");
