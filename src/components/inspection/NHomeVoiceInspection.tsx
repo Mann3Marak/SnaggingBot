@@ -1328,7 +1328,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                 blob,
                 metadata,
                 sessionId,
-                (metadata as any).item || currentItem?.id,
+                currentItem?.id || '',
                 fileName,
                 session,
                 (p) => updateUploadProgress(photoId, p)
@@ -1376,6 +1376,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
             })}
           activeRoomId={activeRoomId}
           onSelectRoom={setActiveRoom}
+          results={resultsMap}
         />
         <MobileItemSelector
           items={activeRoom?.items ?? []}
@@ -1650,7 +1651,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
               blob,
               metadata,
               sessionId,
-              (metadata as any).item || currentItem?.id,
+              currentItem?.id || '',
               fileName,
               session,
               (p) => updateUploadProgress(photoId, p)

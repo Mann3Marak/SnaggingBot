@@ -8,6 +8,7 @@ export interface MobileRoomSelectorProps {
   rooms: RoomGroup[]
   activeRoomId: string | null
   onSelectRoom: (roomId: string) => void
+  results?: Map<string, any> // Map of item_id -> result
 }
 
 // ==================== UTILITY FUNCTIONS ====================
@@ -15,11 +16,9 @@ export interface MobileRoomSelectorProps {
 /**
  * Calculate completion count for a room (items with results)
  */
-function calculateCompleted(room: RoomGroup, results?: any[]): number {
-  if (!results) return 0
-  return room.items.filter(item =>
-    results.some(r => r.item_id === item.id)
-  ).length
+function calculateCompleted(room: RoomGroup, results?: Map<string, any>): number {
+  if (!results || results.size === 0) return 0
+  return room.items.filter(item => results.has(item.id)).length
 }
 
 /**
@@ -28,8 +27,7 @@ function calculateCompleted(room: RoomGroup, results?: any[]): number {
 function getRoomIcon(completed: number, total: number): string {
   if (completed === 0) return '○' // Not started
   if (completed === total) return '✓' // Complete
-  if (completed < total / 2) return '◐' // Less than half
-  return '◑' // More than half
+  return '◔' // In progress (partial)
 }
 
 // ==================== COMPONENT ====================
@@ -38,6 +36,7 @@ export function MobileRoomSelector({
   rooms,
   activeRoomId,
   onSelectRoom,
+  results,
 }: MobileRoomSelectorProps) {
   const activeRoom = rooms.find(r => r.roomId === activeRoomId)
 
@@ -62,7 +61,7 @@ export function MobileRoomSelector({
               <option value="">No rooms available</option>
             )}
             {rooms.map(room => {
-              const completed = room.items.length // Simplified - should calculate from results
+              const completed = calculateCompleted(room, results)
               const total = room.items.length
               const icon = getRoomIcon(completed, total)
 
@@ -96,7 +95,15 @@ export function MobileRoomSelector({
         {/* Current room info */}
         {activeRoom && (
           <div className="mt-2 text-xs text-gray-600">
-            {activeRoom.items.length} items in this room
+            {(() => {
+              const completed = calculateCompleted(activeRoom, results)
+              const total = activeRoom.items.length
+              const remaining = total - completed
+              if (remaining === 0) {
+                return `${total} items completed`
+              }
+              return `${remaining} item${remaining === 1 ? '' : 's'} remaining (${completed}/${total})`
+            })()}
           </div>
         )}
       </div>
