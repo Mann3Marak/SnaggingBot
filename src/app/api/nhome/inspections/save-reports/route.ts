@@ -4,7 +4,7 @@ import { createClient } from '@supabase/supabase-js'
 export async function POST(req: Request) {
   try {
     const body = await req.json()
-    const { sessionId, reportUrlPt, reportUrlEn, photoPackageUrl } = body
+    const { sessionId, portugueseUrl, englishUrl, photoPackageUrl } = body
 
     if (!sessionId) {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
@@ -25,14 +25,14 @@ export async function POST(req: Request) {
     const { data, error } = await supabase
       .from('inspection_sessions')
       .update({
-        // report_url_pt: reportUrlPt ?? null,
-        // report_url_en: reportUrlEn ?? null,
-        // photo_package_url: photoPackageUrl ?? null, // temporarily disabled to test report generation without this field
-        // report_generated_at: new Date().toISOString(),
+        report_url_pt: portugueseUrl ?? null,
+        report_url_en: englishUrl ?? null,
+        photo_package_url: photoPackageUrl ?? null,
+        report_generated_at: new Date().toISOString(),
       })
       .eq('id', sessionId)
       .select('*')
-      .single()
+      .maybeSingle()
 
     if (error) {
       return NextResponse.json({ error: 'Failed to save reports', detail: error.message }, { status: 500 })

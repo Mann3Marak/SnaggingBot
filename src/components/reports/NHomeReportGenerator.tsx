@@ -104,6 +104,19 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     return blob
   }
 
+  const generatePDFServerSide = async (lang: 'en' | 'pt'): Promise<Blob> => {
+    console.log(`[ReportGenerator] Generating ${lang} PDF server-side...`)
+    const response = await fetch(`/api/nhome/inspections/${sessionId}/generate-pdf?lang=${lang}`, {
+      cache: 'no-store',
+    })
+    if (!response.ok) {
+      throw new Error(`Server-side PDF failed (${lang})`)
+    }
+    const blob = await response.blob()
+    console.log(`[ReportGenerator] ${lang} PDF (server) generated: ${(blob.size / 1024).toFixed(1)}KB`)
+    return blob
+  }
+
   const generateNHomeReports = async () => {
     console.log('[ReportGenerator] Button clicked! Starting client-side PDF generation...')
     console.log('[ReportGenerator] Session ID:', sessionId)
@@ -119,26 +132,42 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
       const rawReportData = await fetchReportData()
       console.log(`[ReportGenerator] Report data fetched: ${rawReportData.results?.length || 0} items`)
 
-      // Step 2: Pre-fetch all images as base64
-      console.log('[ReportGenerator] Step 2: Pre-fetching images as base64...')
-      setProgress(10)
-      const reportData = await prepareReportDataWithImages(rawReportData, (imgProgress) => {
-        // Map image progress (0-100) to overall progress (10-35)
-        setProgress(10 + Math.round(imgProgress * 0.25))
-      })
+      const itemCount = rawReportData.results?.length || 0
+      const useServerSide = itemCount >= 80
 
-      // Step 3: Generate PDFs client-side (sequential)
-      console.log('[ReportGenerator] Step 3: Generating Portuguese PDF...')
-      setProgress(40)
+      let portugueseBlob: Blob
+      let englishBlob: Blob
 
-      const portugueseBlob = await generatePDFClientSide('pt', reportData)
-      console.log(`[ReportGenerator] Portuguese PDF: ${(portugueseBlob.size / 1024).toFixed(1)}KB`)
+      if (useServerSide) {
+        console.log('[ReportGenerator] Using server-side PDF generation (large dataset)')
+        setProgress(20)
+        console.log('[ReportGenerator] Step 2: Generating Portuguese PDF server-side...')
+        portugueseBlob = await generatePDFServerSide('pt')
+        setProgress(50)
+        console.log('[ReportGenerator] Step 3: Generating English PDF server-side...')
+        englishBlob = await generatePDFServerSide('en')
+      } else {
+        // Step 2: Pre-fetch all images as base64
+        console.log('[ReportGenerator] Step 2: Pre-fetching images as base64...')
+        setProgress(10)
+        const reportData = await prepareReportDataWithImages(rawReportData, (imgProgress) => {
+          // Map image progress (0-100) to overall progress (10-35)
+          setProgress(10 + Math.round(imgProgress * 0.25))
+        })
 
-      setProgress(55)
-      console.log('[ReportGenerator] Step 4: Generating English PDF...')
+        // Step 3: Generate PDFs client-side (sequential)
+        console.log('[ReportGenerator] Step 3: Generating Portuguese PDF...')
+        setProgress(40)
 
-      const englishBlob = await generatePDFClientSide('en', reportData)
-      console.log(`[ReportGenerator] English PDF: ${(englishBlob.size / 1024).toFixed(1)}KB`)
+        portugueseBlob = await generatePDFClientSide('pt', reportData)
+        console.log(`[ReportGenerator] Portuguese PDF: ${(portugueseBlob.size / 1024).toFixed(1)}KB`)
+
+        setProgress(55)
+        console.log('[ReportGenerator] Step 4: Generating English PDF...')
+
+        englishBlob = await generatePDFClientSide('en', reportData)
+        console.log(`[ReportGenerator] English PDF: ${(englishBlob.size / 1024).toFixed(1)}KB`)
+      }
 
       console.log('[ReportGenerator] PDFs generated successfully')
 

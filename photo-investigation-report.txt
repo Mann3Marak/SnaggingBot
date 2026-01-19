@@ -1,0 +1,1122 @@
+=== INVESTIGATING PHOTO MAPPINGS ===
+
+Session ID: 5b6acc70-442d-4525-b22a-3c6c32ec1281
+
+1. PHOTOS IN SESSION:
+================================================================================
+Total photos: 24
+
+Photo ID: 34c24a58-776e-40d9-afd0-0f6095165ea4
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Hall_other_2026-01-12T22-24-41-970Z.jpg
+  Item ID: c22f03e6-aa02-49c2-a016-76804d6c8af4
+  Item: Hall - Other
+  Created: 2026-01-12T22:24:45.422+00:00
+  Metadata: {"item":"other","room":"Hall","parsed_at":"2026-01-15T13:49:04.720Z","backfilled":true}
+
+Photo ID: ba0c86f3-45ef-4e2c-bb77-d7ed4c4b5989
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Kitchen_floor_skirting_2026-01-12T22-34-22-361Z.jpg
+  Item ID: 8d0106d1-777d-4b0d-9882-9af1bacdfb1a
+  Item: Kitchen - Floor & skirting
+  Created: 2026-01-12T22:34:24.241+00:00
+  Metadata: {"item":"floor skirting","room":"Kitchen","parsed_at":"2026-01-15T13:49:05.222Z","backfilled":true}
+
+Photo ID: 52a30239-7bed-4e79-a888-e3cd5ed626dd
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Kitchen_counters_2026-01-12T22-35-31-543Z.jpg
+  Item ID: b7d268ec-4586-42b7-a76a-022a2dfb1a30
+  Item: Kitchen - Counters
+  Created: 2026-01-12T22:35:32.798+00:00
+  Metadata: {"item":"counters","room":"Kitchen","parsed_at":"2026-01-15T13:49:05.421Z","backfilled":true}
+
+Photo ID: 9ce0bdda-3213-441e-81a8-f24f7dbb65fe
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Item: Living Room - Walls
+  Created: 2026-01-12T22:48:27.985+00:00
+  Metadata: {"item":"walls","room":"Living Room","parsed_at":"2026-01-15T13:49:05.622Z","backfilled":true}
+
+Photo ID: 338d015a-b537-41e2-a87c-3feeb7d97a17
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Item: Living Room - Walls
+  Created: 2026-01-12T22:48:33.858+00:00
+  Metadata: {"item":"walls","room":"Living Room","parsed_at":"2026-01-15T13:49:05.817Z","backfilled":true}
+
+Photo ID: c491ae68-42d7-4403-9ec9-520290d3c46f
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Item: Living Room - Walls
+  Created: 2026-01-12T22:49:41.144+00:00
+  Metadata: {"item":"walls","room":"Living Room","parsed_at":"2026-01-15T13:49:06.029Z","backfilled":true}
+
+Photo ID: 381aa09b-1462-49a8-b03b-178186c5b8b4
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-12-528Z.jpg
+  Item ID: d99b812d-9f3a-4a1f-826a-fcad3f3acbf7
+  Item: Living Room - Ceiling
+  Created: 2026-01-12T22:51:14.348+00:00
+  Metadata: {"item":"ceiling","room":"Living Room","parsed_at":"2026-01-15T13:49:06.222Z","backfilled":true}
+
+Photo ID: 9541e58a-b555-4dbc-a304-68a5ab1ae918
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-18-512Z.jpg
+  Item ID: d99b812d-9f3a-4a1f-826a-fcad3f3acbf7
+  Item: Living Room - Ceiling
+  Created: 2026-01-12T22:51:19.757+00:00
+  Metadata: {"item":"ceiling","room":"Living Room","parsed_at":"2026-01-15T13:49:06.421Z","backfilled":true}
+
+Photo ID: 2ac4bf9b-e07a-46f3-99e0-d810d921d1fa
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Created: 2026-01-12T22:56:51.067+00:00
+  Metadata: {"item":"Pool side walls tiles","room":"Balcony","parsed_at":"2026-01-15T13:49:06.618Z","backfilled":true}
+
+Photo ID: 3d0deec0-1482-4123-8119-376b7de6ad4c
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_ceiling_2026-01-12T22-59-19-844Z.jpg
+  Item ID: fb3dec58-6e2d-4842-9db6-e01a97012407
+  Item: Balcony - Back - Ceiling
+  Created: 2026-01-12T22:59:21.932+00:00
+  Metadata: {"item":"Pool side ceiling","room":"Balcony","parsed_at":"2026-01-15T13:49:06.824Z","backfilled":true}
+
+Photo ID: 88b1bd79-a565-495f-8bc9-a56fc87c1da0
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-07-375Z.jpg
+  Item ID: 23f98a4f-e779-45cb-83e8-f1b6740ec4a7
+  Item: Balcony - Back - Other
+  Created: 2026-01-12T23:03:08.976+00:00
+  Metadata: {"item":"Pool side other","room":"Balcony","parsed_at":"2026-01-15T13:49:07.020Z","backfilled":true}
+
+Photo ID: 42962904-4825-4e35-aa45-c989fd593fc9
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-13-558Z.jpg
+  Item ID: 23f98a4f-e779-45cb-83e8-f1b6740ec4a7
+  Item: Balcony - Back - Other
+  Created: 2026-01-12T23:03:15.313+00:00
+  Metadata: {"item":"Pool side other","room":"Balcony","parsed_at":"2026-01-15T13:49:07.220Z","backfilled":true}
+
+Photo ID: 990bb854-292a-4ea1-add1-8d65f99b2e3f
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Created: 2026-01-12T23:08:38.634+00:00
+  Metadata: {"item":"Back walls tiles","room":"Balcony","parsed_at":"2026-01-15T13:49:07.444Z","backfilled":true}
+
+Photo ID: 0178c765-94dd-47b7-9bd1-2dcd099e5a3a
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Created: 2026-01-12T23:11:00.886+00:00
+  Metadata: {"item":"Back walls tiles","room":"Balcony","parsed_at":"2026-01-15T13:49:07.645Z","backfilled":true}
+
+Photo ID: 10635ae5-7c93-4885-a8f5-d718bb564617
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-16-112Z.jpg
+  Item ID: feba505e-fc45-4966-ac5e-26331cc6c31d
+  Item: Balcony - Back - Floor & skirting
+  Created: 2026-01-12T23:15:18.103+00:00
+  Metadata: {"item":"Back floor skirting","room":"Balcony","parsed_at":"2026-01-15T13:49:07.841Z","backfilled":true}
+
+Photo ID: 0009e99e-e9db-458c-a26e-2c5e5e469b5a
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-26-427Z.jpg
+  Item ID: feba505e-fc45-4966-ac5e-26331cc6c31d
+  Item: Balcony - Back - Floor & skirting
+  Created: 2026-01-12T23:15:28.156+00:00
+  Metadata: {"item":"Back floor skirting","room":"Balcony","parsed_at":"2026-01-15T13:49:08.040Z","backfilled":true}
+
+Photo ID: a9a97397-edf0-4b59-9094-aec1ad343b71
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_walls_2026-01-12T23-18-09-453Z.jpg
+  Item ID: bdd66de4-f11d-4faf-8aa4-904a966a4bd1
+  Item: Suite Bedroom - Walls
+  Created: 2026-01-12T23:18:11.323+00:00
+  Metadata: {"item":"walls","room":"Suite Bedroom","parsed_at":"2026-01-15T13:49:08.234Z","backfilled":true}
+
+Photo ID: d9131fe4-175b-438c-b383-d8c70ccd83cf
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-35-871Z.jpg
+  Item ID: 22d02957-15b5-414d-a8f5-b62b144a67f5
+  Item: Suite Bedroom - Wardrobe
+  Created: 2026-01-12T23:21:37.221+00:00
+  Metadata: {"item":"wardrobe","room":"Suite Bedroom","parsed_at":"2026-01-15T13:49:08.438Z","backfilled":true}
+
+Photo ID: 51c41361-c61c-4edc-9643-2b0909bcde11
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-44-046Z.jpg
+  Item ID: 22d02957-15b5-414d-a8f5-b62b144a67f5
+  Item: Suite Bedroom - Wardrobe
+  Created: 2026-01-12T23:21:45.791+00:00
+  Metadata: {"item":"wardrobe","room":"Suite Bedroom","parsed_at":"2026-01-15T13:49:08.646Z","backfilled":true}
+
+Photo ID: 5b85a765-bc21-471f-abf6-61be718c76fe
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_walls_2026-01-12T23-31-02-254Z.jpg
+  Item ID: 216536b5-ed89-4ad8-9dc8-e9473a390c1e
+  Item: Bedroom 2 - Walls
+  Created: 2026-01-12T23:31:03.731+00:00
+  Metadata: {"item":"walls","room":"Bedroom 2","parsed_at":"2026-01-15T13:49:08.874Z","backfilled":true}
+
+Photo ID: a56eb5e1-983e-4b59-bc30-4468fc4629d7
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-21-463Z.jpg
+  Item ID: 69c67377-af01-4b04-93c3-6acc5f7899e8
+  Item: Bedroom 2 - Wardrobe
+  Created: 2026-01-12T23:34:22.916+00:00
+  Metadata: {"item":"wardrobe","room":"Bedroom 2","parsed_at":"2026-01-15T13:49:09.069Z","backfilled":true}
+
+Photo ID: 29867d2c-88aa-4a71-a2ee-d4c11f7cc725
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-25-228Z.jpg
+  Item ID: 69c67377-af01-4b04-93c3-6acc5f7899e8
+  Item: Bedroom 2 - Wardrobe
+  Created: 2026-01-12T23:34:26.481+00:00
+  Metadata: {"item":"wardrobe","room":"Bedroom 2","parsed_at":"2026-01-15T13:49:09.287Z","backfilled":true}
+
+Photo ID: 7486c888-5d45-4de9-9e05-7747bd0f536b
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_walls_tiles_2026-01-12T23-36-38-714Z.jpg
+  Item ID: 11359638-60ef-4b88-aef0-6267b0528021
+  Item: Bathroom 2 - Walls & Tiles
+  Created: 2026-01-12T23:36:41.013+00:00
+  Metadata: {"item":"walls tiles","room":"Bathroom 2","parsed_at":"2026-01-15T13:49:09.481Z","backfilled":true}
+
+Photo ID: 4774da99-d327-4b00-8fff-e520eb3e5afa
+  File: NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_floor_skirting_2026-01-12T23-38-38-567Z.jpg
+  Item ID: 817ddcce-df97-4cc5-8884-ae916e1623b4
+  Item: Bathroom 2 - Floor & skirting
+  Created: 2026-01-12T23:38:40.524+00:00
+  Metadata: {"item":"floor skirting","room":"Bathroom 2","parsed_at":"2026-01-15T13:49:09.677Z","backfilled":true}
+
+
+2. DUPLICATE PHOTO ASSIGNMENTS:
+================================================================================
+Found 7 items with multiple photos:
+
+Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4 (3 photos)
+  Item: Living Room - Walls
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg (1/12/2026, 10:48:27 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg (1/12/2026, 10:48:33 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg (1/12/2026, 10:49:41 PM)
+
+Item ID: d99b812d-9f3a-4a1f-826a-fcad3f3acbf7 (2 photos)
+  Item: Living Room - Ceiling
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-12-528Z.jpg (1/12/2026, 10:51:14 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-18-512Z.jpg (1/12/2026, 10:51:19 PM)
+
+Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee (3 photos)
+  Item: Balcony - Back - Walls & Tiles
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg (1/12/2026, 10:56:51 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg (1/12/2026, 11:08:38 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg (1/12/2026, 11:11:00 PM)
+
+Item ID: 23f98a4f-e779-45cb-83e8-f1b6740ec4a7 (2 photos)
+  Item: Balcony - Back - Other
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-07-375Z.jpg (1/12/2026, 11:03:08 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-13-558Z.jpg (1/12/2026, 11:03:15 PM)
+
+Item ID: feba505e-fc45-4966-ac5e-26331cc6c31d (2 photos)
+  Item: Balcony - Back - Floor & skirting
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-16-112Z.jpg (1/12/2026, 11:15:18 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-26-427Z.jpg (1/12/2026, 11:15:28 PM)
+
+Item ID: 22d02957-15b5-414d-a8f5-b62b144a67f5 (2 photos)
+  Item: Suite Bedroom - Wardrobe
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-35-871Z.jpg (1/12/2026, 11:21:37 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-44-046Z.jpg (1/12/2026, 11:21:45 PM)
+
+Item ID: 69c67377-af01-4b04-93c3-6acc5f7899e8 (2 photos)
+  Item: Bedroom 2 - Wardrobe
+  Photos:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-21-463Z.jpg (1/12/2026, 11:34:22 PM)
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-25-228Z.jpg (1/12/2026, 11:34:26 PM)
+
+
+3. INSPECTION RESULTS WITH ISSUES:
+================================================================================
+Total issues: 50
+
+Result ID: 35f1acf7-9ec7-4a13-90c3-52be8fbcec44
+  Item ID: 00c2f576-c7f6-4e0a-9963-6c9698534177
+  Item: Bathroom 2 - Shower Cubicle
+  Status: issue
+  Notes: Grout required at wall joint in the bottom corner of the shower cubicle. Hand shower not installed.
+
+Is the hand shower not installed because it was not ordered by the client, or should it be there?
+Grout required at wall joint in the bottom corner of the shower cubicle. Hand shower missing, installation pending.
+  Enhanced Notes: Inspection Note:
+
+1. Grout is required at the wall joint in the bottom corner of the shower cubicle. Please address this issue promptly.
+
+2. The hand shower is missing. Confirm whether the absence is due to a client order or if it should be installed as part of the project scope. Immediate clarification is needed to proceed with installation.
+  Photo URLs in result: 0
+
+Result ID: 742d8cb7-a8c5-4eac-bd18-042133a3657e
+  Item ID: 062b886e-b404-4a0c-8d14-8bec2e43f4c4
+  Item: Balcony - Pool side - Ceiling
+  Status: issue
+  Notes: Paint touch-up needed at two visible spots on ceiling in front of wall between bedroom 1 and bedroom 2.
+  Enhanced Notes: Inspection Note: "Please perform paint touch-up at two visible locations on the ceiling located in the area between Bedroom 1 and Bedroom 2."
+  Photo URLs in result: 0
+
+Result ID: bf17925f-b648-452d-9901-c180d2ca611a
+  Item ID: 0d7f9563-41db-4a5d-8dd1-0c9e444ccb4e
+  Item: Bedroom 3 - Blinds
+  Status: issue
+  Notes: To be adjusted, higher in the right hand side.
+  Enhanced Notes: "Adjust the right-hand side to achieve a higher elevation."
+  Photo URLs in result: 0
+
+Result ID: da88e82f-6234-4689-88c9-417b49b73051
+  Item ID: 11359638-60ef-4b88-aef0-6267b0528021
+  Item: Bathroom 2 - Walls & Tiles
+  Status: issue
+  Notes: Right side of upper north panel requires closure at cap.
+  Enhanced Notes: Inspection Note: "The right side of the upper north panel requires proper closure at the cap. Please ensure this is addressed to prevent potential issues."
+  Photo URLs in result: 0
+
+Result ID: 3cc8f09c-9975-4e6c-8e75-423520ce2a90
+  Item ID: 11359638-60ef-4b88-aef0-6267b0528021
+  Item: Bathroom 2 - Walls & Tiles
+  Status: issue
+  Notes: Right side of Uponor requires closure at cap.
+  Enhanced Notes: Inspection Note: "The right side of the Uponor system requires proper closure at the cap. Please ensure this is addressed."
+  Photo URLs in result: 0
+
+Result ID: d14e6509-24e9-484c-9266-73884553193f
+  Item ID: 19b9e541-960f-4803-9909-d0eb17a29435
+  Item: Bedroom 3 - Walls
+  Status: issue
+  Notes: Right and Top of vacuum outlet needs touch-up and wall at both small wall covers needs touch-up.
+  Enhanced Notes: Inspection Note: 
+
+1. The area around the right and top of the vacuum outlet requires touch-up paint.
+2. Touch-up paint is also needed on the wall at both small wall covers. 
+
+Please address these items promptly.
+  Photo URLs in result: 0
+
+Result ID: 1d18b38e-85ef-4d71-8117-5c858cb377ad
+  Item ID: 216536b5-ed89-4ad8-9dc8-e9473a390c1e
+  Item: Bedroom 2 - Walls
+  Status: issue
+  Notes: Paint touch-up needed at the bottom of Uponor panel.
+  Enhanced Notes: Action Required: Perform paint touch-up at the bottom of the Uponor panel to ensure a uniform finish.
+  Photo URLs in result: 0
+
+Result ID: fc89c3b4-01d2-44ca-9b21-115c6e429b34
+  Item ID: 216536b5-ed89-4ad8-9dc8-e9473a390c1e
+  Item: Bedroom 2 - Walls
+  Status: issue
+  Notes: Paint touch-up needed at the bottom of opener panel.
+Paint touch-up needed at the bottom of Uponor panel.
+  Enhanced Notes: Inspection Note: 
+
+- Perform paint touch-up at the bottom of the opener panel.
+- Perform paint touch-up at the bottom of the Uponor panel.
+  Photo URLs in result: 0
+
+Result ID: 63c91fa6-5838-498b-836f-901e9bcb0092
+  Item ID: 2191946e-dd72-4d81-afcb-ba3b8cf143d5
+  Item: Suite Bedroom - Floor & skirting
+  Status: issue
+  Notes: Skirting corners on both sides of the door frame require sealant and paint touch-up.
+  Enhanced Notes: Inspection Note: "Apply sealant and perform paint touch-up on the skirting corners on both sides of the door frame."
+  Photo URLs in result: 0
+
+Result ID: 99e8d3ba-5e4d-4039-bedf-4fa0930f2d72
+  Item ID: 22a2ace5-aaa1-4946-99fb-abac071c3276
+  Item: Dining Room - Floor & skirting
+  Status: issue
+  Notes: Requires sealant touch-up at skirting in left corner by kitchen cabinets.
+  Enhanced Notes: Action Required: Apply sealant touch-up to the skirting in the left corner adjacent to the kitchen cabinets.
+  Photo URLs in result: 0
+
+Result ID: f5221632-fc1d-40b9-9a31-c01c47b0b7cc
+  Item ID: 22d02957-15b5-414d-a8f5-b62b144a67f5
+  Item: Suite Bedroom - Wardrobe
+  Status: issue
+  Notes: Filler needed at both topside joint panel corners of wardrobe.
+  Enhanced Notes: Action Required: Apply filler to the topside joint panel corners of the wardrobe on both sides.
+  Photo URLs in result: 0
+
+Result ID: 65362bbf-04dd-46e9-a192-a91ba9b394db
+  Item ID: 23f98a4f-e779-45cb-83e8-f1b6740ec4a7
+  Item: Balcony - Back - Other
+  Status: not_applicable
+  Notes: Other marked as not_applicable
+  Enhanced Notes: Inspection Note: "The item marked as 'not applicable' requires clarification. Please provide a detailed explanation or justification for this designation."
+  Photo URLs in result: 0
+
+Result ID: d829bf7b-55d0-47a3-9b54-58e343789eb2
+  Item ID: 356793ef-f2e3-4f22-aebd-8d789f87f040
+  Item: Suite Bathroom - Other
+  Status: not_applicable
+  Notes: Other marked as not_applicable
+  Enhanced Notes: Inspection Note: "The section marked as 'not applicable' requires clarification. Please confirm the status and provide relevant details or documentation to support this designation."
+  Photo URLs in result: 0
+
+Result ID: d9fa790a-f6ba-458f-90cc-6bf760ce439b
+  Item ID: 3736185c-5abb-4395-9365-bbfd56169952
+  Item: Hall - Floor & skirting
+  Status: issue
+  Notes: Skirting corners at wall between guest bathroom and bedroom 2 require sealant, as well as frame corners and right side of the first bathroom and associated frame corners.
+  Enhanced Notes: Inspection Note: 
+
+Apply sealant to the skirting corners at the wall between the guest bathroom and Bedroom 2. Additionally, seal the frame corners and the right side of the first bathroom, including all associated frame corners.
+  Photo URLs in result: 0
+
+Result ID: 260cb480-e5e2-4836-8598-44270db71501
+  Item ID: 3899b36b-a473-4652-bd3d-1ccb946177b0
+  Item: Bathroom 2 - Shower Doors
+  Status: critical
+  Notes: Shower doors pending installation in Bathroom 2.
+  Enhanced Notes: Action Required: Install shower doors in Bathroom 2.
+  Photo URLs in result: 0
+
+Result ID: 58b7ffeb-0f2b-4492-8cdb-76828cf098f8
+  Item ID: 47fc4bd8-a750-412c-aa2b-10471dca4106
+  Item: Living Room - Other
+  Status: not_applicable
+  Notes: Other marked as not_applicable
+  Enhanced Notes: Inspection Note: "The items marked as 'not applicable' require clarification. Please review and confirm their status to ensure all aspects of the project are addressed."
+  Photo URLs in result: 0
+
+Result ID: 4a643b22-305d-4271-a458-7e4c0af61490
+  Item ID: 47feb9fe-6f32-40b3-8607-af27f7b44924
+  Item: Bedroom 3 - Floor & skirting
+  Status: issue
+  Notes: Skirting at both corners by door frame requires sealant touch-up.
+  Enhanced Notes: Inspection Note: "Apply sealant touch-up to the skirting at both corners of the door frame."
+  Photo URLs in result: 0
+
+Result ID: 9d61bbc6-c569-4fd1-82d9-3aa56883774e
+  Item ID: 4930a04b-af32-4ee8-9765-6d1f6bf51b67
+  Item: Suite Bathroom - Cabinet & drawers
+  Status: issue
+  Notes: Requires sealant at wall joint.
+  Enhanced Notes: "Apply sealant to the wall joint to ensure proper sealing and prevent moisture intrusion."
+  Photo URLs in result: 0
+
+Result ID: 1a29e81b-1ba9-457a-b290-d4fb2b2d4404
+  Item ID: 4b098732-2089-46a9-8802-f1638957ec27
+  Item: Balcony - Pool side - Other
+  Status: issue
+  Notes: Paint touch-up needed on outside patio storage, right side wall by top pipe, and at the right side of both plugs on the right wall.
+  Enhanced Notes: Inspection Note: 
+
+"Please perform paint touch-ups on the following areas: 
+1. Outside patio storage - right side wall near the top pipe.
+2. Right side of both electrical plugs on the right wall."
+  Photo URLs in result: 0
+
+Result ID: 1b5c0733-bbda-4b1d-a2b4-380dbc2871bd
+  Item ID: 55586c87-ec65-4d51-be6a-18559d5269e1
+  Item: Balcony - Back - Outside Patio Storage
+  Status: not_applicable
+  Notes: Outside Patio Storage marked as not_applicable
+  Enhanced Notes: Inspection Note: "The Outside Patio Storage area has been marked as not applicable. Please confirm if this designation is correct and provide any necessary documentation or clarification."
+  Photo URLs in result: 0
+
+Result ID: 90da296d-c4d8-4656-ac1d-332612154f63
+  Item ID: 5caf4573-d3b1-4989-a8e3-d1c73d8bf5cc
+  Item: Bedroom 2 - Other
+  Status: not_applicable
+  Notes: Other marked as not_applicable
+  Enhanced Notes: Inspection Note: "The section marked as 'not applicable' requires clarification. Please confirm the status and provide any relevant details or documentation to support this designation."
+  Photo URLs in result: 0
+
+Result ID: 910f2009-1e0f-46d0-a5ee-a0cd9d56a46b
+  Item ID: 69c67377-af01-4b04-93c3-6acc5f7899e8
+  Item: Bedroom 2 - Wardrobe
+  Status: issue
+  Notes: Filler required at left and right top side panel joint area of the wardrobe.
+  Enhanced Notes: Action Required: Apply filler to the joint areas at the left and right top side panels of the wardrobe.
+  Photo URLs in result: 0
+
+Result ID: 7fc8e571-27f4-4f4a-a5a1-759c8dd3c34a
+  Item ID: 76215af2-ec7d-4663-843c-53f34d4650ba
+  Item: Kitchen - Blinds
+  Status: not_applicable
+  Notes: Blinds marked as not_applicable
+  Enhanced Notes: Inspection Note: "Blinds are marked as not applicable. Please confirm the status and provide clarification on the installation or selection of window treatments."
+  Photo URLs in result: 0
+
+Result ID: 0ca7ccb1-6c2f-4690-927d-ae4033687538
+  Item ID: 765dfb02-ca8b-4ca9-a5a2-4431da2d054c
+  Item: Living Room - Floor & skirting
+  Status: issue
+  Notes: Small chip in tile in front of the far right side plug. Chip present on second tile in front of right side sliding door.
+  Enhanced Notes: Inspection Note: 
+
+- There is a small chip in the tile located in front of the far-right electrical plug. 
+- Additionally, a chip is present on the second tile in front of the right-side sliding door. 
+
+Action required: Repair or replace the damaged tiles as necessary.
+  Photo URLs in result: 0
+
+Result ID: 9a63256e-0b61-40f6-9823-d9f2eaea7c48
+  Item ID: 776fb8b2-994d-4ab4-b3d5-5e30b4bad22f
+  Item: Bedroom 2 - Ceiling
+  Status: issue
+  Notes: Paint touch-up needed in two areas—1) in front of the vent by the door, and 2) at the left light fitting beside the door.
+  Enhanced Notes: Inspection Note: 
+
+"Paint touch-up required in the following areas: 
+1) Front of the vent located by the door. 
+2) Left side of the light fitting adjacent to the door."
+  Photo URLs in result: 0
+
+Result ID: ca182b1b-de48-41a0-bc35-af432dc526eb
+  Item ID: 79558bd5-e733-47d8-9ed3-d96b462d442b
+  Item: Suite Bathroom - Floor & skirting
+  Status: issue
+  Notes: Floors and skirtings require sealant in the suite bathroom.
+  Enhanced Notes: "Apply sealant to the floors and skirtings in the suite bathroom to ensure proper sealing and prevent moisture intrusion."
+  Photo URLs in result: 0
+
+Result ID: 32b16cb9-6b1b-4125-b31f-48cd6938f151
+  Item ID: 817ddcce-df97-4cc5-8884-ae916e1623b4
+  Item: Bathroom 2 - Floor & skirting
+  Status: issue
+  Notes: Tile by door stopper is chipped and requires repair.
+  Enhanced Notes: Inspection Note: "The tile adjacent to the door stopper is chipped. Please arrange for repair to restore the tile to its original condition."
+  Photo URLs in result: 0
+
+Result ID: 82bd704c-4118-4646-9f84-b99d9b674627
+  Item ID: 85bae6ae-d387-421d-970d-c7cd66d10cae
+  Item: Bathroom 2 - Cabinet & drawers
+  Status: issue
+  Notes: Requires sealant at wall joint in Bathroom 2.
+  Enhanced Notes: Action Required: Apply sealant to the wall joint in Bathroom 2 to ensure proper sealing and prevent moisture intrusion.
+  Photo URLs in result: 0
+
+Result ID: 9dc5af75-f113-4c59-bceb-fb92ceb34211
+  Item ID: 89b2a895-0270-4b7b-8078-f5873f668ea9
+  Item: Bathroom 2 - Other
+  Status: issue
+  Notes: Small space next to mirror requires wall cover.
+  Enhanced Notes: "Install wall covering in the small space adjacent to the mirror."
+  Photo URLs in result: 0
+
+Result ID: bd5456cb-cc20-49ed-9d78-20462daab553
+  Item ID: 8d0106d1-777d-4b0d-9882-9af1bacdfb1a
+  Item: Kitchen - Floor & skirting
+  Status: issue
+  Notes: Sealant touch-up needed on small skirting between dishwasher, left corner.
+  Enhanced Notes: Action Required: Apply sealant touch-up to the small skirting located in the left corner between the dishwasher.
+  Photo URLs in result: 0
+
+Result ID: 6fb90e79-316e-44ed-ad45-73c305da23e0
+  Item ID: 8db390af-7bcf-4e52-9a94-525bfd6771ae
+  Item: Suite Bathroom - Toilet
+  Status: issue
+  Notes: Requires sealant at wall joint in suite bathroom toilet.
+  Enhanced Notes: Action Required: Apply sealant to the wall joint in the bathroom toilet area of the suite.
+  Photo URLs in result: 0
+
+Result ID: bc4dd32c-b6ba-477c-9dfa-d32d4f429068
+  Item ID: 94250d95-449d-4eaa-9547-7e7c6343d174
+  Item: Bathroom 2 - Lights
+  Status: critical
+  Notes: Light above toilet not functioning.
+  Enhanced Notes: Inspection Note: "The light fixture above the toilet is not operational. Please investigate and repair or replace the fixture as necessary."
+  Photo URLs in result: 0
+
+Result ID: 8bff55f4-eb64-4075-9149-a1e972d3be18
+  Item ID: a986086c-7753-4445-8764-6e3dabb8e33a
+  Item: Suite Bedroom - Blinds
+  Status: issue
+  Notes: Lens on right-hand side of Suite Bedroom blinds requires adjustment.
+Suite Bedroom blinds require adjustment; right-hand side is positioned higher than the left.
+  Enhanced Notes: Inspection Note: 
+
+Adjust the right-hand side of the Suite Bedroom blinds to align with the left side, as it is currently positioned higher.
+  Photo URLs in result: 0
+
+Result ID: f2dcc12f-2398-4bb6-aaba-ecba947f2db0
+  Item ID: b7d268ec-4586-42b7-a76a-022a2dfb1a30
+  Item: Kitchen - Counters
+  Status: issue
+  Notes: Requires sealant at island and wall joint on the left side.
+  Enhanced Notes: Action Required: Apply sealant to the joint between the island and the left-side wall.
+  Photo URLs in result: 0
+
+Result ID: 6cc942c6-a1b4-4fc4-baf7-5f9b366bfc7f
+  Item ID: b925c012-432b-49d1-88dd-45af652af855
+  Item: Bathroom 2 - Toilet
+  Status: issue
+  Notes: Requires sealant at wall joint area.
+  Enhanced Notes: "Apply sealant to the wall joint area to ensure proper sealing and prevent moisture ingress."
+  Photo URLs in result: 0
+
+Result ID: f168287b-2a74-4895-81bb-3b2bc4d67280
+  Item ID: bdd66de4-f11d-4faf-8aa4-904a966a4bd1
+  Item: Suite Bedroom - Walls
+  Status: issue
+  Notes: Paint touch-up needed at left side small wall cover.
+  Enhanced Notes: Action Required: Perform paint touch-up on the left side of the small wall cover.
+  Photo URLs in result: 0
+
+Result ID: 1382dc17-d748-4fac-b64b-8d48383eccfb
+  Item ID: c02e6f2a-bca4-4b4a-97dc-475b5a0ee2e3
+  Item: Suite Bathroom - Shower Cubicle
+  Status: issue
+  Notes: Floor area of the shower cubicle requires sealant.
+
+For the rain shower: Is the rain shower missing because it was not ordered by the client, or should it be installed?
+- Floor area of shower cubicle requires sealant.  
+- Hand shower is missing and still needs to be installed.
+  Enhanced Notes: Inspection Note:
+
+1. The floor area of the shower cubicle requires sealant. Please apply appropriate sealant to prevent water ingress.
+
+2. Clarification needed regarding the rain shower: Confirm whether it was not ordered by the client or if it is to be installed.
+
+3. The hand shower is missing and must be installed. Please ensure it is provided and installed as per specifications.
+  Photo URLs in result: 0
+
+Result ID: bd17b4e9-557a-48ea-a86c-6414aa2699f8
+  Item ID: c22f03e6-aa02-49c2-a016-76804d6c8af4
+  Item: Hall - Other
+  Status: issue
+  Notes: Wardrobe plugs covers inside next to washer/dryer need to be installed. Left top side panel requires filler at panel joints.
+  Enhanced Notes: Inspection Note: 
+
+1. Install plug covers for the wardrobe located next to the washer/dryer.
+2. Apply filler to the left top side panel at the panel joints.
+  Photo URLs in result: 0
+
+Result ID: 288d1401-1875-47c8-a416-adc0ff17cf11
+  Item ID: cde83f2e-8323-4bd3-9838-4a80c237143a
+  Item: Kitchen - Cabinets
+  Status: issue
+  Notes: 1. Small chip inside left garage cabinet near plug cover; plug cover is misaligned.
+2. Small dent present in panel beside oven, located at the bottom of the oven door.
+3. Chip in paint on right side of middle row drawers, below garage doors.
+4. Wall covers still to be installed in double bottom cabinets left of the fridge.
+5. Requires sealant at cabinet and wall joints on dining room side.
+  Enhanced Notes: Inspection Notes:
+
+1. Repair the small chip inside the left garage cabinet near the plug cover and realign the misaligned plug cover.
+2. Address the small dent in the panel beside the oven, located at the bottom of the oven door.
+3. Touch up the chip in the paint on the right side of the middle row drawers, below the garage doors.
+4. Install wall covers in the double bottom cabinets to the left of the fridge.
+5. Apply sealant at the cabinet and wall joints on the dining room side.
+  Photo URLs in result: 0
+
+Result ID: 6a0bc4bd-cffc-4f54-995a-923486f916ca
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Item: Living Room - Walls
+  Status: issue
+  Notes: Small crack at ceiling joint on right corner of living room wall.
+  Enhanced Notes: Inspection Note: "Repair the small crack located at the ceiling joint in the right corner of the living room wall."
+  Photo URLs in result: 0
+
+Result ID: 6cf74622-3177-4a75-8542-c7fc658e33ab
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Item: Living Room - Walls
+  Status: issue
+  Notes: Left and right side corners by blinds require paint and grout touch-up.
+  Enhanced Notes: Inspection Note: "Please perform paint and grout touch-ups on the left and right side corners adjacent to the blinds."
+  Photo URLs in result: 0
+
+Result ID: 062392da-8ab0-4a49-9cb6-ce5aa619f952
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Item: Living Room - Walls
+  Status: issue
+  Notes: Small crack at ceiling joint on wall top side.
+  Enhanced Notes: Inspection Note: "There is a small crack present at the ceiling joint on the upper side of the wall. Please repair the crack to ensure a smooth and even finish."
+  Photo URLs in result: 0
+
+Result ID: 8343a590-4d0f-42b8-96f7-01c47524d9cf
+  Item ID: d99b812d-9f3a-4a1f-826a-fcad3f3acbf7
+  Item: Living Room - Ceiling
+  Status: issue
+  Notes: Paint and grout touch-up needed at left and right side corners by blinds.
+  Enhanced Notes: Inspection Note: "Please perform paint and grout touch-ups at the left and right side corners adjacent to the blinds."
+  Photo URLs in result: 0
+
+Result ID: 23a7a42e-003e-4493-9895-e94b3d7d5c43
+  Item ID: dcb73677-3518-4764-b951-4bd62141d743
+  Item: Balcony - Pool side - Walls & Tiles
+  Status: issue
+  Notes: Sealant touch-up required at right wall corner below glass partition.
+  Enhanced Notes: Action Required: Apply sealant touch-up at the right wall corner beneath the glass partition.
+  Photo URLs in result: 0
+
+Result ID: a338dc7a-cc3f-4bef-91d0-ce7c7c212d0f
+  Item ID: e885c526-323f-4c73-9f19-7adef47d48e4
+  Item: Kitchen - Sliding door
+  Status: not_applicable
+  Notes: Sliding door marked as not_applicable
+  Enhanced Notes: Inspection Note: "The sliding door is marked as not applicable. Please confirm if this door requires any further action or clarification."
+  Photo URLs in result: 0
+
+Result ID: 57df088b-1287-49ce-af36-5d1349fe91c7
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Status: issue
+  Notes: Sealant needed at the left wall, the bottom area, and the left corner where all surfaces meet.
+Sealant needed at bottom left corner of the left wall; wall tiles are in good condition.
+  Enhanced Notes: Inspection Note: 
+
+1. Apply sealant to the left wall at the bottom area and the left corner where all surfaces meet.
+2. Ensure sealant is applied to the bottom left corner of the left wall. 
+
+Note: The wall tiles are in good condition and do not require any action.
+  Photo URLs in result: 0
+
+Result ID: 0c415102-3142-41fa-a5ae-435b63318904
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Status: issue
+  Notes: Right side wall plug requires repair; paint touch-up needed on left and bottom areas of the right wall.
+  Enhanced Notes: Inspection Note: 
+
+- Repair required for the right side wall plug.
+- Perform paint touch-up on the left and bottom sections of the right wall.
+  Photo URLs in result: 0
+
+Result ID: 60c02293-1791-4688-b6ac-4faf28a64889
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Status: issue
+  Notes: Sealant needed at bottom left corner of the left wall. Right side wall plug requires repair; paint touch-up needed on left and bottom areas of the right wall.
+  Enhanced Notes: Inspection Note: 
+
+1. Apply sealant at the bottom left corner of the left wall.
+2. Repair the wall plug on the right side wall.
+3. Perform paint touch-up on the left and lower areas of the right wall.
+  Photo URLs in result: 0
+
+Result ID: e3e27a66-dd13-4495-906f-f24cdd79b792
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Item: Balcony - Back - Walls & Tiles
+  Status: issue
+  Notes: Sealant needed at bottom left corner of the left wall. Right side wall plug requires repair; paint touch-up needed on left and bottom areas.
+  Enhanced Notes: Inspection Note:
+
+1. Apply sealant to the bottom left corner of the left wall.
+2. Repair the right side wall plug.
+3. Perform paint touch-up on the left wall and the bottom areas.
+  Photo URLs in result: 0
+
+Result ID: d100ef87-a5b3-4b94-b8ad-93e60461a411
+  Item ID: feba505e-fc45-4966-ac5e-26331cc6c31d
+  Item: Balcony - Back - Floor & skirting
+  Status: issue
+  Notes: Skirting requires sealant at both walls. Grouting needed at walls between living and dining room.
+  Enhanced Notes: Inspection Note: 
+
+1. Apply sealant to the skirting boards at both wall junctions.
+2. Install grout in the gaps between the walls in the living and dining room areas.
+  Photo URLs in result: 0
+
+
+4. PHOTO-TO-RESULT MAPPING ANALYSIS:
+================================================================================
+
+Item: Bathroom 2 - Shower Cubicle
+  Item ID: 00c2f576-c7f6-4e0a-9963-6c9698534177
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Balcony - Pool side - Ceiling
+  Item ID: 062b886e-b404-4a0c-8d14-8bec2e43f4c4
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bedroom 3 - Blinds
+  Item ID: 0d7f9563-41db-4a5d-8dd1-0c9e444ccb4e
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bathroom 2 - Walls & Tiles
+  Item ID: 11359638-60ef-4b88-aef0-6267b0528021
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_walls_tiles_2026-01-12T23-36-38-714Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_walls_tiles_2026-01-12T23-36-38-714Z.jpg
+
+Item: Bathroom 2 - Walls & Tiles
+  Item ID: 11359638-60ef-4b88-aef0-6267b0528021
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_walls_tiles_2026-01-12T23-36-38-714Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_walls_tiles_2026-01-12T23-36-38-714Z.jpg
+
+Item: Bedroom 3 - Walls
+  Item ID: 19b9e541-960f-4803-9909-d0eb17a29435
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bedroom 2 - Walls
+  Item ID: 216536b5-ed89-4ad8-9dc8-e9473a390c1e
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_walls_2026-01-12T23-31-02-254Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_walls_2026-01-12T23-31-02-254Z.jpg
+
+Item: Bedroom 2 - Walls
+  Item ID: 216536b5-ed89-4ad8-9dc8-e9473a390c1e
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_walls_2026-01-12T23-31-02-254Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_walls_2026-01-12T23-31-02-254Z.jpg
+
+Item: Suite Bedroom - Floor & skirting
+  Item ID: 2191946e-dd72-4d81-afcb-ba3b8cf143d5
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Dining Room - Floor & skirting
+  Item ID: 22a2ace5-aaa1-4946-99fb-abac071c3276
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Suite Bedroom - Wardrobe
+  Item ID: 22d02957-15b5-414d-a8f5-b62b144a67f5
+  Status: issue
+  Photos in nhome_photos: 2
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-35-871Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-35-871Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-44-046Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_wardrobe_2026-01-12T23-21-44-046Z.jpg
+
+Item: Balcony - Back - Other
+  Item ID: 23f98a4f-e779-45cb-83e8-f1b6740ec4a7
+  Status: not_applicable
+  Photos in nhome_photos: 2
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-07-375Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-07-375Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-13-558Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_other_2026-01-12T23-03-13-558Z.jpg
+
+Item: Suite Bathroom - Other
+  Item ID: 356793ef-f2e3-4f22-aebd-8d789f87f040
+  Status: not_applicable
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Hall - Floor & skirting
+  Item ID: 3736185c-5abb-4395-9365-bbfd56169952
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bathroom 2 - Shower Doors
+  Item ID: 3899b36b-a473-4652-bd3d-1ccb946177b0
+  Status: critical
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Living Room - Other
+  Item ID: 47fc4bd8-a750-412c-aa2b-10471dca4106
+  Status: not_applicable
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bedroom 3 - Floor & skirting
+  Item ID: 47feb9fe-6f32-40b3-8607-af27f7b44924
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Suite Bathroom - Cabinet & drawers
+  Item ID: 4930a04b-af32-4ee8-9765-6d1f6bf51b67
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Balcony - Pool side - Other
+  Item ID: 4b098732-2089-46a9-8802-f1638957ec27
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Balcony - Back - Outside Patio Storage
+  Item ID: 55586c87-ec65-4d51-be6a-18559d5269e1
+  Status: not_applicable
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bedroom 2 - Other
+  Item ID: 5caf4573-d3b1-4989-a8e3-d1c73d8bf5cc
+  Status: not_applicable
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bedroom 2 - Wardrobe
+  Item ID: 69c67377-af01-4b04-93c3-6acc5f7899e8
+  Status: issue
+  Photos in nhome_photos: 2
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-21-463Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-21-463Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-25-228Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bedroom_2_wardrobe_2026-01-12T23-34-25-228Z.jpg
+
+Item: Kitchen - Blinds
+  Item ID: 76215af2-ec7d-4663-843c-53f34d4650ba
+  Status: not_applicable
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Living Room - Floor & skirting
+  Item ID: 765dfb02-ca8b-4ca9-a5a2-4431da2d054c
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bedroom 2 - Ceiling
+  Item ID: 776fb8b2-994d-4ab4-b3d5-5e30b4bad22f
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Suite Bathroom - Floor & skirting
+  Item ID: 79558bd5-e733-47d8-9ed3-d96b462d442b
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bathroom 2 - Floor & skirting
+  Item ID: 817ddcce-df97-4cc5-8884-ae916e1623b4
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_floor_skirting_2026-01-12T23-38-38-567Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Bathroom_2_floor_skirting_2026-01-12T23-38-38-567Z.jpg
+
+Item: Bathroom 2 - Cabinet & drawers
+  Item ID: 85bae6ae-d387-421d-970d-c7cd66d10cae
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bathroom 2 - Other
+  Item ID: 89b2a895-0270-4b7b-8078-f5873f668ea9
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Kitchen - Floor & skirting
+  Item ID: 8d0106d1-777d-4b0d-9882-9af1bacdfb1a
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Kitchen_floor_skirting_2026-01-12T22-34-22-361Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Kitchen_floor_skirting_2026-01-12T22-34-22-361Z.jpg
+
+Item: Suite Bathroom - Toilet
+  Item ID: 8db390af-7bcf-4e52-9a94-525bfd6771ae
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Bathroom 2 - Lights
+  Item ID: 94250d95-449d-4eaa-9547-7e7c6343d174
+  Status: critical
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Suite Bedroom - Blinds
+  Item ID: a986086c-7753-4445-8764-6e3dabb8e33a
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Kitchen - Counters
+  Item ID: b7d268ec-4586-42b7-a76a-022a2dfb1a30
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Kitchen_counters_2026-01-12T22-35-31-543Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Kitchen_counters_2026-01-12T22-35-31-543Z.jpg
+
+Item: Bathroom 2 - Toilet
+  Item ID: b925c012-432b-49d1-88dd-45af652af855
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Suite Bedroom - Walls
+  Item ID: bdd66de4-f11d-4faf-8aa4-904a966a4bd1
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_walls_2026-01-12T23-18-09-453Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Suite_Bedroom_walls_2026-01-12T23-18-09-453Z.jpg
+
+Item: Suite Bathroom - Shower Cubicle
+  Item ID: c02e6f2a-bca4-4b4a-97dc-475b5a0ee2e3
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Hall - Other
+  Item ID: c22f03e6-aa02-49c2-a016-76804d6c8af4
+  Status: issue
+  Photos in nhome_photos: 1
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Hall_other_2026-01-12T22-24-41-970Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Hall_other_2026-01-12T22-24-41-970Z.jpg
+
+Item: Kitchen - Cabinets
+  Item ID: cde83f2e-8323-4bd3-9838-4a80c237143a
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Living Room - Walls
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+
+Item: Living Room - Walls
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+
+Item: Living Room - Walls
+  Item ID: d04ad6ac-7143-41b1-bb29-0fbee389a1d4
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-26-323Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-48-32-527Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_walls_2026-01-12T22-49-39-696Z.jpg
+
+Item: Living Room - Ceiling
+  Item ID: d99b812d-9f3a-4a1f-826a-fcad3f3acbf7
+  Status: issue
+  Photos in nhome_photos: 2
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-12-528Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-12-528Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-18-512Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Living_Room_ceiling_2026-01-12T22-51-18-512Z.jpg
+
+Item: Balcony - Pool side - Walls & Tiles
+  Item ID: dcb73677-3518-4764-b951-4bd62141d743
+  Status: issue
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Kitchen - Sliding door
+  Item ID: e885c526-323f-4c73-9f19-7adef47d48e4
+  Status: not_applicable
+  Photos in nhome_photos: 0
+  Photos in inspection_results.photo_urls: 0
+
+Item: Balcony - Back - Walls & Tiles
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+
+Item: Balcony - Back - Walls & Tiles
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+
+Item: Balcony - Back - Walls & Tiles
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+
+Item: Balcony - Back - Walls & Tiles
+  Item ID: f1f01865-34da-4be1-a75e-6e720ef372ee
+  Status: issue
+  Photos in nhome_photos: 3
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Pool_side_walls_tiles_2026-01-12T22-56-48-958Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-08-36-388Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_walls_tiles_2026-01-12T23-10-58-826Z.jpg
+
+Item: Balcony - Back - Floor & skirting
+  Item ID: feba505e-fc45-4966-ac5e-26331cc6c31d
+  Status: issue
+  Photos in nhome_photos: 2
+  Photos in inspection_results.photo_urls: 0
+  Photos from nhome_photos table:
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-16-112Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-16-112Z.jpg
+    - NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-26-427Z.jpg
+      Storage URL: sessions/5b6acc70-442d-4525-b22a-3c6c32ec1281/NHome_Dona_Ana_Beach_residences_5_2A_Balcony___Back_floor_skirting_2026-01-12T23-15-26-427Z.jpg
+
+
+5. SUMMARY AND RECOMMENDATIONS:
+================================================================================
+Total photos: 24
+Total issues: 50
+Average photos per issue: 0.48
+Items with multiple photos: 7
+
+⚠️ WARNING: Some items have multiple photos while others may have none!
+This suggests photos may be incorrectly mapped to items.

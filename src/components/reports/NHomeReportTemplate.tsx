@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { pt, enGB } from "date-fns/locale";
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontFamily: "Roboto" },
+  page: { padding: 40, fontFamily: "Helvetica" },
   header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: "#d29d54", paddingBottom: 10 },
   title: { fontSize: 20, color: "#8f8552", textAlign: "center" },
   sub: { fontSize: 12, color: "#475569", textAlign: "center", marginTop: 6 },

@@ -30,6 +30,9 @@ export class NHomePhotoUploadService {
       formData.append('file', blob)
       formData.append('sessionId', sessionId)
       formData.append('fileName', fileName)
+      if (itemId) {
+        formData.append('itemId', itemId)
+      }
 
       const uploadResponse = await fetch('/api/nhome/upload-photo', {
         method: 'POST',

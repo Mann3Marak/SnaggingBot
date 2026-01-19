@@ -44,10 +44,12 @@ interface NHomeReportLanguage {
   of: string
 }
 
-Font.register({
-  family: 'Roboto',
-  src: '/fonts/Roboto-Regular.ttf',
-})
+// Font registration disabled - relative paths don't work in browser context
+// Using built-in Helvetica font instead
+// Font.register({
+//   family: 'Roboto',
+//   src: '/fonts/Roboto-Regular.ttf',
+// })
 
 const PT: NHomeReportLanguage = {
   title: 'INSPEÇÃO DE LISTA DE PENDÊNCIAS',
@@ -82,7 +84,7 @@ const EN: NHomeReportLanguage = {
 }
 
 const styles = StyleSheet.create({
-  page: { padding: 40, fontFamily: 'Roboto' },
+  page: { padding: 40, fontFamily: 'Helvetica' },
   header: { marginBottom: 20, borderBottomWidth: 2, borderBottomColor: '#d29d54', paddingBottom: 10 },
   title: { fontSize: 20, color: '#8f8552', textAlign: 'center' },
   sub: { fontSize: 12, color: '#475569', textAlign: 'center', marginTop: 6 },
@@ -210,7 +212,14 @@ export class NHomeReportGenerationService {
   }
 
   async generateNHomeBilingualReports(sessionId: string): Promise<{ portuguese: Blob; english: Blob }> {
+    console.log('[ReportService] generateNHomeBilingualReports started', { sessionId })
     const data = await this.loadInspectionData(sessionId)
+    console.log('[ReportService] Data loaded', {
+      resultsCount: data.results?.length,
+      photosCount: data.photos?.length,
+      hasProject: !!data.project,
+      hasApartment: !!data.apartment,
+    })
 
     // Use existing Portuguese notes from database (pt_notes)
     const translatedResults = data.results.map((r) => ({
@@ -220,23 +229,56 @@ export class NHomeReportGenerationService {
 
     const translatedData = { ...data, results: translatedResults };
 
+    console.log('[ReportService] Creating Portuguese report template...')
     const PTReport = this.createNHomeReport(translatedData, "pt");
+    console.log('[ReportService] Creating English report template...')
     const ENReport = this.createNHomeReport(data, "en");
+
+    console.log('[ReportService] Rendering Portuguese PDF...')
     const portuguese = await this.renderNHomePDF(PTReport);
+    console.log('[ReportService] Portuguese PDF complete. Rendering English PDF...')
     const english = await this.renderNHomePDF(ENReport);
+    console.log('[ReportService] Both PDFs rendered successfully')
+
     return { portuguese, english };
   }
 
   public async loadInspectionData(sessionId: string): Promise<NHomeInspectionData> {
-    const res = await fetch(`/api/nhome/inspections/${sessionId}/report-data?t=${Date.now()}`, { cache: 'no-store' })
-    if (!res.ok) throw new Error('Failed to fetch NHome inspection data')
-    return (await res.json()) as NHomeInspectionData
+    console.log('[ReportService] loadInspectionData called', { sessionId })
+    const url = `/api/nhome/inspections/${sessionId}/report-data?t=${Date.now()}`
+    console.log('[ReportService] Fetching:', url)
+
+    const res = await fetch(url, { cache: 'no-store' })
+    console.log('[ReportService] Fetch response:', { status: res.status, ok: res.ok })
+
+    if (!res.ok) {
+      const errorText = await res.text()
+      console.error('[ReportService] Fetch failed:', errorText)
+      throw new Error('Failed to fetch NHome inspection data')
+    }
+
+    const data = (await res.json()) as NHomeInspectionData
+    console.log('[ReportService] Data parsed successfully')
+    return data
   }
 
   private async renderNHomePDF(ReportComponent: React.ComponentType): Promise<Blob> {
-    const { pdf } = await import('@react-pdf/renderer')
-    const inst = pdf(<ReportComponent />)
-    return await inst.toBlob()
+    console.log('[ReportService] Starting PDF render...')
+    const startTime = Date.now()
+
+    try {
+      console.log('[ReportService] Importing @react-pdf/renderer...')
+      const { pdf } = await import('@react-pdf/renderer')
+      console.log('[ReportService] Creating PDF instance...')
+      const inst = pdf(<ReportComponent />)
+      console.log('[ReportService] Converting to blob (this may take a while)...')
+      const blob = await inst.toBlob()
+      console.log(`[ReportService] PDF rendered successfully in ${Date.now() - startTime}ms, size: ${blob.size} bytes`)
+      return blob
+    } catch (error: any) {
+      console.error('[ReportService] PDF render failed:', error?.message, error?.stack)
+      throw error
+    }
   }
 
   async generateNHomeClientPackage(sessionId: string): Promise<{

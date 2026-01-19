@@ -8,7 +8,18 @@
       "Bash(supabase db reset:*)",
       "Bash(npx supabase:*)",
       "Bash(npm run dev)",
-      "Bash(npx tsx query-db-status.ts)"
+      "Bash(npx tsx query-db-status.ts)",
+      "Bash(taskkill:*)",
+      "Bash(cd /c/Users/johan/OneDrive/Documents/GitProjects/SnaggingBot V2.0)",
+      "Bash(node -r dotenv/config -r tsx/register:*)",
+      "Bash(npx ts-node:*)",
+      "Bash(node -e:*)",
+      "Bash(node scripts/check-duplicates.js:*)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nFix PDF generation with photos using client-side rendering\n\n- Switch PDF generation from server-side to client-side to avoid react-pdf hanging\n- Pre-fetch all images as base64 data URLs before PDF rendering\n- Re-enable photos in both EN and PT report templates\n- Fix duplicate photo display in VoiceWorkspace by removing redundant source\n- Improve photo deduplication in useNHomePhotoCapture hook\n- Add server-side PDF templates and generate-pdf route \\(fallback option\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []

@@ -31,6 +31,7 @@ export async function POST(req: Request) {
       .upload(path, buffer, {
         upsert: true,
         contentType: "application/pdf",
+        cacheControl: "no-cache, no-store, must-revalidate",
       });
 
     if (error) {
@@ -42,8 +43,10 @@ export async function POST(req: Request) {
       .from("nhome_reports")
       .getPublicUrl(path);
 
-    console.log("✅ Report uploaded successfully:", publicUrl.publicUrl);
-    return NextResponse.json({ url: publicUrl.publicUrl });
+    // Add cache-busting timestamp to URL
+    const urlWithCacheBuster = `${publicUrl.publicUrl}?t=${Date.now()}`;
+    console.log("✅ Report uploaded successfully:", urlWithCacheBuster);
+    return NextResponse.json({ url: urlWithCacheBuster });
   } catch (err: any) {
     console.error("❌ Upload failed:", err);
     return NextResponse.json({ error: err.message }, { status: 500 });
