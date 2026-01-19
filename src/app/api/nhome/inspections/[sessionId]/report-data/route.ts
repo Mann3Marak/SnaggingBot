@@ -194,12 +194,15 @@ export async function GET(
       photosByKey.set(key, bucket)
     })
 
-    const filteredResults = (results ?? []).filter((r) =>
-      r.status === 'issue' || r.status === 'critical'
-    )
+    const visibleResults = (results ?? []).filter((r) => {
+      if (r.status === 'not_applicable') return false
+      const desc = r.checklist_templates?.item_description
+      if (desc === 'Other' && r.status === 'good') return false
+      return true
+    })
 
     // Sort results by checklist order_sequence for proper report ordering
-    const sortedResults = [...filteredResults].sort((a, b) => {
+    const sortedResults = [...visibleResults].sort((a, b) => {
       const orderA = a.checklist_templates?.order_sequence ?? 9999
       const orderB = b.checklist_templates?.order_sequence ?? 9999
       return orderA - orderB

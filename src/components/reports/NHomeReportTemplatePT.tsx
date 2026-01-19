@@ -31,7 +31,6 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
     property: "Imóvel",
     apartment: "Fração",
     date: "Data",
-    inspector: "Inspetor",
   };
 
   const translateItem = (desc?: string) => {
@@ -49,6 +48,10 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
     };
     return dict[desc] || desc;
   };
+
+  const visibleResults = (data.results || []).filter(
+    (it: any) => it.status === 'issue' || it.status === 'critical'
+  );
 
   return (
     <Document>
@@ -96,16 +99,12 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
               {format(new Date(data.session.started_at), "PPP", { locale: pt })}
             </Text>
           </View>
-          <View style={styles.cell}>
-            <Text style={styles.label}>{L.inspector}:</Text>
-            <Text style={styles.value}>Equipa Profissional NHome</Text>
-          </View>
         </View>
 
         <View style={{ borderBottomWidth: 1, borderBottomColor: "#ccc", marginVertical: 10 }} />
 
         {(Object.entries(
-          data.results.reduce((acc: Record<string, any[]>, it: any) => {
+          visibleResults.reduce((acc: Record<string, any[]>, it: any) => {
             const room = it.checklist_templates?.room_type || "Sem categoria";
             if (!acc[room]) acc[room] = [];
             acc[room].push(it);

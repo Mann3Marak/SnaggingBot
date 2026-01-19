@@ -70,10 +70,6 @@ export const ServerPDFTemplateEN = ({ data }: { data: ServerPDFData }) => {
                 : 'N/A'}
             </Text>
           </View>
-          <View style={styles.cell}>
-            <Text style={styles.label}>Inspector:</Text>
-            <Text style={styles.value}>NHome Professional Team</Text>
-          </View>
         </View>
 
         <View style={{ borderBottomWidth: 1, borderBottomColor: "#ccc", marginVertical: 10 }} />

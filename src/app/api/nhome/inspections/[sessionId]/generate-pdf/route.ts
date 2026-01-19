@@ -120,8 +120,18 @@ export async function GET(
       console.log(`  >>> BLINDS [id=${r.id}, item_id=${r.item_id}] room=${r.checklist_templates?.room_type}: status=${r.status}, notes=${r.notes?.substring(0, 30) || 'none'}`);
     });
 
+    const filteredResults = (results || []).filter(r => {
+      if (r.status === 'not_applicable') return false;
+      const desc = r.checklist_templates?.item_description;
+      if (desc === 'Other' && r.status === 'good') return false;
+      return true;
+    });
+    const visibleResults = lang === 'pt'
+      ? filteredResults.filter(r => r.status === 'issue' || r.status === 'critical')
+      : filteredResults;
+
     // Sort by order_sequence
-    const sortedResults = [...(results || [])].sort((a, b) => {
+    const sortedResults = [...visibleResults].sort((a, b) => {
       const orderA = a.checklist_templates?.order_sequence ?? 9999;
       const orderB = b.checklist_templates?.order_sequence ?? 9999;
       return orderA - orderB;

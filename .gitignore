@@ -40,3 +40,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# generated reports and logs
+changed_files_list.txt
+changed_files.txt
+commit_history.txt
+diff_report.txt
+diff_summary_output.txt
+diff_summary.txt
+photo-investigation-report.txt
+
+# supabase temp files
+supabase/all_tables_extract.txt
+supabase/users_table_extract.txt
+supabase/.temp/
+
+# editor settings
+.claude/

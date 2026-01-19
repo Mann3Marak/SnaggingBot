@@ -27,7 +27,6 @@ export const NHomeReportTemplate = ({ data, language }: { data: any; language: "
         property: "Imóvel",
         apartment: "Fração",
         date: "Data",
-        inspector: "Inspetor",
       }
     : {
         title: "SNAG LIST INSPECTION",
@@ -36,7 +35,6 @@ export const NHomeReportTemplate = ({ data, language }: { data: any; language: "
         property: "Property",
         apartment: "Unit",
         date: "Date",
-        inspector: "Inspector",
       };
 
   const locale = language === "pt" ? pt : enGB;
@@ -101,10 +99,6 @@ export const NHomeReportTemplate = ({ data, language }: { data: any; language: "
             <Text style={styles.value}>
               {format(new Date(data.session.started_at), "PPP", { locale })}
             </Text>
-          </View>
-          <View style={styles.cell}>
-            <Text style={styles.label}>{L.inspector}:</Text>
-            <Text style={styles.value}>NHome Professional Team</Text>
           </View>
         </View>
 

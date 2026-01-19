@@ -31,7 +31,6 @@ export const NHomeReportTemplateEN = ({ data }: { data: any }) => {
     property: "Property",
     apartment: "Unit",
     date: "Date",
-    inspector: "Inspector",
   };
 
   return (
@@ -79,10 +78,6 @@ export const NHomeReportTemplateEN = ({ data }: { data: any }) => {
             <Text style={styles.value}>
               {format(new Date(data.session.started_at), "PPP", { locale: enGB })}
             </Text>
-          </View>
-          <View style={styles.cell}>
-            <Text style={styles.label}>{L.inspector}:</Text>
-            <Text style={styles.value}>NHome Professional Team</Text>
           </View>
         </View>
 
