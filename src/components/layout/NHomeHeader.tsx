@@ -9,7 +9,6 @@ import { SignOutButton } from '@/components/auth/SignOutButton'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard' },
-  { href: '/inspection/start', label: 'Inspection' },
 ]
 
 export function NHomeHeader() {
@@ -28,12 +27,12 @@ export function NHomeHeader() {
   }, [pathname, isAuthenticated])
 
   const desktopMenuClasses = [
-    'absolute right-0 top-12 z-30 hidden w-64 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg',
+    'absolute right-0 top-12 z-50 hidden w-64 rounded-2xl border border-slate-200 bg-white p-4 shadow-lg',
     menuOpen ? 'md:block' : 'md:hidden',
   ].join(' ')
 
   return (
-    <header className='border-b border-slate-200 bg-white/90 backdrop-blur'>
+    <header className='relative z-50 border-b border-slate-200 bg-white/90 backdrop-blur'>
       <div className='mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8'>
         <div className='flex items-center gap-6'>
           <Link href='/' aria-label='NHome home'>
@@ -53,6 +52,14 @@ export function NHomeHeader() {
                   </Link>
                 )
               })}
+              {user?.role === 'admin' && (
+                <Link
+                  href='/admin'
+                  className={pathname.startsWith('/admin') ? 'text-nhome-primary' : 'text-slate-600 hover:text-nhome-primary'}
+                >
+                  Admin
+                </Link>
+              )}
             </nav>
           )}
         </div>
@@ -91,6 +98,17 @@ export function NHomeHeader() {
                       </Link>
                     )
                   })}
+                  {user?.role === 'admin' && (
+                    <Link
+                      href='/admin'
+                      onClick={closeMenu}
+                      className={`rounded-lg px-3 py-2 transition ${
+                        pathname.startsWith('/admin') ? 'bg-nhome-primary/10 text-nhome-primary' : 'hover:bg-slate-100'
+                      }`}
+                    >
+                      Admin
+                    </Link>
+                  )}
                 </nav>
                 <div className='mt-4 border-t border-slate-200 pt-4'>
                   <SignOutButton className='w-full rounded-lg bg-nhome-primary px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-nhome-primary-dark'>
@@ -99,14 +117,14 @@ export function NHomeHeader() {
                 </div>
               </div>
             </>
-          ) : (
+          ) : pathname !== '/auth/signin' ? (
             <Link
               href='/auth/signin'
               className='inline-flex items-center justify-center rounded-full border border-nhome-primary px-4 py-2 text-sm font-semibold text-nhome-primary transition hover:bg-nhome-primary/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-nhome-primary'
             >
               Log in
             </Link>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -131,6 +149,17 @@ export function NHomeHeader() {
                     </Link>
                   )
                 })}
+                {user?.role === 'admin' && (
+                  <Link
+                    href='/admin'
+                    onClick={closeMenu}
+                    className={`rounded-lg px-3 py-2 transition ${
+                      pathname.startsWith('/admin') ? 'bg-nhome-primary/10 text-nhome-primary' : 'hover:bg-slate-100'
+                    }`}
+                  >
+                    Admin
+                  </Link>
+                )}
               </nav>
               <div className='mt-4 border-t border-slate-200 pt-4'>
                 <SignOutButton className='w-full rounded-lg bg-nhome-primary px-3 py-2 text-center text-sm font-semibold text-white transition hover:bg-nhome-primary-dark'>

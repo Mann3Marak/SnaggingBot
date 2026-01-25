@@ -45,11 +45,6 @@ function isPublicPath(pathname: string): boolean {
     return true;
   }
 
-  // Root path is public (landing page)
-  if (pathname === "/") {
-    return true;
-  }
-
   // Everything else requires authentication
   return false;
 }
@@ -128,6 +123,22 @@ export async function middleware(req: NextRequest) {
 
   console.log('[Middleware] Path public:', isPublic);
 
+  // Handle root path - redirect based on auth status
+  if (normalizedPathname === "/") {
+    const redirectUrl = req.nextUrl.clone();
+    if (session) {
+      // Authenticated user → dashboard
+      console.log('[Middleware] Root path - authenticated user, redirecting to /dashboard');
+      redirectUrl.pathname = "/dashboard";
+    } else {
+      // Not authenticated → sign-in
+      console.log('[Middleware] Root path - no session, redirecting to /auth/signin');
+      redirectUrl.pathname = "/auth/signin";
+    }
+    redirectUrl.search = ""; // Clear any query params
+    return NextResponse.redirect(redirectUrl);
+  }
+
   // Handle authenticated user trying to access sign-in page
   if (session && normalizedPathname === "/auth/signin") {
     console.log('[Middleware] Authenticated user accessing signin - redirecting to /dashboard');
@@ -159,7 +170,5 @@ export async function middleware(req: NextRequest) {
 
 // Match all paths
 export const config = {
-  matcher: [
-    '/(.*)',
-  ],
+  matcher: ['/:path*'],
 };
