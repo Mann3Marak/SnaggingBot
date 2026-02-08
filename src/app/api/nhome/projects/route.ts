@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest } from "next/server";
+import { createServiceClient, requireApiAuth } from "@/lib/server/apiAuth";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    const { user, profile } = await requireApiAuth(req);
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
     const { data, error } = await supabase
       .from("projects")
       .select("id, name, developer_name, address")
+      .eq("company_id", profile.company_id)
       .order("name", { ascending: true });
 
     if (error) {
@@ -22,6 +26,9 @@ export async function GET() {
 
     return NextResponse.json({ projects: data });
   } catch (err: any) {
+    if (err instanceof NextResponse) {
+      return err;
+    }
     console.error("Unexpected error fetching projects:", err);
     return NextResponse.json(
       { error: "Unexpected server error", detail: err.message },

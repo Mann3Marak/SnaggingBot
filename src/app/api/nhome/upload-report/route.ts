@@ -1,10 +1,10 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { requireOwnership, createServiceClient } from "@/lib/server/apiAuth";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { file, fileName, sessionId } = await req.json();
 
@@ -12,10 +12,23 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Verify user owns the session or is admin
+    const { user } = await requireOwnership(req, {
+      type: "session",
+      resourceId: sessionId,
+    });
+
+    console.info('[Upload Report] Uploading report', {
+      sessionId,
+      fileName,
+      userId: user.id,
+    });
+
+    // Use service role for storage operations (required for storage API)
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
     const buffer = Buffer.from(file, "base64");
     // Use fixed filenames to ensure overwriting existing reports
@@ -45,10 +58,23 @@ export async function POST(req: Request) {
 
     // Add cache-busting timestamp to URL
     const urlWithCacheBuster = `${publicUrl.publicUrl}?t=${Date.now()}`;
-    console.log("✅ Report uploaded successfully:", urlWithCacheBuster);
+
+    console.info('[Upload Report] Report uploaded successfully', {
+      sessionId,
+      userId: user.id,
+      url: urlWithCacheBuster,
+    });
+
     return NextResponse.json({ url: urlWithCacheBuster });
   } catch (err: any) {
-    console.error("❌ Upload failed:", err);
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (err instanceof NextResponse) {
+      return err;
+    }
+
+    console.error("[Upload Report] Upload failed", {
+      error: err.message,
+    });
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getOpenAIConfig } from "@/lib/env";
+import { requireOwnership } from "@/lib/server/apiAuth";
 
 type ConversationMessage = {
   role: "user" | "assistant";
@@ -28,7 +29,7 @@ import { NHOME_WORKFLOW_PROMPT } from "@/lib/nhome-workflow-prompt";
 
 const BASE_SYSTEM_PROMPT = NHOME_WORKFLOW_PROMPT;
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const contentType = req.headers.get("content-type") || "";
     const body = contentType.includes("application/json") ? await req.json() : {};
@@ -36,6 +37,17 @@ export async function POST(req: Request) {
 
     // If text is provided, handle structured voice agent logic
     if (text && sessionId) {
+      // Verify user owns the session or is admin
+      const { user } = await requireOwnership(req, {
+        type: "session",
+        resourceId: sessionId,
+      });
+
+      console.info('[Agent] Voice command processing', {
+        sessionId,
+        userId: user.id,
+        textLength: text.length,
+      });
       const lower = text.toLowerCase();
       let action = "none";
       let comment = "";
@@ -72,10 +84,17 @@ export async function POST(req: Request) {
         reply = "I didn’t quite catch that. Could you repeat?";
       }
 
+      console.info('[Agent] Voice command processed', {
+        sessionId,
+        userId: user.id,
+        action,
+      });
+
       return NextResponse.json({ action, comment, reply });
     }
 
     // Otherwise, fallback to OpenAI conversation logic
+    // Note: Conversation mode doesn't modify sessions, so it's less critical but still authenticated
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: "Missing messages" }, { status: 400 });
     }
@@ -136,7 +155,14 @@ export async function POST(req: Request) {
       ...(actionData ? actionData : {}),
     });
   } catch (error: any) {
-    console.error("Agent error:", error);
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (error instanceof NextResponse) {
+      return error;
+    }
+
+    console.error("[Agent] Error processing request", {
+      error: error.message,
+    });
     return NextResponse.json({ error: "Failed to generate response" }, { status: 500 });
   }
 }

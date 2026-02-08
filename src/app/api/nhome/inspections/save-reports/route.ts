@@ -1,7 +1,7 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireOwnership, createServiceClient } from '@/lib/server/apiAuth'
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { sessionId, portugueseUrl, englishUrl, photoPackageUrl } = body
@@ -10,17 +10,25 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Verify user owns the session or is admin
+    const { user } = await requireOwnership(req, {
+      type: 'session',
+      resourceId: sessionId,
+    })
 
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { error: 'Supabase service role key or URL not configured' },
-        { status: 500 }
-      )
-    }
+    console.info('[Save Reports] Saving report URLs', {
+      sessionId,
+      userId: user.id,
+      hasPortuguese: !!portugueseUrl,
+      hasEnglish: !!englishUrl,
+      hasPhotoPackage: !!photoPackageUrl,
+    })
 
-    const supabase = createClient(supabaseUrl, serviceKey)
+    // Use service role to update session (RLS might block updates)
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    })
 
     const { data, error } = await supabase
       .from('inspection_sessions')
@@ -35,13 +43,23 @@ export async function POST(req: Request) {
       .maybeSingle()
 
     if (error) {
+      console.error('[Save Reports] Failed to save report URLs', {
+        error: error.message,
+        sessionId,
+        userId: user.id,
+      });
       return NextResponse.json({ error: 'Failed to save reports', detail: error.message }, { status: 500 })
     }
+
+    console.info('[Save Reports] Report URLs saved successfully', {
+      sessionId,
+      userId: user.id,
+    });
 
     // After saving reports, trigger translation for any missing pt_notes
     try {
       const { data: results } = await supabase
-        .from("nhome_inspection_results")
+        .from("inspection_results")
         .select("id, notes, pt_notes")
         .eq("session_id", sessionId)
 
@@ -56,12 +74,24 @@ export async function POST(req: Request) {
           }
         }
       }
-    } catch (err) {
-      console.error("Translation trigger failed:", err)
+    } catch (err: any) {
+      console.warn('[Save Reports] Translation trigger failed', {
+        error: err.message,
+        sessionId,
+        userId: user.id,
+      });
     }
 
     return NextResponse.json({ success: true, session: data })
   } catch (e: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (e instanceof NextResponse) {
+      return e;
+    }
+
+    console.error('[Save Reports] Unexpected error', {
+      error: e?.message,
+    });
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })
   }
 }

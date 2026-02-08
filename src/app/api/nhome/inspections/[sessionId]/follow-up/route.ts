@@ -1,11 +1,11 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { createServiceClient, requireOwnership } from "@/lib/server/apiAuth";
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: { sessionId: string } }
 ) {
   const sessionId = params.sessionId;
@@ -14,17 +14,15 @@ export async function GET(
       return NextResponse.json({ error: "Missing sessionId" }, { status: 400 });
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { error: "Supabase service role key or URL not configured" },
-        { status: 500 }
-      );
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey);
+    // Enforce session ownership (or admin) before any read.
+    const { user } = await requireOwnership(req, {
+      type: "session",
+      resourceId: sessionId,
+    });
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
     // 1) Fetch session with apartment and project details
     const { data: session, error: sessionError } = await supabase
@@ -160,7 +158,7 @@ export async function GET(
   }
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { sessionId, updates } = body;
@@ -172,48 +170,77 @@ export async function POST(req: Request) {
       );
     }
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Enforce session ownership (or admin) before any mutation.
+    const { user } = await requireOwnership(req, {
+      type: "session",
+      resourceId: sessionId,
+    });
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
-    if (!supabaseUrl || !serviceKey) {
+    const updateIds = updates
+      .map((u: { id?: string }) => u?.id)
+      .filter((id: string | undefined): id is string => Boolean(id));
+
+    if (updateIds.length !== updates.length) {
       return NextResponse.json(
-        { error: "Supabase service role key or URL not configured" },
-        { status: 500 }
+        { error: "Each update must include a valid id" },
+        { status: 400 }
       );
     }
 
-    const supabase = createClient(supabaseUrl, serviceKey);
-
-    // Update each item with follow-up data
-    const updatesWithTimestamps = updates.map((u) => ({
-      id: u.id,
-      follow_up_fixed: u.fixed,
-      follow_up_comment: u.comment || null,
-      follow_up_updated_at: new Date().toISOString(),
-    }));
-
-    const { data, error } = await supabase
+    // Ensure every requested result belongs to this session.
+    const { data: scopedRows, error: scopeError } = await supabase
       .from("inspection_results")
-      .update(
-        updates.map((u) => ({
-          follow_up_fixed: u.fixed,
-          follow_up_comment: u.comment || null,
-          follow_up_updated_at: new Date().toISOString(),
-        }))
-      )
-      .in("id", updates.map((u) => u.id))
-      .select("*");
+      .select("id")
+      .eq("session_id", sessionId)
+      .in("id", updateIds);
 
-    if (error) {
-      console.error("Supabase update error:", error);
+    if (scopeError) {
+      console.error("Supabase scoping error:", scopeError);
       return NextResponse.json(
-        { error: "Failed to update follow-up results", detail: error.message },
+        { error: "Failed to validate update scope", detail: scopeError.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ success: true, updated: data });
+    const allowedIds = new Set((scopedRows ?? []).map((r) => r.id));
+    const outOfScopeIds = updateIds.filter((id) => !allowedIds.has(id));
+    if (outOfScopeIds.length > 0) {
+      return NextResponse.json(
+        { error: "One or more update IDs do not belong to this session" },
+        { status: 403 }
+      );
+    }
+
+    const updatedResults = await Promise.all(
+      updates.map(async (u: { id: string; fixed?: boolean; comment?: string }) => {
+        const { data, error } = await supabase
+          .from("inspection_results")
+          .update({
+            follow_up_fixed: Boolean(u.fixed),
+            follow_up_comment: u.comment || null,
+            follow_up_updated_at: new Date().toISOString(),
+          })
+          .eq("id", u.id)
+          .eq("session_id", sessionId)
+          .select("*")
+          .maybeSingle();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+        return data;
+      })
+    );
+
+    return NextResponse.json({ success: true, updated: updatedResults.filter(Boolean) });
   } catch (e: any) {
+    if (e instanceof NextResponse) {
+      return e;
+    }
     return NextResponse.json(
       { error: "Unexpected server error", detail: e?.message },
       { status: 500 }

@@ -1,16 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+import { requireRole, createServiceClient } from '@/lib/server/apiAuth';
 
 /**
  * One-time fix endpoint to mark inspection sessions as completed
  * when all checklist items have been inspected
+ * ADMIN-ONLY: Affects all sessions across all companies
  */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient(supabaseUrl, serviceKey);
+    // Require admin role for this maintenance endpoint
+    const { user } = await requireRole(request, ['admin']);
+
+    console.info('[Fix Completed Sessions] Starting maintenance operation', {
+      userId: user.id,
+    });
+
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: request.nextUrl.pathname,
+    });
 
     // Get all inspection sessions that are not completed
     const { data: sessions, error: sessionsError } = await supabase
@@ -64,13 +72,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    console.info('[Fix Completed Sessions] Maintenance operation completed', {
+      updatedSessions: updates.length,
+      userId: user.id,
+    });
+
     return NextResponse.json({
       success: true,
       message: `Fixed ${updates.length} inspection session(s)`,
       updates,
     });
   } catch (error: any) {
-    console.error('Error fixing completed sessions:', error);
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (error instanceof NextResponse) {
+      return error;
+    }
+
+    console.error('[Fix Completed Sessions] Maintenance operation failed', {
+      error: error.message,
+    });
     return NextResponse.json(
       { error: error.message || 'Unknown error' },
       { status: 500 }

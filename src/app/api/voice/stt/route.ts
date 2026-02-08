@@ -1,10 +1,12 @@
 export const runtime = "nodejs";
 
+import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { Buffer } from "node:buffer";
 import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import { getOpenAIConfig } from "@/lib/env";
+import { requireApiAuth } from "@/lib/server/apiAuth";
 
 type OpenAIClient = ReturnType<typeof createClient>;
 
@@ -62,12 +64,17 @@ async function createUploadableFile(file: File, maxBytes: number) {
   return toFile(buffer, filename, { type: mimeType });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   let openai: OpenAIClient;
 
   try {
+    // Require authenticated user to prevent public cost abuse.
+    await requireApiAuth(req);
     openai = getClient();
   } catch (configError: any) {
+    if (configError instanceof NextResponse) {
+      return configError;
+    }
     console.error("STT configuration error:", configError);
     const message =
       configError?.message ||

@@ -1,10 +1,6 @@
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { NextRequest, NextResponse } from "next/server";
+import { requireOwnership, createServiceClient } from "@/lib/server/apiAuth";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey);
 const BUCKET_ID = "nhome_photos";
 
 const tryDecode = (value: string) => {
@@ -65,13 +61,11 @@ function buildStorageCandidates(options: {
 }
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { sessionId: string } }
 ) {
   try {
     const sessionId = params.sessionId;
-    const { searchParams } = new URL(req.url);
-    const itemId = searchParams.get("itemId") ?? searchParams.get("item_id");
 
     if (!sessionId) {
       return NextResponse.json(
@@ -79,6 +73,21 @@ export async function GET(
         { status: 400 }
       );
     }
+
+    // Verify user owns the session or is admin
+    const { user } = await requireOwnership(req, {
+      type: "session",
+      resourceId: sessionId,
+    });
+
+    // Use service role for storage operations and photo metadata
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
+
+    const { searchParams } = new URL(req.url);
+    const itemId = searchParams.get("itemId") ?? searchParams.get("item_id");
 
     const query = supabase
       .from("nhome_photos")
@@ -93,10 +102,12 @@ export async function GET(
     const { data, error } = await query;
 
     if (error) {
-      console.error(
-        "[NHomePhotos] Failed to load photos",
-        { sessionId, itemId, error }
-      );
+      console.error("[NHomePhotos] Failed to load photos", {
+        sessionId,
+        itemId,
+        error: error.message,
+        userId: user.id,
+      });
       return NextResponse.json(
         { error: "Failed to load photos" },
         { status: 500 }
@@ -149,6 +160,11 @@ export async function GET(
 
     return NextResponse.json({ photos: photosWithUrls });
   } catch (err: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (err instanceof NextResponse) {
+      return err;
+    }
+
     console.error("[NHomePhotos] Unexpected GET error", err);
     return NextResponse.json(
       { error: "Unexpected error" },
@@ -158,11 +174,18 @@ export async function GET(
 }
 
 export async function POST(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { sessionId: string } }
 ) {
   try {
     const sessionId = params.sessionId;
+
+    // Verify user owns the session or is admin
+    const { user } = await requireOwnership(req, {
+      type: "session",
+      resourceId: sessionId,
+    });
+
     const body = await req.json();
     const {
       item_id,
@@ -180,6 +203,12 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Use service role for storage operations and photo metadata
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
     const storagePath = resolveStoragePath(
       sessionId,
@@ -205,30 +234,37 @@ export async function POST(
       .single();
 
     if (error) {
-      console.error(
-        "[NHomePhotos] Failed to persist metadata",
-        { sessionId, item_id, file_name, error }
-      );
+      console.error("[NHomePhotos] Failed to persist metadata", {
+        sessionId,
+        item_id,
+        file_name,
+        error: error.message,
+        userId: user.id,
+      });
       return NextResponse.json(
         { error: "Failed to save photo" },
         { status: 500 }
       );
     }
 
-    console.log(
-      `[NHomePhotos] Stored photo metadata`,
-      { sessionId, item_id, file_name }
-    );
+    console.info("[NHomePhotos] Stored photo metadata", {
+      sessionId,
+      item_id,
+      file_name,
+      userId: user.id,
+    });
 
     const { data: signed, error: signedError } = await supabase.storage
       .from(BUCKET_ID)
       .createSignedUrl(storagePath, 60 * 60 * 24);
 
     if (signedError) {
-      console.warn(
-        "[NHomePhotos] Metadata stored but unable to create signed URL",
-        { sessionId, storagePath, error: signedError }
-      );
+      console.warn("[NHomePhotos] Metadata stored but unable to create signed URL", {
+        sessionId,
+        storagePath,
+        error: signedError.message,
+        userId: user.id,
+      });
     }
 
     return NextResponse.json({
@@ -240,6 +276,11 @@ export async function POST(
       },
     });
   } catch (err: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (err instanceof NextResponse) {
+      return err;
+    }
+
     console.error("[NHomePhotos] Unexpected POST error", err);
     return NextResponse.json(
       { error: "Unexpected error" },

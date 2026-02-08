@@ -1,6 +1,5 @@
 const cached = {
   openAI: null as null | OpenAIConfig,
-  microsoft: null as null | MicrosoftGraphConfig,
   smtp: null as null | NHomeSmtpConfig,
   supabase: null as null | SupabaseConfig,
 }
@@ -8,15 +7,6 @@ const cached = {
 type OpenAIConfig = {
   apiKey: string
   baseUrl: string
-}
-
-type MicrosoftGraphConfig = {
-  tenant?: string
-  clientId?: string
-  clientSecret?: string
-  driveId?: string
-  hasClientCredentials: boolean
-  hasPartialCredentials: boolean
 }
 
 type NHomeSmtpConfig = {
@@ -52,42 +42,6 @@ export function getOpenAIConfig(): OpenAIConfig {
   return config
 }
 
-export function getMicrosoftGraphConfig(): MicrosoftGraphConfig {
-  const cachedValue = cached.microsoft
-  if (cachedValue) return cachedValue
-  const tenant = process.env.MS_TENANT_ID?.trim()
-  const clientId = process.env.MS_CLIENT_ID?.trim()
-  const clientSecret = process.env.MS_CLIENT_SECRET?.trim()
-  const driveId = (process.env.NEXT_PUBLIC_MS_DRIVE_ID || process.env.MS_DRIVE_ID)?.trim()
-  const provided = [tenant, clientId, clientSecret].filter(Boolean).length
-  const config: MicrosoftGraphConfig = {
-    tenant,
-    clientId,
-    clientSecret,
-    driveId,
-    hasClientCredentials: provided === 3,
-    hasPartialCredentials: provided > 0 && provided < 3,
-  }
-  cached.microsoft = config
-  return config
-}
-
-export function getMicrosoftGraphClientCredentials(): { tenant: string; clientId: string; clientSecret: string } {
-  const config = getMicrosoftGraphConfig()
-  const missing: string[] = []
-  if (!config.tenant) missing.push('MS_TENANT_ID')
-  if (!config.clientId) missing.push('MS_CLIENT_ID')
-  if (!config.clientSecret) missing.push('MS_CLIENT_SECRET')
-  if (missing.length) {
-    throw new Error(`[env] Missing Microsoft Graph configuration: ${missing.join(', ')}`)
-  }
-  return {
-    tenant: config.tenant!,
-    clientId: config.clientId!,
-    clientSecret: config.clientSecret!,
-  }
-}
-
 export function getNHomeSmtpConfig(): NHomeSmtpConfig {
   const cachedValue = cached.smtp
   if (cachedValue) return cachedValue
@@ -117,7 +71,6 @@ export function getSupabaseServiceConfig(): SupabaseConfig {
 
 export function resetEnvCache() {
   cached.openAI = null
-  cached.microsoft = null
   cached.smtp = null
   cached.supabase = null
 }

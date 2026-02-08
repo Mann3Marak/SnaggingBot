@@ -1,8 +1,8 @@
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { NextRequest, NextResponse } from 'next/server'
+import { requireOwnership, createServiceClient } from '@/lib/server/apiAuth'
 
 const BUCKET_ID = 'nhome_photos'
 
@@ -51,7 +51,7 @@ function buildStorageCandidates(options: {
 }
 
 export async function GET(
-  _req: Request,
+  req: NextRequest,
   { params }: { params: { sessionId: string } },
 ) {
   const sessionId = params.sessionId
@@ -60,20 +60,22 @@ export async function GET(
       return NextResponse.json({ error: 'Missing sessionId' }, { status: 400 })
     }
 
-    console.log("🧩 Report Data API called with sessionId:", sessionId);
+    // Verify user owns the session or is admin
+    const { user } = await requireOwnership(req, {
+      type: 'session',
+      resourceId: sessionId,
+    })
 
-    // Use service role client to bypass RLS for report generation
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    console.info('[Report Data] Loading report data', {
+      sessionId,
+      userId: user.id,
+    })
 
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { error: "Supabase service role key or URL not configured" },
-        { status: 500 }
-      )
-    }
-
-    const supabase = createClient(supabaseUrl, serviceKey)
+    // Use service role for report generation (bypasses RLS for comprehensive data fetch)
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    })
 
     // 1) Load the inspection session
     const { data: session, error: sessionError } = await supabase
@@ -277,6 +279,15 @@ export async function GET(
 
     return NextResponse.json(payload)
   } catch (e: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (e instanceof NextResponse) {
+      return e
+    }
+
+    console.error('[Report Data] Unexpected error', {
+      error: e?.message,
+      sessionId,
+    })
     return NextResponse.json({ error: 'Unexpected server error', detail: e?.message }, { status: 500 })
   }
 }

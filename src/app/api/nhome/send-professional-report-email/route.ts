@@ -1,13 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import { requireOwnership } from '@/lib/server/apiAuth'
 
 export async function POST(request: NextRequest) {
   try {
-    const { clientEmail, sessionData, reportUrls, projectName, unitNumber } = await request.json()
+    const { clientEmail, sessionData, reportUrls, projectName, unitNumber, sessionId } = await request.json()
 
     if (!clientEmail || !reportUrls?.portuguese) {
       return NextResponse.json({ error: 'Missing clientEmail or report URLs' }, { status: 400 })
     }
+
+    // IMPORTANT: Callers must now include sessionId in the request body
+    if (!sessionId) {
+      return NextResponse.json({ error: 'Missing sessionId - required for authorization' }, { status: 400 })
+    }
+
+    // Verify user owns the session or is admin (rename to authUser to avoid conflict with email username)
+    const { user: authUser } = await requireOwnership(request, {
+      type: 'session',
+      resourceId: sessionId,
+    })
+
+    console.info('[Send Report Email] Sending professional report email', {
+      sessionId,
+      clientEmail,
+      userId: authUser.id,
+    })
 
     const user = process.env.NHOME_EMAIL
     const pass = process.env.NHOME_EMAIL_PASSWORD
@@ -63,11 +81,22 @@ export async function POST(request: NextRequest) {
       html,
     })
 
+    console.info('[Send Report Email] Email sent successfully', {
+      sessionId,
+      clientEmail,
+      userId: authUser.id,
+    })
+
     return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Error sending NHome professional email:', error)
+  } catch (error: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (error instanceof NextResponse) {
+      return error
+    }
+
+    console.error('[Send Report Email] Failed to send email', {
+      error: error.message,
+    })
     return NextResponse.json({ error: 'Failed to send professional email' }, { status: 500 })
   }
 }
-
-

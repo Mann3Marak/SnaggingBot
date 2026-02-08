@@ -1,5 +1,7 @@
+import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getOpenAIConfig } from "@/lib/env";
+import { requireApiAuth } from "@/lib/server/apiAuth";
 
 type OpenAIConfig = {
   apiKey: string;
@@ -13,11 +15,16 @@ function getTtsConfig(): OpenAIConfig {
   return { apiKey, baseUrl: normalized };
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   let config: OpenAIConfig;
   try {
+    // Require authenticated user to prevent public cost abuse.
+    await requireApiAuth(req);
     config = getTtsConfig();
   } catch (configError: any) {
+    if (configError instanceof NextResponse) {
+      return configError;
+    }
     console.error("TTS configuration error:", configError);
     const message =
       configError?.message ||
@@ -29,6 +36,9 @@ export async function POST(req: Request) {
     const { text, voice = "alloy" } = await req.json();
     if (!text) {
       return NextResponse.json({ error: "Missing text input" }, { status: 400 });
+    }
+    if (typeof text !== "string" || text.length > 4000) {
+      return NextResponse.json({ error: "Text input is invalid or too long" }, { status: 400 });
     }
 
     const resp = await fetch(`${config.baseUrl}/audio/speech`, {

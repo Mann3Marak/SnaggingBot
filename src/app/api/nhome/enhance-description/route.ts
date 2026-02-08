@@ -1,8 +1,51 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireApiAuth } from '@/lib/server/apiAuth'
+
+/**
+ * GET handler for authentication enforcement
+ * Returns 405 Method Not Allowed only after authentication check
+ * This prevents endpoint enumeration through unauthenticated 405 responses
+ */
+export async function GET(request: NextRequest) {
+  try {
+    // Require authentication first (returns 401 if not authenticated)
+    await requireApiAuth(request)
+
+    // After authentication, return 405 for wrong method
+    return NextResponse.json(
+      { error: 'Method not allowed. Use POST to enhance descriptions.' },
+      { status: 405 }
+    )
+  } catch (error: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (error instanceof NextResponse) {
+      return error
+    }
+    throw error
+  }
+}
 
 export async function POST(request: NextRequest) {
   let userInput = ''
   try {
+    // Authenticate user (doesn't need ownership check as it's just AI enhancement)
+    const { user: authUser } = await requireApiAuth(request)
+
+    // Parse and validate request body
+    let body
+    try {
+      body = await request.json()
+    } catch (jsonError) {
+      console.warn('[Enhance Description] Malformed JSON', {
+        userId: authUser.id,
+        error: jsonError instanceof Error ? jsonError.message : 'Unknown',
+      })
+      return NextResponse.json(
+        { error: 'Invalid JSON in request body' },
+        { status: 400 }
+      )
+    }
+
     const {
       userInput: ui,
       item,
@@ -10,9 +53,26 @@ export async function POST(request: NextRequest) {
       nhome_standards,
       property_type,
       location,
-    } = await request.json()
+    } = body
+
+    // Validate required fields
+    if (!ui || typeof ui !== 'string' || ui.trim() === '') {
+      console.warn('[Enhance Description] Missing or invalid userInput', {
+        userId: authUser.id,
+      })
+      return NextResponse.json(
+        { error: 'Missing required field: userInput' },
+        { status: 400 }
+      )
+    }
 
     userInput = ui
+
+    console.info('[Enhance Description] Processing enhancement request', {
+      userId: authUser.id,
+      item,
+      room,
+    })
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
       console.warn('OPENAI_API_KEY not configured')
@@ -80,7 +140,13 @@ Enhance this observation into a professional NHome inspection note:`
     const data = await resp.json()
     const enhanced = data?.choices?.[0]?.message?.content || userInput
 
-    return NextResponse.json({ 
+    console.info('[Enhance Description] Enhancement completed', {
+      userId: authUser.id,
+      originalLength: userInput.length,
+      enhancedLength: enhanced.length,
+    })
+
+    return NextResponse.json({
       enhanced,
       nhome_context: {
         company: 'NHome Property Setup & Management',
@@ -88,9 +154,15 @@ Enhance this observation into a professional NHome inspection note:`
         standards: 'Professional Algarve property standards',
       },
     })
-  } catch (error) {
-    console.error('NHome description enhancement error:', error)
+  } catch (error: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (error instanceof NextResponse) {
+      return error
+    }
+
+    console.error('[Enhance Description] Enhancement error', {
+      error: error.message,
+    })
     return NextResponse.json({ enhanced: userInput })
   }
 }
-

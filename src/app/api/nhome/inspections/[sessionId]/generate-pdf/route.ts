@@ -3,8 +3,8 @@ export const revalidate = 0;
 export const fetchCache = 'force-no-store';
 export const maxDuration = 60; // Allow up to 60 seconds for PDF generation
 
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { NextRequest, NextResponse } from 'next/server';
+import { requireOwnership, createServiceClient } from '@/lib/server/apiAuth';
 import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { ServerPDFTemplateEN } from '@/components/reports/ServerPDFTemplateEN';
@@ -62,20 +62,36 @@ function renderWithTimeout(renderFn: () => Promise<Buffer>, timeoutMs: number): 
 }
 
 export async function GET(
-  req: Request,
+  req: NextRequest,
   { params }: { params: { sessionId: string } },
 ) {
   const sessionId = params.sessionId;
   const url = new URL(req.url);
   const lang = url.searchParams.get('lang') || 'en';
 
-  console.log(`[generate-pdf] Starting PDF generation for session ${sessionId}, lang: ${lang}`);
+  console.info('[generate-pdf] Starting PDF generation', {
+    sessionId,
+    lang,
+  });
   const startTime = Date.now();
 
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
-    const supabase = createClient(supabaseUrl, serviceKey);
+    // Verify user owns the session or is admin
+    const { user } = await requireOwnership(req, {
+      type: 'session',
+      resourceId: sessionId,
+    });
+
+    console.info('[generate-pdf] Session access granted', {
+      sessionId,
+      userId: user.id,
+    });
+
+    // Use service role for PDF generation (bypasses RLS for comprehensive data fetch)
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
     // 1) Load session
     const { data: session, error: sessionError } = await supabase
@@ -101,7 +117,6 @@ export async function GET(
 
     // 3) Load results with checklist templates
     console.log(`[generate-pdf] Querying inspection_results for session: ${sessionId}`);
-    console.log(`[generate-pdf] Using Supabase URL: ${supabaseUrl}`);
 
     const { data: results, error: resultsError } = await supabase
       .from('inspection_results')
@@ -226,7 +241,15 @@ export async function GET(
     });
 
   } catch (e: any) {
-    console.error('[generate-pdf] Error:', e);
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (e instanceof NextResponse) {
+      return e;
+    }
+
+    console.error('[generate-pdf] Error', {
+      error: e.message,
+      sessionId,
+    });
     return NextResponse.json({ error: e.message }, { status: 500 });
   }
 }

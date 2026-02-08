@@ -1,15 +1,27 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
+import { requireOwnership, createServiceClient } from "@/lib/server/apiAuth"
 
 // Force Node.js runtime so console logs appear in terminal
 export const runtime = "nodejs";
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
     const { note, resultId } = await req.json()
 
     if (!note || !resultId) {
       return NextResponse.json({ error: "Missing note or resultId" }, { status: 400 })
     }
+
+    // Verify user owns the result's session or is admin
+    const { user } = await requireOwnership(req, {
+      type: "result",
+      resourceId: resultId,
+    })
+
+    console.info("[Translate Notes] Translating note", {
+      resultId,
+      userId: user.id,
+    })
 
     // Translate note using OpenAI API
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -43,28 +55,18 @@ export async function POST(req: Request) {
     const data = await res.json()
     const translated = data.choices?.[0]?.message?.content?.trim() || note
 
-    // Update Supabase record with translated note
-    console.log("🟢 Translation API called with:", { resultId, note });
+    console.info("[Translate Notes] Translation completed", {
+      resultId,
+      userId: user.id,
+    })
 
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    // Use service role to update record (RLS might block updates)
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    })
 
-    // Debug: list all IDs in inspection_results
-    const { data: allResults, error: listError } = await supabase
-      .from("inspection_results")
-      .select("id, notes, pt_notes")
-      .limit(10);
-
-    if (listError) {
-      console.error("❌ Failed to list inspection_results:", listError);
-    } else {
-      console.log("📋 Sample inspection_results IDs:", allResults);
-    }
-
-    // Try updating by id
+    // Update inspection_result with translated note
     const { data: updated, error } = await supabase
       .from("inspection_results")
       .update({ pt_notes: translated })
@@ -72,7 +74,11 @@ export async function POST(req: Request) {
       .select("id, pt_notes");
 
     if (error) {
-      console.error("❌ Supabase update error:", error);
+      console.error("[Translate Notes] Supabase update error", {
+        error: error.message,
+        resultId,
+        userId: user.id,
+      });
       return NextResponse.json(
         { error: "Failed to update pt_notes", details: error.message },
         { status: 500 }
@@ -80,7 +86,10 @@ export async function POST(req: Request) {
     }
 
     if (!updated || updated.length === 0) {
-      console.warn("⚠️ No rows updated — check if resultId matches inspection_results.id");
+      console.warn("[Translate Notes] No rows updated", {
+        resultId,
+        userId: user.id,
+      });
       return NextResponse.json(
         {
           success: false,
@@ -91,11 +100,21 @@ export async function POST(req: Request) {
       );
     }
 
-    console.log("✅ Translation stored in Supabase:", updated);
+    console.info("[Translate Notes] Translation stored successfully", {
+      resultId,
+      userId: user.id,
+    });
 
     return NextResponse.json({ success: true, translated, updated });
   } catch (err: any) {
-    console.error("Unexpected error:", err)
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (err instanceof NextResponse) {
+      return err;
+    }
+
+    console.error("[Translate Notes] Unexpected error", {
+      error: err.message,
+    });
     return NextResponse.json({ error: "Internal server error", details: err.message }, { status: 500 })
   }
 }

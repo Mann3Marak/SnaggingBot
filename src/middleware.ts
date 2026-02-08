@@ -21,7 +21,6 @@ function isPublicPath(pathname: string): boolean {
   const authPaths = [
     "/auth/signin",
     "/auth/signup",
-    "/auth/microsoft/callback",
     "/auth/callback",
   ];
 

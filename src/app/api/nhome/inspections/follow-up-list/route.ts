@@ -1,25 +1,28 @@
+import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth, createServiceClient } from "@/lib/server/apiAuth";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-
-export async function GET() {
+export async function GET(req: NextRequest) {
   try {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // Authenticate user and get company context
+    const { user, profile } = await requireApiAuth(req);
 
-    if (!supabaseUrl || !serviceKey) {
-      return NextResponse.json(
-        { error: "Supabase service role key or URL not configured" },
-        { status: 500 }
-      );
-    }
+    console.info("[Follow-up List] Loading follow-up inspections", {
+      userId: user.id,
+      companyId: profile.company_id,
+    });
 
-    const supabase = createClient(supabaseUrl, serviceKey);
+    // Use service role for comprehensive query (bypasses RLS)
+    const supabase = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
 
-    // Fetch completed sessions that have unresolved items (issue or critical)
-    const { data, error } = await supabase
+    // Fetch completed sessions in user's company
+    // CRITICAL: Filter by company_id through projects join to enforce company isolation
+    const { data: sessions, error } = await supabase
       .from("inspection_sessions")
       .select(`
         id,
@@ -27,36 +30,33 @@ export async function GET() {
         completed_at,
         status,
         inspection_type,
-        apartments (
+        apartments!inner (
           unit_number,
           apartment_type,
-          projects (
-            name
+          projects!inner (
+            name,
+            company_id
           )
-        ),
-        inspection_results!inner (
-          status
         )
       `)
       .eq("status", "completed")
-      .or("inspection_results.status.eq.issue,inspection_results.status.eq.critical")
+      .eq("apartments.projects.company_id", profile.company_id)
       .order("completed_at", { ascending: false });
 
     if (error) {
+      console.error("[Follow-up List] Failed to load follow-up inspections", {
+        error: error.message,
+        userId: user.id,
+        companyId: profile.company_id,
+      });
       return NextResponse.json(
         { error: "Failed to load follow-up inspections", detail: error.message },
         { status: 500 }
       );
     }
 
-    // Deduplicate sessions (since join may return multiple rows per session)
-    const uniqueSessions = Array.from(
-      new Map(
-        (data || []).map((s: any) => [s.id, s])
-      ).values()
-    );
-
-    const formatted = uniqueSessions.map((s: any) => ({
+    // Format sessions for response
+    const formatted = (sessions || []).map((s: any) => ({
       id: s.id,
       project: s.apartments?.projects?.[0]?.name || s.apartments?.projects?.name || "Unknown Project",
       unit: s.apartments?.unit_number || "Unknown Unit",
@@ -65,8 +65,22 @@ export async function GET() {
       inspection_type: s.inspection_type || "initial",
     }));
 
+    console.info("[Follow-up List] Follow-up inspections loaded", {
+      count: formatted.length,
+      userId: user.id,
+      companyId: profile.company_id,
+    });
+
     return NextResponse.json({ inspections: formatted });
   } catch (e: any) {
+    // Auth errors are already thrown as NextResponse, so just return them
+    if (e instanceof NextResponse) {
+      return e;
+    }
+
+    console.error("[Follow-up List] Unexpected error", {
+      error: e?.message,
+    });
     return NextResponse.json(
       { error: "Unexpected server error", detail: e?.message },
       { status: 500 }
