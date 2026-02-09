@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { logger } from "@/lib/logger";
 
 /**
  * Normalize pathname by removing trailing slashes and ensuring consistent format
@@ -17,6 +18,9 @@ function normalizePathname(pathname: string): string {
  * Check if a path is public (doesn't require authentication)
  */
 function isPublicPath(pathname: string): boolean {
+  // Any request for a file (e.g. .png/.jpg/.js/.css/.map/.ico) should bypass auth middleware.
+  if (/\.[a-zA-Z0-9]+$/.test(pathname)) return true;
+
   // Exact matches for auth routes
   const authPaths = [
     "/auth/signin",
@@ -52,7 +56,7 @@ export async function middleware(req: NextRequest) {
   // Normalize the pathname
   const normalizedPathname = normalizePathname(req.nextUrl.pathname);
 
-  console.log('[Middleware] Request:', normalizedPathname, '(original:', req.nextUrl.pathname, ')');
+  logger.debug("[Middleware] Request", { pathname: normalizedPathname });
 
   // Create response object for Supabase SSR
   let response = NextResponse.next({
@@ -115,23 +119,23 @@ export async function middleware(req: NextRequest) {
     data: { session },
   } = await supabase.auth.getSession();
 
-  console.log('[Middleware] Session exists:', !!session, 'User:', session?.user.email || 'none');
+  logger.debug("[Middleware] Session lookup", { hasSession: !!session });
 
   // Check if path is public
   const isPublic = isPublicPath(normalizedPathname);
 
-  console.log('[Middleware] Path public:', isPublic);
+  logger.debug("[Middleware] Route visibility", { isPublic });
 
   // Handle root path - redirect based on auth status
   if (normalizedPathname === "/") {
     const redirectUrl = req.nextUrl.clone();
     if (session) {
       // Authenticated user → dashboard
-      console.log('[Middleware] Root path - authenticated user, redirecting to /dashboard');
+      logger.debug("[Middleware] Redirecting root to dashboard");
       redirectUrl.pathname = "/dashboard";
     } else {
       // Not authenticated → sign-in
-      console.log('[Middleware] Root path - no session, redirecting to /auth/signin');
+      logger.debug("[Middleware] Redirecting root to sign-in");
       redirectUrl.pathname = "/auth/signin";
     }
     redirectUrl.search = ""; // Clear any query params
@@ -140,7 +144,7 @@ export async function middleware(req: NextRequest) {
 
   // Handle authenticated user trying to access sign-in page
   if (session && normalizedPathname === "/auth/signin") {
-    console.log('[Middleware] Authenticated user accessing signin - redirecting to /dashboard');
+    logger.debug("[Middleware] Redirecting authenticated user away from sign-in");
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = "/dashboard";
     redirectUrl.search = ""; // Clear any query params
@@ -149,13 +153,13 @@ export async function middleware(req: NextRequest) {
 
   // Allow public routes
   if (isPublic) {
-    console.log('[Middleware] Public route - allowing access');
+    logger.debug("[Middleware] Allowing public route");
     return response;
   }
 
   // Protected route - require authentication
   if (!session) {
-    console.log('[Middleware] No session - redirecting to /auth/signin');
+    logger.debug("[Middleware] Redirecting unauthenticated request to sign-in");
     const redirectUrl = req.nextUrl.clone();
     redirectUrl.pathname = "/auth/signin";
     redirectUrl.searchParams.set("redirectedFrom", normalizedPathname);
@@ -163,11 +167,14 @@ export async function middleware(req: NextRequest) {
   }
 
   // User is authenticated and accessing protected route - allow
-  console.log('[Middleware] Authenticated user accessing protected route - allowing');
+  logger.debug("[Middleware] Allowing authenticated request");
   return response;
 }
 
 // Match all paths
 export const config = {
-  matcher: ['/:path*'],
+  matcher: [
+    // Skip Next internals and common static asset files.
+    '/((?!_next/static|_next/image|favicon.ico|sw.js|workbox-).*)',
+  ],
 };

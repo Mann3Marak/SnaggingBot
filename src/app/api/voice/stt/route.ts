@@ -7,6 +7,8 @@ import OpenAI from "openai";
 import { toFile } from "openai/uploads";
 import { getOpenAIConfig } from "@/lib/env";
 import { requireApiAuth } from "@/lib/server/apiAuth";
+import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/server/rateLimit";
 
 type OpenAIClient = ReturnType<typeof createClient>;
 
@@ -45,7 +47,7 @@ async function createUploadableFile(file: File, maxBytes: number) {
   } else if (mimeType === "audio/webm" || mimeType === "audio/wav" || mimeType === "audio/ogg") {
     // supported formats
   } else {
-    console.warn("Unsupported audio MIME type:", mimeType);
+    logger.warn("Unsupported audio MIME type", { mimeType });
     throw new Error(`Unsupported audio format: ${mimeType}`);
   }
 
@@ -54,28 +56,41 @@ async function createUploadableFile(file: File, maxBytes: number) {
   // Detect AAC/MP4 magic numbers and correct MIME type if needed
   const header = buffer.subarray(0, 12).toString("hex");
   if (header.includes("66747970") && !mimeType.includes("m4a")) {
-    console.log("Detected MP4/M4A header, correcting MIME type to audio/m4a");
+    logger.debug("Detected MP4/M4A header, correcting MIME type", { mimeType });
     mimeType = "audio/m4a";
     filename = filename.endsWith(".m4a") ? filename : "audio.m4a";
   }
 
-  console.log("Uploading audio file:", { filename, mimeType, size, header: header.slice(0, 16) });
+  logger.debug("Uploading audio file", { filename, mimeType, size });
 
   return toFile(buffer, filename, { type: mimeType });
 }
 
 export async function POST(req: NextRequest) {
   let openai: OpenAIClient;
+  let userId: string | undefined;
 
   try {
     // Require authenticated user to prevent public cost abuse.
-    await requireApiAuth(req);
+    const { user } = await requireApiAuth(req);
+    userId = user.id;
+    const rateLimitResponse = await enforceRateLimit(
+      req,
+      {
+        keyPrefix: "voice-stt",
+        windowMs: 60_000,
+        max: 60,
+      },
+      { identifier: user.id }
+    );
+    if (rateLimitResponse) return rateLimitResponse;
+
     openai = getClient();
   } catch (configError: any) {
     if (configError instanceof NextResponse) {
       return configError;
     }
-    console.error("STT configuration error:", configError);
+    logger.error("STT configuration error", { userId, error: configError?.message });
     const message =
       configError?.message ||
       "Speech-to-text service is not configured. Please set OPENAI_API_KEY.";
@@ -101,10 +116,10 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ text: transcription.text });
   } catch (error: any) {
-    console.error("STT error:", {
+    logger.error("STT error", {
+      userId,
       message: error?.message,
       response: error?.response?.data,
-      stack: error?.stack,
     });
     const message =
       error?.response?.data?.error?.message ||

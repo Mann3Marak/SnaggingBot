@@ -1,4 +1,3 @@
-import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 import DashboardQuickActions from '@/components/dashboard/DashboardQuickActions'
 import { requireAuth } from '@/lib/server/requireAuth'
 
@@ -26,14 +25,8 @@ export default async function DashboardPage() {
   let inProgress: any[] = []
   let followUpInspections: any[] = []
   try {
-    const svcUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const svcKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-    const svc = svcUrl && svcKey
-      ? createSupabaseClient(svcUrl!, svcKey!, { auth: { persistSession: false } })
-      : supabase
-
-    // Fetch all inspection sessions
-    const { data: allSessions, error: sessionsError } = await svc
+    // Use the authenticated client so RLS enforces tenant/user isolation.
+    const { data: allSessions, error: sessionsError } = await supabase
       .from('inspection_sessions')
       .select('id, status, started_at, completed_at, inspector_id, apartment_id')
       .order('started_at', { ascending: false })
@@ -45,7 +38,7 @@ export default async function DashboardPage() {
     const apartmentIds = Array.from(new Set(sessions.map((s) => s.apartment_id).filter(Boolean)));
     let apartmentMap = new Map<string, any>();
     if (apartmentIds.length > 0) {
-      const { data: apartmentsData, error: apartmentsError } = await svc
+      const { data: apartmentsData, error: apartmentsError } = await supabase
         .from('apartments')
         .select('id, unit_number, apartment_type, client_name, client_surname, projects(id, name, developer_name)')
         .in('id', apartmentIds);

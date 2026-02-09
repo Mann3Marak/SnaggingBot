@@ -4,6 +4,28 @@ export const revalidate = 0;
 import { NextRequest, NextResponse } from "next/server";
 import { createServiceClient, requireOwnership } from "@/lib/server/apiAuth";
 
+const BUCKET_ID = "nhome_photos";
+
+function resolveStoragePath(sessionId: string, fileName: string | null | undefined, storedPath?: string | null) {
+  const safeName = fileName && fileName.trim().length > 0 ? fileName : `photo-${Date.now()}.jpg`;
+  const stripQuery = (value: string) => value.split("?")[0];
+
+  if (!storedPath) {
+    return `sessions/${sessionId}/${safeName}`;
+  }
+  if (storedPath.startsWith("sessions/")) {
+    return stripQuery(storedPath);
+  }
+
+  const marker = "/nhome_photos/";
+  const markerIndex = storedPath.indexOf(marker);
+  if (markerIndex >= 0) {
+    return stripQuery(storedPath.slice(markerIndex + marker.length));
+  }
+
+  return stripQuery(storedPath);
+}
+
 export async function GET(
   req: NextRequest,
   { params }: { params: { sessionId: string } }
@@ -64,24 +86,25 @@ export async function GET(
     }
 
     // 3) Fetch photos for all results
-    const resultIds = (results ?? []).map((r) => r.id);
-    let photosByResultId: Record<string, any[]> = {};
+    const itemIds = Array.from(new Set((results ?? []).map((r) => r.item_id).filter(Boolean)));
+    let photosByItemId: Record<string, any[]> = {};
 
-    if (resultIds.length > 0) {
+    if (itemIds.length > 0) {
       const { data: photos, error: photosError } = await supabase
         .from("nhome_photos")
         .select("*")
         .eq("session_id", sessionId)
-        .in("result_id", resultIds);
+        .in("item_id", itemIds);
 
       if (!photosError && photos) {
-        // Group photos by result_id
-        photosByResultId = photos.reduce((acc, photo) => {
-          const resultId = photo.result_id;
-          if (!acc[resultId]) {
-            acc[resultId] = [];
+        // Group photos by item_id
+        photosByItemId = photos.reduce((acc, photo) => {
+          const itemId = photo.item_id;
+          if (!itemId) return acc;
+          if (!acc[itemId]) {
+            acc[itemId] = [];
           }
-          acc[resultId].push(photo);
+          acc[itemId].push(photo);
           return acc;
         }, {} as Record<string, any[]>);
       }
@@ -90,17 +113,15 @@ export async function GET(
     // 4) Generate signed URLs for photos and shape the response
     const followUpItems = await Promise.all(
       (results ?? []).map(async (r) => {
-        const resultPhotos = photosByResultId[r.id] || [];
+        const resultPhotos = photosByItemId[r.item_id] || [];
 
         // Generate signed URLs for photos
         const photosWithUrls = await Promise.all(
           resultPhotos.map(async (photo) => {
-            const path = photo.supabase_url || `sessions/${sessionId}/${photo.file_name}`;
-            const cleanPath = path.split("?")[0]; // Remove query params
-
-            const { data: signed, error: signedError } = await supabase.storage
-              .from("nhome_photos")
-              .createSignedUrl(cleanPath, 60 * 60 * 24); // 24 hours
+            const path = resolveStoragePath(sessionId, photo.file_name, photo.storage_path ?? photo.supabase_url);
+            const { data: signed } = await supabase.storage
+              .from(BUCKET_ID)
+              .createSignedUrl(path, 60 * 60 * 24); // 24 hours
 
             return {
               id: photo.id,
@@ -151,6 +172,9 @@ export async function GET(
       followUpItems,
     });
   } catch (e: any) {
+    if (e instanceof NextResponse) {
+      return e;
+    }
     return NextResponse.json(
       { error: "Unexpected server error", detail: e?.message },
       { status: 500 }

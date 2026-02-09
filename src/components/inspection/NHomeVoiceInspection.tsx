@@ -1166,7 +1166,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                           const supabase = (await import("@/lib/supabase")).getSupabase();
                           await supabase
                             .from("inspection_results")
-                            .update({ status: "pending" })
+                            .delete()
                             .eq("item_id", currentItem.id)
                             .eq("session_id", sessionId);
                           setSelectedStatus(null);
@@ -1269,7 +1269,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                           const supabase = (await import("@/lib/supabase")).getSupabase();
                           await supabase
                             .from("inspection_results")
-                            .update({ status: "pending" })
+                            .delete()
                             .eq("item_id", currentItem.id)
                             .eq("session_id", sessionId);
                           setSelectedStatus(null);
@@ -1491,7 +1491,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                     const supabase = (await import("@/lib/supabase")).getSupabase();
                     await supabase
                       .from("inspection_results")
-                      .update({ status: "pending" })
+                      .delete()
                       .eq("item_id", currentItem.id)
                       .eq("session_id", sessionId);
                     setSelectedStatus(null);
@@ -1594,7 +1594,7 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
                     const supabase = (await import("@/lib/supabase")).getSupabase();
                     await supabase
                       .from("inspection_results")
-                      .update({ status: "pending" })
+                      .delete()
                       .eq("item_id", currentItem.id)
                       .eq("session_id", sessionId);
                     setSelectedStatus(null);

@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireApiAuth, validateUUID } from '@/lib/server/apiAuth';
+import { createServiceClient, requireApiAuth, validateUUID } from '@/lib/server/apiAuth';
+
+const REPORT_BUCKET_ID = 'nhome_reports';
+
+function resolveReportPath(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const stripQuery = (input: string) => input.split('?')[0];
+
+  if (value.startsWith('reports/')) return stripQuery(value);
+
+  const marker = '/nhome_reports/';
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex >= 0) {
+    return stripQuery(value.slice(markerIndex + marker.length));
+  }
+
+  return null;
+}
 
 /**
  * Portal endpoint: Get detailed information for a specific apartment
@@ -108,10 +125,32 @@ export async function GET(
       });
     }
 
+    const adminClient = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
+
+    async function signReportUrl(pathOrUrl: string | null | undefined): Promise<string | null> {
+      const path = resolveReportPath(pathOrUrl);
+      if (!path) return null;
+      const { data } = await adminClient.storage
+        .from(REPORT_BUCKET_ID)
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
+      return data?.signedUrl ?? null;
+    }
+
+    const inspectionsWithSignedUrls = await Promise.all(
+      (inspections || []).map(async (inspection) => ({
+        ...inspection,
+        report_url_pt: await signReportUrl(inspection.report_url_pt),
+        report_url_en: await signReportUrl(inspection.report_url_en),
+      }))
+    );
+
     // Count outstanding snags (issues/critical items from latest inspection)
     let outstandingSnags = 0;
-    if (inspections && inspections.length > 0) {
-      const latestCompletedInspection = inspections.find((i) => i.status === 'completed');
+    if (inspectionsWithSignedUrls.length > 0) {
+      const latestCompletedInspection = inspectionsWithSignedUrls.find((i) => i.status === 'completed');
       if (latestCompletedInspection) {
         const { count } = await supabase
           .from('inspection_results')
@@ -127,19 +166,19 @@ export async function GET(
       apartment: {
         ...apartment,
         stats: {
-          totalInspections: inspections?.length || 0,
+          totalInspections: inspectionsWithSignedUrls.length,
           completedInspections:
-            inspections?.filter((i) => i.status === 'completed').length || 0,
+            inspectionsWithSignedUrls.filter((i) => i.status === 'completed').length,
           outstandingSnags,
         },
       },
-      inspections: inspections || [],
+      inspections: inspectionsWithSignedUrls,
     };
 
     console.info('[Portal /apartments/[id]] Apartment loaded successfully', {
       apartmentId,
       userId: user.id,
-      inspectionsCount: inspections?.length || 0,
+      inspectionsCount: inspectionsWithSignedUrls.length,
       outstandingSnags,
     });
 

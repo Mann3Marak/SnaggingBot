@@ -1,5 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { requireApiAuth } from '@/lib/server/apiAuth';
+import { createServiceClient, requireApiAuth } from '@/lib/server/apiAuth';
+
+const REPORT_BUCKET_ID = 'nhome_reports';
+
+function resolveReportPath(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const stripQuery = (input: string) => input.split('?')[0];
+
+  if (value.startsWith('reports/')) return stripQuery(value);
+
+  const marker = '/nhome_reports/';
+  const markerIndex = value.indexOf(marker);
+  if (markerIndex >= 0) {
+    return stripQuery(value.slice(markerIndex + marker.length));
+  }
+
+  return null;
+}
 
 /**
  * Portal endpoint: Get inspection reports for a specific apartment
@@ -103,6 +120,20 @@ export async function GET(
       );
     }
 
+    const adminClient = createServiceClient({
+      userId: user.id,
+      route: req.nextUrl.pathname,
+    });
+
+    async function signReportUrl(pathOrUrl: string | null | undefined): Promise<string | null> {
+      const path = resolveReportPath(pathOrUrl);
+      if (!path) return null;
+      const { data } = await adminClient.storage
+        .from(REPORT_BUCKET_ID)
+        .createSignedUrl(path, 60 * 60 * 24 * 7);
+      return data?.signedUrl ?? null;
+    }
+
     // 5. For each inspection, count snags
     const inspectionsWithStats = await Promise.all(
       (inspections || []).map(async (inspection) => {
@@ -127,6 +158,9 @@ export async function GET(
           .eq('session_id', inspection.id)
           .eq('status', 'good');
 
+        const portugueseReportUrl = await signReportUrl(inspection.report_url_pt);
+        const englishReportUrl = await signReportUrl(inspection.report_url_en);
+
         return {
           id: inspection.id,
           inspection_type: inspection.inspection_type,
@@ -139,8 +173,8 @@ export async function GET(
             name: inspector?.full_name,
           },
           reports: {
-            portuguese: inspection.report_url_pt,
-            english: inspection.report_url_en,
+            portuguese: portugueseReportUrl,
+            english: englishReportUrl,
             photoPackage: inspection.photo_package_url,
           },
           stats: {

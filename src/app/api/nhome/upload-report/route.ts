@@ -3,6 +3,8 @@ export const revalidate = 0;
 
 import { NextRequest, NextResponse } from "next/server";
 import { requireOwnership, createServiceClient } from "@/lib/server/apiAuth";
+import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/server/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -17,8 +19,18 @@ export async function POST(req: NextRequest) {
       type: "session",
       resourceId: sessionId,
     });
+    const rateLimitResponse = await enforceRateLimit(
+      req,
+      {
+        keyPrefix: "nhome-upload-report",
+        windowMs: 10 * 60_000,
+        max: 30,
+      },
+      { identifier: user.id }
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
-    console.info('[Upload Report] Uploading report', {
+    logger.info('[Upload Report] Uploading report', {
       sessionId,
       fileName,
       userId: user.id,
@@ -37,7 +49,7 @@ export async function POST(req: NextRequest) {
     const fixedName = isEnglish ? "english.pdf" : isPortuguese ? "portuguese.pdf" : fileName;
     const path = `reports/${sessionId}/${fixedName}`;
 
-    console.log("📤 Uploading report via API route:", path);
+    logger.debug("[Upload Report] Uploading report blob", { path });
 
     const { error } = await supabase.storage
       .from("nhome_reports")
@@ -48,31 +60,35 @@ export async function POST(req: NextRequest) {
       });
 
     if (error) {
-      console.error("❌ Supabase upload failed:", error);
+      logger.error("[Upload Report] Supabase upload failed", { error: error.message });
       throw error;
     }
 
-    const { data: publicUrl } = supabase.storage
+    const { data: signedData, error: signedError } = await supabase.storage
       .from("nhome_reports")
-      .getPublicUrl(path);
+      .createSignedUrl(path, 60 * 60 * 24 * 7);
+    if (signedError || !signedData?.signedUrl) {
+      logger.error("[Upload Report] Failed to sign uploaded report", {
+        path,
+        error: signedError?.message ?? "No signed URL returned",
+      });
+      return NextResponse.json({ error: "Failed to generate signed URL" }, { status: 500 });
+    }
 
-    // Add cache-busting timestamp to URL
-    const urlWithCacheBuster = `${publicUrl.publicUrl}?t=${Date.now()}`;
-
-    console.info('[Upload Report] Report uploaded successfully', {
+    logger.info('[Upload Report] Report uploaded successfully', {
       sessionId,
       userId: user.id,
-      url: urlWithCacheBuster,
+      url: signedData.signedUrl,
     });
 
-    return NextResponse.json({ url: urlWithCacheBuster });
+    return NextResponse.json({ url: signedData.signedUrl, path });
   } catch (err: any) {
     // Auth errors are already thrown as NextResponse, so just return them
     if (err instanceof NextResponse) {
       return err;
     }
 
-    console.error("[Upload Report] Upload failed", {
+    logger.error("[Upload Report] Upload failed", {
       error: err.message,
     });
     return NextResponse.json({ error: err.message }, { status: 500 });

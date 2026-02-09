@@ -93,20 +93,28 @@ export class NHomePhotoUploadService {
 
       if (error) throw error
 
-      const publicUrls = (data ?? []).map((f: any) => ({
-        name: f.name,
-        url: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET_ID}/sessions/${sessionId}/${f.name}`,
-      }))
-
-      const packageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET_ID}/sessions/${sessionId}/`
+      const signedUrls = await Promise.all(
+        (data ?? []).map(async (f: any) => {
+          const { data: signed } = await supabase.storage
+            .from(BUCKET_ID)
+            .createSignedUrl(`sessions/${sessionId}/${f.name}`, 60 * 60 * 24 * 7)
+          return {
+            name: f.name,
+            url: signed?.signedUrl ?? null,
+          }
+        })
+      )
+      const validUrls = signedUrls.filter((entry) => Boolean(entry.url))
 
       console.log(
         `Shared inspection package for session ${sessionId}:`,
-        publicUrls.length,
+        validUrls.length,
         'files',
       )
 
-      return { success: true, package_url: packageUrl }
+      // This endpoint currently returns a single link for compatibility.
+      // Use the first signed file URL if available.
+      return { success: true, package_url: validUrls[0]?.url ?? undefined }
     } catch (e: any) {
       console.error('Failed to share inspection with client', e)
       return { success: false, error: e?.message || 'share_failed' }

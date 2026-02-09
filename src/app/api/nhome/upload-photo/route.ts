@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireOwnership, createServiceClient } from "@/lib/server/apiAuth";
+import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/server/rateLimit";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,6 +20,16 @@ export async function POST(req: NextRequest) {
       type: "session",
       resourceId: sessionId,
     });
+    const rateLimitResponse = await enforceRateLimit(
+      req,
+      {
+        keyPrefix: "nhome-upload-photo",
+        windowMs: 60_000,
+        max: 120,
+      },
+      { identifier: user.id }
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
     // Use service role for storage operations (required for storage API)
     const adminClient = createServiceClient({
@@ -25,12 +37,10 @@ export async function POST(req: NextRequest) {
       route: req.nextUrl.pathname,
     });
 
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-
     const bucket = "nhome_photos";
     const path = `sessions/${sessionId}/${fileName}`;
 
-    console.info("[Upload Photo] Uploading photo", {
+    logger.info("[Upload Photo] Uploading photo", {
       path,
       itemId: itemId || 'unknown',
       sessionId,
@@ -42,7 +52,7 @@ export async function POST(req: NextRequest) {
       .upload(path, file, { upsert: true });
 
     if (uploadError) {
-      console.error("[Upload Photo] Supabase upload error", {
+      logger.error("[Upload Photo] Supabase upload error", {
         error: uploadError.message,
         sessionId,
         userId: user.id,
@@ -55,7 +65,7 @@ export async function POST(req: NextRequest) {
       .createSignedUrl(path, 60 * 60 * 24 * 7);
 
     if (signedUrlError) {
-      console.error("[Upload Photo] Signed URL error", {
+      logger.error("[Upload Photo] Signed URL error", {
         error: signedUrlError.message,
         sessionId,
         userId: user.id,
@@ -63,63 +73,11 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: signedUrlError.message }, { status: 500 });
     }
 
-    // Append the public URL to inspection_results.photo_urls for the specific item
-    const publicUrl = `${supabaseUrl}/storage/v1/object/public/${bucket}/${path}`;
+    // NOTE: photo_urls is synchronized from nhome_photos metadata persistence/trigger path.
+    // This upload route only handles blob storage.
 
-    if (itemId) {
-      // Update the specific inspection_result by session_id AND item_id
-      const { data: existingResult, error: fetchError } = await adminClient
-        .from("inspection_results")
-        .select("id, photo_urls")
-        .eq("session_id", sessionId)
-        .eq("item_id", itemId)
-        .maybeSingle();
-
-      if (fetchError) {
-        console.error("[Upload Photo] Error fetching inspection_result", {
-          error: fetchError.message,
-          sessionId,
-          itemId,
-          userId: user.id,
-        });
-      } else if (existingResult) {
-        const currentUrls = Array.isArray(existingResult.photo_urls) ? existingResult.photo_urls : [];
-        const updatedUrls = [...currentUrls, publicUrl];
-
-        const { error: updateError } = await adminClient
-          .from("inspection_results")
-          .update({ photo_urls: updatedUrls })
-          .eq("id", existingResult.id);
-
-        if (updateError) {
-          console.error("[Upload Photo] Error updating inspection_results.photo_urls", {
-            error: updateError.message,
-            resultId: existingResult.id,
-            userId: user.id,
-          });
-        } else {
-          console.info("[Upload Photo] Photo URL appended to inspection_result", {
-            resultId: existingResult.id,
-            sessionId,
-            userId: user.id,
-          });
-        }
-      } else {
-        console.warn("[Upload Photo] No inspection_result found", {
-          sessionId,
-          itemId,
-          userId: user.id,
-        });
-      }
-    } else {
-      console.warn("[Upload Photo] No itemId provided, photo_urls not updated", {
-        sessionId,
-        userId: user.id,
-      });
-    }
-
-    console.info("[Upload Photo] Photo uploaded successfully", {
-      publicUrl,
+    logger.info("[Upload Photo] Photo uploaded successfully", {
+      path,
       sessionId,
       userId: user.id,
       companyId: profile.company_id,
@@ -128,7 +86,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       supabase_url: signedUrlData?.signedUrl,
-      public_url: publicUrl,
       path,
     });
   } catch (err: any) {
@@ -137,7 +94,7 @@ export async function POST(req: NextRequest) {
       return err;
     }
 
-    console.error("[Upload Photo] Upload API error", {
+    logger.error("[Upload Photo] Upload API error", {
       error: err.message,
     });
     return NextResponse.json({ error: "Unexpected error" }, { status: 500 });

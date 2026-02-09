@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { getOpenAIConfig } from "@/lib/env";
-import { requireOwnership } from "@/lib/server/apiAuth";
+import { requireApiAuth, requireOwnership } from "@/lib/server/apiAuth";
+import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/server/rateLimit";
 
 type ConversationMessage = {
   role: "user" | "assistant";
@@ -31,6 +33,19 @@ const BASE_SYSTEM_PROMPT = NHOME_WORKFLOW_PROMPT;
 
 export async function POST(req: NextRequest) {
   try {
+    // Enforce authentication for all agent paths to prevent anonymous model usage.
+    const { user } = await requireApiAuth(req);
+    const rateLimitResponse = await enforceRateLimit(
+      req,
+      {
+        keyPrefix: "nhome-agent",
+        windowMs: 60_000,
+        max: 90,
+      },
+      { identifier: user.id }
+    );
+    if (rateLimitResponse) return rateLimitResponse;
+
     const contentType = req.headers.get("content-type") || "";
     const body = contentType.includes("application/json") ? await req.json() : {};
     const { text, sessionId, instructions, messages } = body;
@@ -43,7 +58,7 @@ export async function POST(req: NextRequest) {
         resourceId: sessionId,
       });
 
-      console.info('[Agent] Voice command processing', {
+      logger.info('[Agent] Voice command processing', {
         sessionId,
         userId: user.id,
         textLength: text.length,
@@ -84,7 +99,7 @@ export async function POST(req: NextRequest) {
         reply = "I didn’t quite catch that. Could you repeat?";
       }
 
-      console.info('[Agent] Voice command processed', {
+      logger.info('[Agent] Voice command processed', {
         sessionId,
         userId: user.id,
         action,
@@ -113,9 +128,11 @@ export async function POST(req: NextRequest) {
       ? `${BASE_SYSTEM_PROMPT}\n\n${instructions.trim()}`
       : BASE_SYSTEM_PROMPT;
 
-    // Log only user input and agent response for debugging
-    const lastUserMessage = sanitizedMessages[sanitizedMessages.length - 1]?.content || "N/A";
-    console.log("🎤 User Input:", lastUserMessage);
+    logger.debug("[Agent] Conversation request", {
+      userId: user.id,
+      messageCount: sanitizedMessages.length,
+      lastMessageLength: sanitizedMessages[sanitizedMessages.length - 1]?.content?.length || 0,
+    });
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4.1",
@@ -131,8 +148,10 @@ export async function POST(req: NextRequest) {
 
     const reply = completion.choices[0]?.message?.content?.trim() || "I'm not sure how to respond.";
 
-    // Log agent reply for debugging
-    console.log("🤖 Agent Reply:", reply);
+    logger.debug("[Agent] Conversation response generated", {
+      userId: user.id,
+      replyLength: reply.length,
+    });
 
     // Attempt to extract structured action object from model output
     let actionData: any = null;
@@ -140,9 +159,12 @@ export async function POST(req: NextRequest) {
     if (actionMatch) {
       try {
         actionData = JSON.parse(actionMatch[1]);
-        console.log("🧩 Parsed Action Object:", actionData);
+        logger.debug("[Agent] Parsed action object", {
+          userId: user.id,
+          keys: Object.keys(actionData || {}),
+        });
       } catch (err) {
-        console.warn("⚠️ Failed to parse action object:", err);
+        logger.warn("[Agent] Failed to parse action object");
       }
     }
 
@@ -160,7 +182,7 @@ export async function POST(req: NextRequest) {
       return error;
     }
 
-    console.error("[Agent] Error processing request", {
+    logger.error("[Agent] Error processing request", {
       error: error.message,
     });
     return NextResponse.json({ error: "Failed to generate response" }, { status: 500 });

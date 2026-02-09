@@ -177,17 +177,16 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
       const portugalFilename = "portuguese.pdf"
       const englishFilename = "english.pdf"
 
-      const [ptUrl, enUrl] = await Promise.all([
+      const [ptUpload, enUpload] = await Promise.all([
         uploadNHomeReportToSupabase(portugueseBlob, portugalFilename, sessionId),
         uploadNHomeReportToSupabase(englishBlob, englishFilename, sessionId),
       ])
 
-      // Step 3: Save to database (100%)
-      const photoPackageUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/nhome_photos/sessions/${sessionId}/`
-      await saveNHomeReportUrls(ptUrl, enUrl, photoPackageUrl)
+      // Step 3: Save storage paths to database (stable, non-expiring), keep signed URLs for immediate use
+      await saveNHomeReportUrls(ptUpload.path, enUpload.path, null)
       setProgress(100)
 
-      setReportUrls({ portuguese: ptUrl, english: enUrl, photoPackage: photoPackageUrl })
+      setReportUrls({ portuguese: ptUpload.url, english: enUpload.url })
 
       // Auto-download
       downloadBlob(portugueseBlob, portugalFilename)
@@ -201,7 +200,7 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     }
   }
 
-  const saveNHomeReportUrls = async (ptUrl: string, enUrl: string, photoPackage: string) => {
+  const saveNHomeReportUrls = async (ptUrl: string, enUrl: string, photoPackage: string | null) => {
     await fetch('/api/nhome/inspections/save-reports', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -429,7 +428,10 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
               </button>
               <button
                 onClick={() => {
-                  const text = `NHome Professional Inspection Reports:\n\nPortuguese: ${reportUrls.portuguese}\nEnglish: ${reportUrls.english}\nPhotos: ${reportUrls.photoPackage}\n\nProfessional Property Services in the Algarve\nNHome Property Setup & Management`;
+                  const photoLine = reportUrls.photoPackage
+                    ? `\nPhotos: ${reportUrls.photoPackage}`
+                    : '';
+                  const text = `NHome Professional Inspection Reports:\n\nPortuguese: ${reportUrls.portuguese}\nEnglish: ${reportUrls.english}${photoLine}\n\nProfessional Property Services in the Algarve\nNHome Property Setup & Management`;
                   navigator.clipboard.writeText(text);
                   alert('Professional report package copied!');
                 }}

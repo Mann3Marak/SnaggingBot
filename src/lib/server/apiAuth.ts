@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { logger } from "@/lib/logger";
 
 /**
  * User profile data from the database
@@ -47,7 +48,7 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
   if (!supabaseUrl || !anonKey || !serviceRoleKey) {
-    console.error("[ApiAuth] Missing Supabase credentials");
+    logger.error("[ApiAuth] Missing Supabase credentials");
     throw NextResponse.json(
       { error: "Server configuration error" },
       { status: 500 }
@@ -60,19 +61,17 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
   let user: User | null = null;
   let userError: any = null;
 
-  console.log('[ApiAuth] Checking authentication method', {
+  logger.debug('[ApiAuth] Checking authentication method', {
     route: req.nextUrl.pathname,
     hasAuthHeader: !!authHeader,
-    authHeaderPrefix: authHeader?.substring(0, 10) || 'none',
   });
 
   if (authHeader?.startsWith('Bearer ')) {
     // API testing mode: Use Bearer token
     const token = authHeader.substring(7);
-    console.log('[ApiAuth] Using Bearer token authentication', {
+    logger.debug('[ApiAuth] Using Bearer token authentication', {
       route: req.nextUrl.pathname,
       tokenLength: token.length,
-      tokenPrefix: token.substring(0, 20) + '...',
     });
 
     const tokenClient = createClient(supabaseUrl, anonKey);
@@ -80,10 +79,9 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
     user = data.user;
     userError = error;
 
-    console.log('[ApiAuth] Bearer token validation result', {
+    logger.debug('[ApiAuth] Bearer token validation result', {
       route: req.nextUrl.pathname,
       userId: user?.id || 'none',
-      userEmail: user?.email || 'none',
       error: error?.message || 'none',
     });
 
@@ -97,7 +95,7 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
     });
   } else {
     // Browser mode: Use cookies (respects RLS)
-    console.log('[ApiAuth] Using cookie-based authentication', {
+    logger.debug('[ApiAuth] Using cookie-based authentication', {
       route: req.nextUrl.pathname,
     });
 
@@ -115,16 +113,15 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
     user = data.user;
     userError = error;
 
-    console.log('[ApiAuth] Cookie authentication result', {
+    logger.debug('[ApiAuth] Cookie authentication result', {
       route: req.nextUrl.pathname,
       userId: user?.id || 'none',
-      userEmail: user?.email || 'none',
       error: error?.message || 'none',
     });
   }
 
   if (userError) {
-    console.error("[ApiAuth] Failed to read auth user", {
+    logger.error("[ApiAuth] Failed to read auth user", {
       error: userError.message,
       route: req.nextUrl.pathname,
     });
@@ -135,7 +132,7 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
   }
 
   if (!user) {
-    console.warn("[ApiAuth] Unauthenticated request blocked", {
+    logger.warn("[ApiAuth] Unauthenticated request blocked", {
       route: req.nextUrl.pathname,
     });
     throw NextResponse.json({ error: "Authentication required" }, { status: 401 });
@@ -153,7 +150,7 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
     .maybeSingle();
 
   if (profileError) {
-    console.error("[ApiAuth] Failed to load user profile", {
+    logger.error("[ApiAuth] Failed to load user profile", {
       error: profileError.message,
       userId: user.id,
       route: req.nextUrl.pathname,
@@ -165,7 +162,7 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
   }
 
   if (!profile) {
-    console.error("[ApiAuth] User profile not found", {
+    logger.error("[ApiAuth] User profile not found", {
       userId: user.id,
       route: req.nextUrl.pathname,
     });
@@ -176,9 +173,8 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
   }
 
   if (!profile.company_id) {
-    console.error("[ApiAuth] User profile missing company assignment", {
+    logger.error("[ApiAuth] User profile missing company assignment", {
       userId: user.id,
-      email: user.email,
       route: req.nextUrl.pathname,
     });
     throw NextResponse.json(
@@ -190,7 +186,7 @@ export async function requireApiAuth(req: NextRequest): Promise<AuthContext> {
     );
   }
 
-  console.info("[ApiAuth] Request authenticated", {
+  logger.debug("[ApiAuth] Request authenticated", {
     userId: user.id,
     companyId: profile.company_id,
     role: profile.role,
@@ -247,7 +243,7 @@ export async function requireOwnership(
         .maybeSingle();
 
       if (error) {
-        console.error("[ApiAuth] Session ownership check failed", {
+        logger.error("[ApiAuth] Session ownership check failed", {
           error: error.message,
           sessionId: ownershipCheck.resourceId,
           userId: user.id,
@@ -259,7 +255,7 @@ export async function requireOwnership(
       }
 
       if (!session) {
-        console.warn("[ApiAuth] Session not found", {
+        logger.warn("[ApiAuth] Session not found", {
           sessionId: ownershipCheck.resourceId,
           userId: user.id,
         });
@@ -269,7 +265,7 @@ export async function requireOwnership(
       const isOwner = session.inspector_id === user.id;
 
       if (!isOwner && !isAdmin) {
-        console.warn("[ApiAuth] Session access denied", {
+        logger.warn("[ApiAuth] Session access denied", {
           sessionId: ownershipCheck.resourceId,
           requester: user.id,
           owner: session.inspector_id,
@@ -278,7 +274,7 @@ export async function requireOwnership(
         throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      console.info("[ApiAuth] Session access granted", {
+      logger.debug("[ApiAuth] Session access granted", {
         sessionId: ownershipCheck.resourceId,
         userId: user.id,
         isOwner,
@@ -295,7 +291,7 @@ export async function requireOwnership(
         .maybeSingle();
 
       if (error) {
-        console.error("[ApiAuth] Project ownership check failed", {
+        logger.error("[ApiAuth] Project ownership check failed", {
           error: error.message,
           projectId: ownershipCheck.resourceId,
           userId: user.id,
@@ -307,7 +303,7 @@ export async function requireOwnership(
       }
 
       if (!project) {
-        console.warn("[ApiAuth] Project not found", {
+        logger.warn("[ApiAuth] Project not found", {
           projectId: ownershipCheck.resourceId,
           userId: user.id,
         });
@@ -317,7 +313,7 @@ export async function requireOwnership(
       const belongsToCompany = project.company_id === profile.company_id;
 
       if (!belongsToCompany && !isAdmin) {
-        console.warn("[ApiAuth] Project access denied", {
+        logger.warn("[ApiAuth] Project access denied", {
           projectId: ownershipCheck.resourceId,
           requester: user.id,
           userCompany: profile.company_id,
@@ -326,7 +322,7 @@ export async function requireOwnership(
         throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      console.info("[ApiAuth] Project access granted", {
+      logger.debug("[ApiAuth] Project access granted", {
         projectId: ownershipCheck.resourceId,
         userId: user.id,
         belongsToCompany,
@@ -343,7 +339,7 @@ export async function requireOwnership(
         .maybeSingle();
 
       if (error) {
-        console.error("[ApiAuth] Apartment ownership check failed", {
+        logger.error("[ApiAuth] Apartment ownership check failed", {
           error: error.message,
           apartmentId: ownershipCheck.resourceId,
           userId: user.id,
@@ -355,7 +351,7 @@ export async function requireOwnership(
       }
 
       if (!apartment) {
-        console.warn("[ApiAuth] Apartment not found", {
+        logger.warn("[ApiAuth] Apartment not found", {
           apartmentId: ownershipCheck.resourceId,
           userId: user.id,
         });
@@ -366,7 +362,7 @@ export async function requireOwnership(
       const belongsToCompany = projectCompanyId === profile.company_id;
 
       if (!belongsToCompany && !isAdmin) {
-        console.warn("[ApiAuth] Apartment access denied", {
+        logger.warn("[ApiAuth] Apartment access denied", {
           apartmentId: ownershipCheck.resourceId,
           requester: user.id,
           userCompany: profile.company_id,
@@ -375,7 +371,7 @@ export async function requireOwnership(
         throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      console.info("[ApiAuth] Apartment access granted", {
+      logger.debug("[ApiAuth] Apartment access granted", {
         apartmentId: ownershipCheck.resourceId,
         userId: user.id,
         belongsToCompany,
@@ -392,7 +388,7 @@ export async function requireOwnership(
         .maybeSingle();
 
       if (error) {
-        console.error("[ApiAuth] Result ownership check failed", {
+        logger.error("[ApiAuth] Result ownership check failed", {
           error: error.message,
           resultId: ownershipCheck.resourceId,
           userId: user.id,
@@ -404,7 +400,7 @@ export async function requireOwnership(
       }
 
       if (!result) {
-        console.warn("[ApiAuth] Result not found", {
+        logger.warn("[ApiAuth] Result not found", {
           resultId: ownershipCheck.resourceId,
           userId: user.id,
         });
@@ -415,7 +411,7 @@ export async function requireOwnership(
       const isOwner = inspectorId === user.id;
 
       if (!isOwner && !isAdmin) {
-        console.warn("[ApiAuth] Result access denied", {
+        logger.warn("[ApiAuth] Result access denied", {
           resultId: ownershipCheck.resourceId,
           requester: user.id,
           owner: inspectorId,
@@ -423,7 +419,7 @@ export async function requireOwnership(
         throw NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      console.info("[ApiAuth] Result access granted", {
+      logger.debug("[ApiAuth] Result access granted", {
         resultId: ownershipCheck.resourceId,
         userId: user.id,
         isOwner,
@@ -459,7 +455,7 @@ export async function requireRole(
   const { user, profile } = authContext;
 
   if (!allowedRoles.includes(profile.role)) {
-    console.warn("[ApiAuth] Role check failed", {
+    logger.warn("[ApiAuth] Role check failed", {
       userId: user.id,
       userRole: profile.role,
       allowedRoles,
@@ -471,7 +467,7 @@ export async function requireRole(
     );
   }
 
-  console.info("[ApiAuth] Role check passed", {
+  logger.debug("[ApiAuth] Role check passed", {
     userId: user.id,
     userRole: profile.role,
     route: req.nextUrl.pathname,
@@ -494,7 +490,7 @@ export function validateUUID(value: string, fieldName: string = "ID"): void {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   if (!uuidRegex.test(value)) {
-    console.warn("[ApiAuth] Invalid UUID format", {
+    logger.warn("[ApiAuth] Invalid UUID format", {
       value,
       fieldName,
     });
@@ -519,7 +515,7 @@ export function createServiceClient(context: {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 
-  console.info("[ServiceRole] Usage", {
+  logger.debug("[ServiceRole] Usage", {
     timestamp: new Date().toISOString(),
     userId: context.userId,
     route: context.route,

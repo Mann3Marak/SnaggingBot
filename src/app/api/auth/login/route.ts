@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { logger } from '@/lib/logger';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
 
 /**
  * Test authentication endpoint for security tests
@@ -14,6 +16,13 @@ import { createClient } from '@supabase/supabase-js';
  */
 export async function POST(req: NextRequest) {
   try {
+    const rateLimitResponse = await enforceRateLimit(req, {
+      keyPrefix: 'auth-login',
+      windowMs: 60_000,
+      max: 20,
+    });
+    if (rateLimitResponse) return rateLimitResponse;
+
     const { email, password } = await req.json();
 
     if (!email || !password) {
@@ -36,8 +45,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
-      console.error('[Auth /login] Authentication failed', {
-        email,
+      logger.warn('[Auth /login] Authentication failed', {
         error: error.message,
       });
       return NextResponse.json(
@@ -53,9 +61,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.info('[Auth /login] User authenticated successfully', {
+    logger.info('[Auth /login] User authenticated successfully', {
       userId: data.user.id,
-      email: data.user.email,
     });
 
     // Return access token for testing
@@ -69,7 +76,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('[Auth /login] Unexpected error', {
+    logger.error('[Auth /login] Unexpected error', {
       error: error.message,
     });
     return NextResponse.json(

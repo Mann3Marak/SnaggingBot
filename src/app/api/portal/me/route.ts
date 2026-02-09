@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/server/apiAuth';
+import { enforceRateLimit } from '@/lib/server/rateLimit';
+import { logger } from '@/lib/logger';
 
 /**
  * Portal endpoint: Get current user profile and accessible resources
@@ -18,8 +20,18 @@ export async function GET(req: NextRequest) {
   try {
     // 1. ALWAYS authenticate first - returns authenticated client with RLS enforcement
     const { user, profile, supabase } = await requireApiAuth(req);
+    const rateLimitResponse = await enforceRateLimit(
+      req,
+      {
+        keyPrefix: 'portal-me',
+        windowMs: 60_000,
+        max: 100,
+      },
+      { identifier: user.id }
+    );
+    if (rateLimitResponse) return rateLimitResponse;
 
-    console.info('[Portal /me] Loading user profile', {
+    logger.info('[Portal /me] Loading user profile', {
       userId: user.id,
       companyId: profile.company_id,
     });
@@ -33,7 +45,7 @@ export async function GET(req: NextRequest) {
       .maybeSingle();
 
     if (companyError) {
-      console.error('[Portal /me] Failed to load company', {
+      logger.error('[Portal /me] Failed to load company', {
         error: companyError.message,
         userId: user.id,
         companyId: profile.company_id,
@@ -57,7 +69,7 @@ export async function GET(req: NextRequest) {
       .order('unit_number', { ascending: true });
 
     if (apartmentsError) {
-      console.error('[Portal /me] Failed to load apartments', {
+      logger.error('[Portal /me] Failed to load apartments', {
         error: apartmentsError.message,
         userId: user.id,
         companyId: profile.company_id,
@@ -84,7 +96,7 @@ export async function GET(req: NextRequest) {
       .limit(10);
 
     if (sessionsError) {
-      console.error('[Portal /me] Failed to load recent sessions', {
+      logger.error('[Portal /me] Failed to load recent sessions', {
         error: sessionsError.message,
         userId: user.id,
       });
@@ -104,7 +116,7 @@ export async function GET(req: NextRequest) {
       accessGrantedAt: new Date().toISOString(),
     };
 
-    console.info('[Portal /me] Profile loaded successfully', {
+    logger.info('[Portal /me] Profile loaded successfully', {
       userId: user.id,
       companyId: profile.company_id,
       apartmentsCount: response.apartmentsCount,
@@ -118,7 +130,7 @@ export async function GET(req: NextRequest) {
       return error;
     }
 
-    console.error('[Portal /me] Unexpected error', {
+    logger.error('[Portal /me] Unexpected error', {
       error: error.message,
     });
     return NextResponse.json(

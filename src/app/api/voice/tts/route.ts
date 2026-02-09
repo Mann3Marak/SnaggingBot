@@ -2,6 +2,8 @@ import { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getOpenAIConfig } from "@/lib/env";
 import { requireApiAuth } from "@/lib/server/apiAuth";
+import { logger } from "@/lib/logger";
+import { enforceRateLimit } from "@/lib/server/rateLimit";
 
 type OpenAIConfig = {
   apiKey: string;
@@ -17,15 +19,28 @@ function getTtsConfig(): OpenAIConfig {
 
 export async function POST(req: NextRequest) {
   let config: OpenAIConfig;
+  let userId: string | undefined;
   try {
     // Require authenticated user to prevent public cost abuse.
-    await requireApiAuth(req);
+    const { user } = await requireApiAuth(req);
+    userId = user.id;
+    const rateLimitResponse = await enforceRateLimit(
+      req,
+      {
+        keyPrefix: "voice-tts",
+        windowMs: 60_000,
+        max: 120,
+      },
+      { identifier: user.id }
+    );
+    if (rateLimitResponse) return rateLimitResponse;
+
     config = getTtsConfig();
   } catch (configError: any) {
     if (configError instanceof NextResponse) {
       return configError;
     }
-    console.error("TTS configuration error:", configError);
+    logger.error("TTS configuration error", { userId, error: configError?.message });
     const message =
       configError?.message ||
       "Text-to-speech service is not configured. Please set OPENAI_API_KEY.";
@@ -56,7 +71,7 @@ export async function POST(req: NextRequest) {
 
     if (!resp.ok) {
       const err = await resp.text();
-      console.error("TTS API error:", err);
+      logger.error("TTS API error", { userId, error: err });
       return NextResponse.json({ error: "Failed to generate speech" }, { status: 500 });
     }
 
@@ -65,7 +80,7 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "audio/mpeg" },
     });
   } catch (error: any) {
-    console.error("TTS error:", error);
+    logger.error("TTS error", { userId, error: error?.message });
     const message = error?.message || "Failed to generate speech";
     return NextResponse.json({ error: message }, { status: 500 });
   }

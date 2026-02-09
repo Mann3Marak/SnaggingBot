@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireApiAuth } from '@/lib/server/apiAuth'
+import { logger } from '@/lib/logger'
+import { enforceRateLimit } from '@/lib/server/rateLimit'
 
 /**
  * GET handler for authentication enforcement
@@ -30,13 +32,23 @@ export async function POST(request: NextRequest) {
   try {
     // Authenticate user (doesn't need ownership check as it's just AI enhancement)
     const { user: authUser } = await requireApiAuth(request)
+    const rateLimitResponse = await enforceRateLimit(
+      request,
+      {
+        keyPrefix: 'nhome-enhance-description',
+        windowMs: 60_000,
+        max: 60,
+      },
+      { identifier: authUser.id }
+    )
+    if (rateLimitResponse) return rateLimitResponse
 
     // Parse and validate request body
     let body
     try {
       body = await request.json()
     } catch (jsonError) {
-      console.warn('[Enhance Description] Malformed JSON', {
+      logger.warn('[Enhance Description] Malformed JSON', {
         userId: authUser.id,
         error: jsonError instanceof Error ? jsonError.message : 'Unknown',
       })
@@ -57,7 +69,7 @@ export async function POST(request: NextRequest) {
 
     // Validate required fields
     if (!ui || typeof ui !== 'string' || ui.trim() === '') {
-      console.warn('[Enhance Description] Missing or invalid userInput', {
+      logger.warn('[Enhance Description] Missing or invalid userInput', {
         userId: authUser.id,
       })
       return NextResponse.json(
@@ -68,14 +80,14 @@ export async function POST(request: NextRequest) {
 
     userInput = ui
 
-    console.info('[Enhance Description] Processing enhancement request', {
+    logger.info('[Enhance Description] Processing enhancement request', {
       userId: authUser.id,
       item,
       room,
     })
     const apiKey = process.env.OPENAI_API_KEY
     if (!apiKey) {
-      console.warn('OPENAI_API_KEY not configured')
+      logger.warn('OPENAI_API_KEY not configured')
       return NextResponse.json({ enhanced: userInput })
     }
 
@@ -133,14 +145,14 @@ Enhance this observation into a professional NHome inspection note:`
 
     if (!resp.ok) {
       const detail = await resp.text().catch(() => '')
-      console.error('OpenAI enhance error:', detail)
+      logger.error('OpenAI enhance error', { detail })
       return NextResponse.json({ enhanced: userInput })
     }
 
     const data = await resp.json()
     const enhanced = data?.choices?.[0]?.message?.content || userInput
 
-    console.info('[Enhance Description] Enhancement completed', {
+    logger.info('[Enhance Description] Enhancement completed', {
       userId: authUser.id,
       originalLength: userInput.length,
       enhancedLength: enhanced.length,
@@ -160,7 +172,7 @@ Enhance this observation into a professional NHome inspection note:`
       return error
     }
 
-    console.error('[Enhance Description] Enhancement error', {
+    logger.error('[Enhance Description] Enhancement error', {
       error: error.message,
     })
     return NextResponse.json({ enhanced: userInput })
