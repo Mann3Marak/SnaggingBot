@@ -3,6 +3,9 @@ import { requireApiAuth } from '@/lib/server/apiAuth';
 import { enforceRateLimit } from '@/lib/server/rateLimit';
 import { logger } from '@/lib/logger';
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * Portal endpoint: Get current user profile and accessible resources
  *

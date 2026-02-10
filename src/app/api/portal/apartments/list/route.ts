@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireApiAuth } from '@/lib/server/apiAuth';
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 /**
  * Portal endpoint: List apartments accessible to the authenticated user
  *

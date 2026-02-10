@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireApiAuth } from "@/lib/server/apiAuth";
 import { verifyProjectOwnership } from "@/lib/server/ownershipChecks";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 export async function GET(req: NextRequest) {
   try {
     // Authenticate user and get company context
