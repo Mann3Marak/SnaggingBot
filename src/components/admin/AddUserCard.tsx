@@ -1,11 +1,93 @@
 "use client";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { UserPlusIcon } from "@heroicons/react/24/outline";
 import { useAuthUser } from "@/hooks/useAuthUser";
 
 export default function AddUserCard() {
   const { user } = useAuthUser();
   const [showModal, setShowModal] = useState(false);
+  const [form, setForm] = useState({
+    fullName: "",
+    email: "",
+    role: "inspector" as "admin" | "manager" | "inspector",
+    password: "",
+    confirmPassword: "",
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
+
+  const canSubmit = useMemo(() => {
+    return (
+      form.fullName.trim().length > 0 &&
+      form.email.trim().length > 0 &&
+      form.password.length >= 8 &&
+      form.confirmPassword.length >= 8 &&
+      form.password === form.confirmPassword &&
+      !submitting
+    );
+  }, [form, submitting]);
+
+  async function handleCreateUser(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMessage("");
+    setSuccessMessage("");
+
+    if (form.password !== form.confirmPassword) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
+    if (form.password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/admin/users", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          fullName: form.fullName.trim(),
+          email: form.email.trim(),
+          role: form.role,
+          password: form.password,
+        }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to create user");
+
+      setSuccessMessage(`User created: ${json?.user?.email || form.email.trim()}`);
+      setForm({
+        fullName: "",
+        email: "",
+        role: "inspector",
+        password: "",
+        confirmPassword: "",
+      });
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to create user");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function resetAndClose() {
+    setShowModal(false);
+    setSubmitting(false);
+    setErrorMessage("");
+    setSuccessMessage("");
+    setForm({
+      fullName: "",
+      email: "",
+      role: "inspector",
+      password: "",
+      confirmPassword: "",
+    });
+  }
 
   // Only admins can see this card
   if (!user || user.role !== "admin") return null;
@@ -32,46 +114,86 @@ export default function AddUserCard() {
               Add New User
             </h2>
 
-            <div className="space-y-4">
-              <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-4 text-center">
-                <p className="text-sm text-slate-600">
-                  Backend integration pending. This modal will allow creating new user accounts.
-                </p>
-              </div>
-
+            <form onSubmit={handleCreateUser} className="space-y-4">
               <div className="space-y-3">
                 <input
                   type="text"
                   placeholder="Full Name"
-                  disabled
-                  className="border rounded-lg p-2 w-full bg-slate-100 cursor-not-allowed"
+                  value={form.fullName}
+                  onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
+                  disabled={submitting}
+                  className="border border-slate-300 rounded-lg p-2 w-full disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  required
                 />
                 <input
                   type="email"
                   placeholder="Email Address"
-                  disabled
-                  className="border rounded-lg p-2 w-full bg-slate-100 cursor-not-allowed"
+                  value={form.email}
+                  onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
+                  disabled={submitting}
+                  className="border border-slate-300 rounded-lg p-2 w-full disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  required
                 />
                 <select
-                  disabled
-                  className="border rounded-lg p-2 w-full bg-slate-100 cursor-not-allowed"
+                  value={form.role}
+                  onChange={(e) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      role: e.target.value as "admin" | "manager" | "inspector",
+                    }))
+                  }
+                  disabled={submitting}
+                  className="border border-slate-300 rounded-lg p-2 w-full disabled:bg-slate-100 disabled:cursor-not-allowed"
                 >
-                  <option>Select Role...</option>
-                  <option>Inspector</option>
-                  <option>Admin</option>
+                  <option value="inspector">Inspector</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
                 </select>
+                <input
+                  type="password"
+                  placeholder="Temporary Password (min 8 chars)"
+                  value={form.password}
+                  onChange={(e) => setForm((prev) => ({ ...prev, password: e.target.value }))}
+                  disabled={submitting}
+                  className="border border-slate-300 rounded-lg p-2 w-full disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  minLength={8}
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={form.confirmPassword}
+                  onChange={(e) => setForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                  disabled={submitting}
+                  className="border border-slate-300 rounded-lg p-2 w-full disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  minLength={8}
+                  required
+                />
               </div>
 
+              {errorMessage && (
+                <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                  {errorMessage}
+                </div>
+              )}
+
+              {successMessage && (
+                <div className="rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                  {successMessage}
+                </div>
+              )}
+
               <button
-                disabled
-                className="w-full bg-nhome-primary text-white py-2 rounded-lg opacity-50 cursor-not-allowed"
+                type="submit"
+                disabled={!canSubmit}
+                className="w-full bg-nhome-primary text-white py-2 rounded-lg hover:bg-nhome-secondary transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Create User
+                {submitting ? "Creating..." : "Create User"}
               </button>
-            </div>
+            </form>
 
             <button
-              onClick={() => setShowModal(false)}
+              onClick={resetAndClose}
               className="mt-4 w-full text-sm text-slate-500 hover:text-nhome-primary"
             >
               Close

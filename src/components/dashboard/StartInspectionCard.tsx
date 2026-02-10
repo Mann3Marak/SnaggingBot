@@ -54,7 +54,15 @@ export default function StartInspectionCard() {
     setSelectedProject(projects.find((p) => p.id === projectId));
     setSelectedApartment("");
     try {
-      const res = await fetch(`/api/nhome/apartments/list?projectId=${projectId}`);
+      const supabase = getSupabase();
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+
+      const res = await fetch(`/api/nhome/apartments/list?projectId=${projectId}&mode=initial`, {
+        cache: "no-store",
+        credentials: "include",
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
       const data = await res.json();
       if (data?.apartments) {
         setApartments(data.apartments);
@@ -72,46 +80,39 @@ export default function StartInspectionCard() {
     setLoading(true);
     try {
       const supabase = getSupabase();
+      const { data } = await supabase.auth.getSession();
+      const token = data.session?.access_token;
 
-      // Get current user (inspector)
-      const { data: user } = await supabase.auth.getUser();
-      const inspectorId = user.user?.id;
-      if (!inspectorId) throw new Error("Not signed in");
-      if (!selectedApartment) throw new Error("Choose an apartment");
+      const res = await fetch("/api/nhome/inspections/create", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          project_id: selectedProject?.id,
+          apartment_id: selectedApartment,
+          inspection_type: "initial",
+        }),
+      });
 
-      // Check if an active session already exists for this apartment
-      const { data: existing } = await supabase
-        .from("inspection_sessions")
-        .select("*")
-        .eq("apartment_id", selectedApartment)
-        .eq("status", "in_progress")
-        .order("started_at", { ascending: false })
-        .maybeSingle();
+      const payload = await res.json().catch(() => ({}));
 
-      if (existing) {
-        router.push(`/inspection/nhome/${existing.id}`);
+      if (res.status === 409 && payload?.existingSessionId) {
+        router.push(`/inspection/nhome/${payload.existingSessionId}`);
         return;
       }
 
-      // Create a new inspection session
-      const { data, error } = await supabase
-        .from("inspection_sessions")
-        .insert({
-          apartment_id: selectedApartment,
-          inspector_id: inspectorId,
-          inspection_type: "initial",
-          status: "in_progress",
-          nhome_quality_score: null,
-          started_at: new Date().toISOString(),
-        })
-        .select("*")
-        .single();
-
-      if (error || !data) {
-        throw new Error(error?.message || "Failed to create inspection session");
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to create inspection session");
       }
 
-      router.push(`/inspection/nhome/${data.id}`);
+      if (!payload?.sessionId) {
+        throw new Error("Inspection session created but no session ID was returned");
+      }
+
+      router.push(`/inspection/nhome/${payload.sessionId}`);
     } catch (err) {
       console.error("Error starting inspection:", err);
       const errorMessage = err instanceof Error ? err.message : String(err);

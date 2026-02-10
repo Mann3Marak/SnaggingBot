@@ -26,11 +26,11 @@
         "test:security:idor": "jest tests/security/idor.test.ts",
         "test:security:suite": "jest tests/security/security-suite.test.ts",
         "brand:assets": "python scripts/generate_brand_assets.py",
-        "db:migrate": "supabase --workdir ./supabase db push --linked",
-        "db:seed": "supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
-        "db:pull": "supabase --workdir ./supabase db pull",
-        "db:diff": "supabase --workdir ./supabase db diff",
-        "db:reset": "supabase --workdir ./supabase db reset"
+        "db:migrate": "npx supabase --workdir ./supabase db push --linked",
+        "db:seed": "npx supabase db seed --file supabase/seeds/20250922130000_nhome_seed.sql",
+        "db:pull": "npx supabase --workdir ./supabase db pull",
+        "db:diff": "npx supabase --workdir ./supabase db diff",
+        "db:reset": "npx supabase --workdir ./supabase db reset"
     },
     "dependencies": {
         "@heroicons/react": "2.1.5",

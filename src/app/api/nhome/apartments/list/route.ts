@@ -8,6 +8,7 @@ export async function GET(req: NextRequest) {
     const { user, profile, supabase } = await requireApiAuth(req);
 
     const projectId = req.nextUrl.searchParams.get("projectId");
+    const mode = req.nextUrl.searchParams.get("mode") === "follow_up" ? "follow_up" : "initial";
     if (!projectId) {
       return NextResponse.json({ error: "Missing projectId" }, { status: 400 });
     }
@@ -55,14 +56,75 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 400 });
     }
 
+    const apartments = data || [];
+
+    // Exclude apartments based on inspection flow mode.
+    const apartmentIds = apartments.map((a) => a.id);
+    const availableApartmentIds = new Set<string>(apartmentIds);
+
+    if (apartmentIds.length > 0) {
+      const { data: sessions, error: sessionsError } = await supabase
+        .from("inspection_sessions")
+        .select("apartment_id, status")
+        .in("apartment_id", apartmentIds);
+
+      if (sessionsError) {
+        console.error("[Apartments List] Error checking inspection sessions", {
+          error: sessionsError.message,
+          projectId,
+          userId: user.id,
+        });
+        return NextResponse.json(
+          { error: "Failed to determine apartment availability" },
+          { status: 500 }
+        );
+      }
+
+      const sessionsByApartment = new Map<string, string[]>();
+      for (const session of sessions || []) {
+        if (!session.apartment_id) continue;
+        const bucket = sessionsByApartment.get(session.apartment_id) ?? [];
+        bucket.push(session.status);
+        sessionsByApartment.set(session.apartment_id, bucket);
+      }
+
+      for (const apartmentId of apartmentIds) {
+        const statuses = sessionsByApartment.get(apartmentId) ?? [];
+        const hasInProgress = statuses.includes("in_progress");
+        const hasCompleted = statuses.includes("completed");
+
+        if (mode === "initial") {
+          // Once an apartment has started/completed an inspection, it should
+          // no longer appear in the "start initial inspection" picker.
+          if (hasInProgress || hasCompleted) {
+            availableApartmentIds.delete(apartmentId);
+          }
+          continue;
+        }
+
+        // follow_up mode:
+        // - requires at least one completed inspection
+        // - cannot have an active in-progress inspection
+        if (hasInProgress || !hasCompleted) {
+          availableApartmentIds.delete(apartmentId);
+        }
+      }
+    }
+
+    const availableApartments = apartments.filter(
+      (apartment) => availableApartmentIds.has(apartment.id)
+    );
+
     console.info("[Apartments List] Apartments fetched", {
       projectId,
-      count: data?.length || 0,
+      mode,
+      count: availableApartments.length,
+      blockedCount: apartments.length - availableApartments.length,
       userId: user.id,
       companyId,
     });
 
-    return NextResponse.json({ apartments: data || [] }, { status: 200 });
+    return NextResponse.json({ apartments: availableApartments }, { status: 200 });
   } catch (err: any) {
     // Auth errors are already thrown as NextResponse, so just return them
     if (err instanceof NextResponse) {

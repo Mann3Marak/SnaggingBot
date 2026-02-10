@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { TrashIcon } from "@heroicons/react/24/outline";
 import { useAuthUser } from "@/hooks/useAuthUser";
 
@@ -15,30 +15,6 @@ interface Project {
   id: string;
   name: string;
 }
-
-// Mock data (will be replaced with API calls later)
-const MOCK_PROJECTS: Project[] = [
-  { id: "1", name: "Lote 6" },
-  { id: "2", name: "Marina Gardens" },
-  { id: "3", name: "Ocean View" },
-];
-
-const MOCK_INSPECTIONS: Record<string, Inspection[]> = {
-  "1": [
-    { id: "a1", clientName: "Dayne Roberts", apartmentDetails: "Lote 6, 5-2A", status: "in_progress" },
-    { id: "a2", clientName: "Sarah Miller", apartmentDetails: "Lote 6, 3-1B", status: "completed" },
-    { id: "a3", clientName: "John Smith", apartmentDetails: "Lote 6, 2-4C", status: "completed" },
-    { id: "a4", clientName: "Maria Garcia", apartmentDetails: "Lote 6, 4-3A", status: "in_progress" },
-    { id: "a5", clientName: "James Wilson", apartmentDetails: "Lote 6, 1-1A", status: "completed" },
-  ],
-  "2": [
-    { id: "b1", clientName: "Emma Wilson", apartmentDetails: "Marina Gardens, T2-A", status: "in_progress" },
-    { id: "b2", clientName: "Michael Brown", apartmentDetails: "Marina Gardens, T3-B", status: "cancelled" },
-  ],
-  "3": [
-    { id: "c1", clientName: "Lisa Johnson", apartmentDetails: "Ocean View, 101", status: "completed" },
-  ],
-};
 
 // Status badge component
 function StatusBadge({ status }: { status: Inspection["status"] }) {
@@ -65,22 +41,79 @@ export default function DeleteInspectionCard() {
   const { user } = useAuthUser();
   const [showModal, setShowModal] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProject, setSelectedProject] = useState("");
   const [inspections, setInspections] = useState<Inspection[]>([]);
   const [inspectionToDelete, setInspectionToDelete] = useState<Inspection | null>(null);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [loadingInspections, setLoadingInspections] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
-  // Only admins can see this card
-  if (!user || user.role !== "admin") return null;
+  const canInteract = useMemo(() => !loadingProjects && !loadingInspections && !deleting, [
+    loadingProjects,
+    loadingInspections,
+    deleting,
+  ]);
 
-  const handleProjectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  useEffect(() => {
+    if (!showModal) return;
+
+    let ignore = false;
+    async function loadProjects() {
+      setLoadingProjects(true);
+      setErrorMessage("");
+      try {
+        const res = await fetch("/api/nhome/projects", { credentials: "include" });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || "Failed to load projects");
+        if (!ignore) setProjects(json.projects || []);
+      } catch (err: any) {
+        if (!ignore) {
+          setErrorMessage(err?.message || "Failed to load projects");
+          setProjects([]);
+        }
+      } finally {
+        if (!ignore) setLoadingProjects(false);
+      }
+    }
+
+    loadProjects();
+    return () => {
+      ignore = true;
+    };
+  }, [showModal]);
+
+  const loadInspections = async (projectId: string) => {
+    setLoadingInspections(true);
+    setErrorMessage("");
+    setSuccessMessage("");
+    try {
+      const res = await fetch(`/api/admin/inspections?projectId=${encodeURIComponent(projectId)}`, {
+        credentials: "include",
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || "Failed to load inspections");
+      setInspections(json.inspections || []);
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to load inspections");
+      setInspections([]);
+    } finally {
+      setLoadingInspections(false);
+    }
+  };
+
+  const handleProjectChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
     const projectId = e.target.value;
     setSelectedProject(projectId);
-    if (projectId) {
-      // TODO: Replace with API call
-      setInspections(MOCK_INSPECTIONS[projectId] || []);
-    } else {
+    setInspectionToDelete(null);
+    setShowConfirmModal(false);
+    if (!projectId) {
       setInspections([]);
+      return;
     }
+    await loadInspections(projectId);
   };
 
   const handleDeleteClick = (inspection: Inspection) => {
@@ -88,12 +121,31 @@ export default function DeleteInspectionCard() {
     setShowConfirmModal(true);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (inspectionToDelete) {
-      // TODO: Replace with API call
-      setInspections((prev) => prev.filter((i) => i.id !== inspectionToDelete.id));
-      setShowConfirmModal(false);
-      setInspectionToDelete(null);
+      setDeleting(true);
+      setErrorMessage("");
+      setSuccessMessage("");
+      try {
+        const res = await fetch("/api/admin/inspections", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ sessionId: inspectionToDelete.id }),
+        });
+
+        const json = await res.json();
+        if (!res.ok) throw new Error(json?.error || "Failed to delete inspection");
+
+        setInspections((prev) => prev.filter((i) => i.id !== inspectionToDelete.id));
+        setSuccessMessage("Inspection deleted successfully.");
+        setShowConfirmModal(false);
+        setInspectionToDelete(null);
+      } catch (err: any) {
+        setErrorMessage(err?.message || "Failed to delete inspection");
+      } finally {
+        setDeleting(false);
+      }
     }
   };
 
@@ -101,7 +153,18 @@ export default function DeleteInspectionCard() {
     setShowModal(false);
     setSelectedProject("");
     setInspections([]);
+    setProjects([]);
+    setErrorMessage("");
+    setSuccessMessage("");
+    setLoadingProjects(false);
+    setLoadingInspections(false);
+    setDeleting(false);
+    setShowConfirmModal(false);
+    setInspectionToDelete(null);
   };
+
+  // Only admins can see this card
+  if (!user || user.role !== "admin") return null;
 
   return (
     <>
@@ -134,10 +197,11 @@ export default function DeleteInspectionCard() {
               <select
                 value={selectedProject}
                 onChange={handleProjectChange}
-                className="border border-slate-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-nhome-primary focus:border-nhome-primary"
+                disabled={!canInteract}
+                className="border border-slate-300 rounded-lg p-2 w-full focus:ring-2 focus:ring-nhome-primary focus:border-nhome-primary disabled:bg-slate-100 disabled:cursor-not-allowed"
               >
                 <option value="">Select a project...</option>
-                {MOCK_PROJECTS.map((project) => (
+                {projects.map((project) => (
                   <option key={project.id} value={project.id}>
                     {project.name}
                   </option>
@@ -145,10 +209,24 @@ export default function DeleteInspectionCard() {
               </select>
             </div>
 
+            {errorMessage && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+                {errorMessage}
+              </div>
+            )}
+
+            {successMessage && (
+              <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-700">
+                {successMessage}
+              </div>
+            )}
+
             {/* Inspection List */}
             {selectedProject && (
               <div className="flex-1 overflow-hidden flex flex-col">
-                {inspections.length === 0 ? (
+                {loadingInspections ? (
+                  <div className="text-center py-8 text-slate-500">Loading inspections...</div>
+                ) : inspections.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     No inspections found for this project.
                   </div>
@@ -186,8 +264,9 @@ export default function DeleteInspectionCard() {
                             </td>
                             <td className="px-4 py-3">
                               <button
+                                disabled={deleting}
                                 onClick={() => handleDeleteClick(inspection)}
-                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition"
+                                className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
                                 title="Delete inspection"
                               >
                                 <TrashIcon className="h-5 w-5" />
@@ -205,7 +284,7 @@ export default function DeleteInspectionCard() {
             {/* Placeholder when no project selected */}
             {!selectedProject && (
               <div className="text-center py-8 text-slate-500">
-                Select a project to view inspections.
+                {loadingProjects ? "Loading projects..." : "Select a project to view inspections."}
               </div>
             )}
 
@@ -239,15 +318,17 @@ export default function DeleteInspectionCard() {
             <div className="flex gap-3">
               <button
                 onClick={() => setShowConfirmModal(false)}
+                disabled={deleting}
                 className="flex-1 px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition"
               >
                 Cancel
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition"
+                disabled={deleting}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Yes, Delete
+                {deleting ? "Deleting..." : "Yes, Delete"}
               </button>
             </div>
           </div>

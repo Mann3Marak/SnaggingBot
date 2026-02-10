@@ -42,6 +42,13 @@ export function NHomeInspectionStart() {
   const router = useRouter()
 
   useEffect(() => { loadProjects() }, [])
+  useEffect(() => {
+    if (!selectedProject) return
+    loadProjectApartments(selectedProject, inspectionType).catch((err) => {
+      alert(`Error loading apartments: ${err?.message ?? err}`)
+      setApartments([])
+    })
+  }, [inspectionType, selectedProject])
 
   async function loadProjects() {
     const supabase = getSupabase()
@@ -49,64 +56,65 @@ export function NHomeInspectionStart() {
     setProjects(data || [])
   }
 
-  async function loadProjectApartments(projectId: string) {
+  async function loadProjectApartments(projectId: string, mode: 'initial' | 'follow_up' = inspectionType) {
     const supabase = getSupabase()
-    const { data } = await supabase.from('apartments').select('*').eq('project_id', projectId).order('unit_number')
-    setApartments(data || [])
+    const { data: sessionData } = await supabase.auth.getSession()
+    const token = sessionData.session?.access_token
+
+    const res = await fetch(`/api/nhome/apartments/list?projectId=${projectId}&mode=${mode}`, {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    })
+
+    if (!res.ok) {
+      const detail = await res.text().catch(() => '')
+      throw new Error(detail || `Failed to load apartments (${res.status})`)
+    }
+
+    const payload = await res.json()
+    setApartments(payload?.apartments || [])
   }
 
   async function startInspection() {
     setLoading(true)
     try {
       const supabase = getSupabase()
-      const { data: user } = await supabase.auth.getUser()
-      const inspectorId = user.user?.id
-      console.log("Supabase auth user:", user)
-      if (!inspectorId) throw new Error('Not signed in')
+      const { data: sessionData } = await supabase.auth.getSession()
+      const token = sessionData.session?.access_token
+
       if (!selectedApartment) throw new Error('Choose an apartment')
 
-      // First check if an active session already exists for this apartment (any inspector)
-      const { data: existing } = await supabase
-        .from('inspection_sessions')
-        .select('*')
-        .eq('apartment_id', selectedApartment)
-        .eq('status', 'in_progress')
-        .order('started_at', { ascending: false })
-        .maybeSingle()
+      const res = await fetch('/api/nhome/inspections/create', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          project_id: selectedProject,
+          apartment_id: selectedApartment,
+          inspection_type: inspectionType,
+        }),
+      })
 
-      if (existing) {
-        router.push(`/inspection/nhome/${existing.id}`)
+      const payload = await res.json().catch(() => ({}))
+
+      if (res.status === 409 && payload?.existingSessionId) {
+        router.push(`/inspection/nhome/${payload.existingSessionId}`)
         return
       }
 
-      const { data, error } = await supabase
-        .from('inspection_sessions')
-        .insert({ 
-          apartment_id: selectedApartment, 
-          inspector_id: inspectorId, 
-          inspection_type: inspectionType,
-          status: 'in_progress', 
-          nhome_quality_score: null, 
-          started_at: new Date().toISOString() 
-        })
-        .select('*')
-        .single()
-
-      console.log("Insert result:", { data, error })
-
-      // Double-check by querying the table immediately
-      const { data: checkRows, error: checkError } = await supabase
-        .from('inspection_sessions')
-        .select('*')
-        .eq('id', data?.id)
-
-      console.log("Verification query:", { checkRows, checkError })
-
-      if (error || !data) {
-        throw new Error(error?.message || "Insert failed or blocked by RLS")
+      if (!res.ok) {
+        throw new Error(payload?.error || `Failed to start inspection (${res.status})`)
       }
 
-      router.push(`/inspection/nhome/${data.id}`)
+      if (!payload?.sessionId) {
+        throw new Error('Inspection session created but no session ID was returned')
+      }
+
+      router.push(`/inspection/nhome/${payload.sessionId}`)
     } catch (e: any) {
       alert(`Error starting NHome inspection: ${e?.message ?? e}`)
     } finally { setLoading(false) }
@@ -175,7 +183,7 @@ export function NHomeInspectionStart() {
           <div className="mb-6">
             <label className="block text-sm font-medium text-gray-700 mb-2">Select Development Project</label>
             <div className="flex gap-2">
-              <select value={selectedProject} onChange={(e) => { setSelectedProject(e.target.value); setSelectedApartment(''); if (e.target.value) loadProjectApartments(e.target.value) }} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nhome-primary focus:border-transparent">
+              <select value={selectedProject} onChange={(e) => { setSelectedProject(e.target.value); setSelectedApartment(''); if (e.target.value) { loadProjectApartments(e.target.value, inspectionType).catch((err)=>{ alert(`Error loading apartments: ${err?.message ?? err}`); setApartments([]) }) } }} className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nhome-primary focus:border-transparent">
                 <option value="">Choose a project...</option>
                 {projects.map((p) => (<option key={p.id} value={p.id}>{p.name} - {p.developer_name}</option>))}
               </select>

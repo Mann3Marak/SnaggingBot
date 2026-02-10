@@ -31,7 +31,9 @@ export async function POST(req: NextRequest) {
     // Authenticate user and get company context
     const { user, profile, supabase } = await requireApiAuth(req);
 
-    const { project_id, apartment_id } = await req.json();
+    const { project_id, apartment_id, inspection_type } = await req.json();
+    const inspectionType: "initial" | "follow_up" =
+      inspection_type === "follow_up" ? "follow_up" : "initial";
 
     if (!project_id || !apartment_id) {
       return NextResponse.json(
@@ -62,12 +64,110 @@ export async function POST(req: NextRequest) {
       route: req.nextUrl.pathname,
     });
 
+    // Prevent concurrent active inspections for the same apartment.
+    const { data: existingSession, error: existingSessionError } = await adminClient
+      .from("inspection_sessions")
+      .select("id")
+      .eq("apartment_id", apartment_id)
+      .eq("status", "in_progress")
+      .order("started_at", { ascending: false })
+      .maybeSingle();
+
+    if (existingSessionError) {
+      console.error("[Inspections Create] Error checking existing active session", {
+        error: existingSessionError.message,
+        apartmentId: apartment_id,
+        userId: user.id,
+      });
+      return NextResponse.json(
+        { error: "Failed to validate apartment availability" },
+        { status: 500 }
+      );
+    }
+
+    if (existingSession?.id) {
+      return NextResponse.json(
+        {
+          error: "An inspection is already in progress for this apartment",
+          existingSessionId: existingSession.id,
+        },
+        { status: 409 }
+      );
+    }
+
+    // Initial inspections can only be started once per apartment.
+    if (inspectionType === "initial") {
+      const { data: completedInitial, error: completedInitialError } = await adminClient
+        .from("inspection_sessions")
+        .select("id")
+        .eq("apartment_id", apartment_id)
+        .eq("inspection_type", "initial")
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+        .maybeSingle();
+
+      if (completedInitialError) {
+        console.error("[Inspections Create] Error checking completed initial sessions", {
+          error: completedInitialError.message,
+          apartmentId: apartment_id,
+          userId: user.id,
+        });
+        return NextResponse.json(
+          { error: "Failed to validate apartment availability" },
+          { status: 500 }
+        );
+      }
+
+      if (completedInitial?.id) {
+        return NextResponse.json(
+          {
+            error:
+              "This apartment already has a completed initial inspection. Use follow-up inspection instead.",
+            existingSessionId: completedInitial.id,
+          },
+          { status: 409 }
+        );
+      }
+    }
+
+    // Follow-up inspection requires a completed initial inspection first.
+    if (inspectionType === "follow_up") {
+      const { data: completedInitial, error: completedInitialError } = await adminClient
+        .from("inspection_sessions")
+        .select("id")
+        .eq("apartment_id", apartment_id)
+        .eq("inspection_type", "initial")
+        .eq("status", "completed")
+        .order("completed_at", { ascending: false })
+        .maybeSingle();
+
+      if (completedInitialError) {
+        console.error("[Inspections Create] Error validating follow-up prerequisite", {
+          error: completedInitialError.message,
+          apartmentId: apartment_id,
+          userId: user.id,
+        });
+        return NextResponse.json(
+          { error: "Failed to validate follow-up prerequisites" },
+          { status: 500 }
+        );
+      }
+
+      if (!completedInitial?.id) {
+        return NextResponse.json(
+          { error: "Follow-up inspection requires a completed initial inspection first." },
+          { status: 400 }
+        );
+      }
+    }
+
     const { data, error } = await adminClient
       .from("inspection_sessions")
       .insert([
         {
           apartment_id,
           inspector_id: user.id,  // Set authenticated user as inspector
+          inspection_type: inspectionType,
           status: "in_progress",
           started_at: new Date().toISOString(),
         },
