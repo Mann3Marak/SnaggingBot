@@ -2,7 +2,6 @@
 import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
-import { NHomeLogo } from '@/components/NHomeLogo'
 
 export function NHomeAuthForm() {
   const [email, setEmail] = useState('')
@@ -45,16 +44,16 @@ export function NHomeAuthForm() {
   const redirectedFrom = params?.get('redirectedFrom')
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-cyan-50">
-      <div className="flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div className="h-full min-h-full w-full bg-gradient-to-br from-blue-50 via-white to-cyan-50">
+      <div className="flex min-h-full items-center justify-center py-6 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
-          <div className="text-center">
+          {/* <div className="text-center">
             <NHomeLogo variant="primary" size="xl" className="mx-auto mb-4" />
             <h1 className="text-3xl font-bold text-nhome-primary mb-2">NHome Inspection Pro</h1>
             <p className="text-lg font-medium text-gray-700 mb-1">Professional Property Inspections</p>
             <p className="text-sm text-gray-500 mb-6">Your Property Setup and Management Partner in the Algarve</p>
             <div className="text-xs text-gray-400">Founded by Natalie O'Kelly ï¿½ Algarve, Portugal</div>
-          </div>
+          </div> */}
 
           {redirectedFrom && (
             <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
