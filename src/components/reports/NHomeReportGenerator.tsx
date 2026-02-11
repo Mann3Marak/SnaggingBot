@@ -41,8 +41,6 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
   const [progress, setProgress] = useState(0)
   const [reportUrls, setReportUrls] = useState<{ portuguese?: string; english?: string; photoPackage?: string }>({})
   const [error, setError] = useState<string>('')
-  const [clientEmail, setClientEmail] = useState('')
-  const [emailSent, setEmailSent] = useState(false)
 
   // Fetch report data including photos from API
   const fetchReportData = async () => {
@@ -215,27 +213,6 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     })
   }
 
-  const sendProfessionalEmail = async () => {
-    if (!clientEmail || !reportUrls.portuguese) return
-    try {
-      const resp = await fetch('/api/nhome/send-professional-report-email', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientEmail,
-          sessionData,
-          reportUrls,
-          projectName: sessionData.project.name,
-          unitNumber: sessionData.apartment.unit_number,
-        }),
-      })
-      if (!resp.ok) throw new Error('Failed to send professional email')
-      setEmailSent(true)
-    } catch (e: any) {
-      setError('Failed to send email: ' + (e?.message || 'unknown_error'))
-    }
-  }
-
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
@@ -245,23 +222,6 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
-  }
-
-  const getDateString = () => new Date().toISOString().split('T')[0]
-
-  const shareNHomeReport = async (language: 'portuguese' | 'english') => {
-    const url = reportUrls[language]
-    if (!url) return
-    if (navigator.share) {
-      await navigator.share({
-        title: `NHome Professional Inspection Report - ${sessionData.apartment.unit_number}`,
-        text: `Professional property inspection report by NHome Property Management for unit ${sessionData.apartment.unit_number}`,
-        url,
-      })
-    } else {
-      await navigator.clipboard.writeText(url)
-      alert('Professional report link copied to clipboard!')
-    }
   }
 
   // Allow bypass during testing with ?showReports=1
@@ -372,33 +332,8 @@ export default function NHomeReportGenerator({ sessionId, sessionData }: NHomeRe
         )}
       </button>
 
-      {/* Report preview section temporarily disabled */}
-
       {reportUrls.portuguese && (
         <>
-          {/* <div className="bg-gradient-to-r from-nhome-primary/5 to-nhome-secondary/5 rounded-lg p-4 border border-nhome-primary/10 mb-6">
-            <h5 className="font-medium text-nhome-primary mb-3">📧 Send Professional Package to Client</h5>
-            <div className="flex space-x-3">
-              <input
-                type="email"
-                placeholder="client@developer.com"
-                value={clientEmail}
-                onChange={(e) => setClientEmail(e.target.value)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-nhome-primary focus:border-transparent"
-              />
-              <button
-                onClick={sendProfessionalEmail}
-                disabled={!clientEmail || !reportUrls.portuguese || emailSent}
-                className="bg-nhome-primary hover:bg-nhome-primary-dark disabled:bg-gray-400 text-white px-6 py-2 rounded-lg font-medium transition-colors"
-              >
-                {emailSent ? '✅ Sent' : '📧 Send Professional Package'}
-              </button>
-            </div>
-            {emailSent && (
-              <p className="text-sm text-green-600 mt-2">✅ Professional package sent successfully to {clientEmail}</p>
-            )}
-          </div> */}
-
           <div className="pt-4 border-t border-gray-200">
             <h5 className="font-medium mb-3">🚀 Quick Actions</h5>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

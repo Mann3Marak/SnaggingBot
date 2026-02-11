@@ -464,10 +464,6 @@ export function NHomeVoiceInspection({ sessionId, onRefreshReport }: NHomeVoiceI
     setAssistantMessages([])
   }
 
-  const updateSessionInstructions = (_: string) => {
-    // no-op for now
-  }
-
   const isProcessingTurnRef = useRef(false)
   
 
@@ -897,15 +893,6 @@ Maintain Natalie O'Kelly's professional standards, reference Algarve-specific co
 
     loadConversationAndNotes();
   }, [currentItem?.id, sessionId]);
-
-  useEffect(() => {
-    if (!isRecording) {
-      return;
-    }
-    if (inspectionInstructions) {
-      updateSessionInstructions(inspectionInstructions);
-    }
-  }, [currentItem, inspectionInstructions, isRecording, sendTextMessage, session, updateSessionInstructions]);
 
   const handleToggleAssistant = useCallback(async () => {
     if (isRecording) {
