@@ -134,7 +134,7 @@ export const NHomeReportTemplatePT = ({ data }: { data: any }) => {
                     {/* Photos - pre-fetched as base64 for client-side rendering */}
                     {it.photo_base64_urls?.length > 0 && (
                       <View style={{ flexDirection: "row", flexWrap: "wrap", marginTop: 6 }}>
-                        {it.photo_base64_urls.slice(0, 2).map((base64Url: string, j: number) => (
+                        {it.photo_base64_urls.slice(0, 5).map((base64Url: string, j: number) => (
                           <Image key={`photo-${j}`} src={base64Url} style={{ ...styles.photo, marginRight: 4 }} />
                         ))}
                       </View>

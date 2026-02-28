@@ -92,7 +92,7 @@ export const ServerPDFTemplateEN = ({ data }: { data: ServerPDFData }) => {
                     {it.notes && (
                       <Text style={styles.text}>{`Notes: ${it.notes}`}</Text>
                     )}
-                    {it.photo_base64_urls?.slice(0, 2).map((base64Url: string, j: number) => (
+                    {it.photo_base64_urls?.slice(0, 5).map((base64Url: string, j: number) => (
                       <Image key={j} style={styles.photo} src={base64Url} />
                     ))}
                   </>

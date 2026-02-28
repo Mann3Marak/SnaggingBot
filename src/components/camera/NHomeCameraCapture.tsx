@@ -1,6 +1,5 @@
 "use client"
-import { useState, useRef, useCallback, useEffect, ChangeEvent } from 'react'
-import { NHomeLogo } from '@/components/NHomeLogo'
+import { useState, useRef, useEffect, ChangeEvent } from 'react'
 import type { NHomePhotoMetadata } from '@/types/nhome-photo'
 
 interface NHomeCameraCaptureProps {
@@ -23,6 +22,23 @@ interface NHomeCameraCaptureProps {
 
 import { Camera } from "react-camera-pro";
 
+const MAX_UPLOAD_IMAGE_BYTES = 10 * 1024 * 1024;
+const MAX_STORAGE_IMAGE_DIMENSION = 1920;
+const STORAGE_IMAGE_QUALITY = 0.82;
+
+type CameraHandle = {
+  takePhoto?: () => string;
+  stream?: MediaStream;
+};
+
+type ZoomCapabilities = MediaTrackCapabilities & {
+  zoom?: number;
+};
+
+type ZoomConstraintSet = MediaTrackConstraintSet & {
+  zoom?: number;
+};
+
 export function NHomeCameraCapture({
   onPhotoTaken,
   isOpen,
@@ -30,7 +46,7 @@ export function NHomeCameraCapture({
   inspectionItem,
   sessionData,
 }: NHomeCameraCaptureProps) {
-  const cameraRef = useRef<any>(null);
+  const cameraRef = useRef<CameraHandle | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string>("");
   const [capturing, setCapturing] = useState(false);
@@ -66,7 +82,11 @@ export function NHomeCameraCapture({
       const photo = cameraRef.current?.takePhoto?.();
       if (!photo) throw new Error("Camera not ready");
       const res = await fetch(photo);
-      const blob = await res.blob();
+      const originalBlob = await res.blob();
+      const blob = await compressImageBlob(originalBlob, {
+        maxDimension: MAX_STORAGE_IMAGE_DIMENSION,
+        quality: STORAGE_IMAGE_QUALITY,
+      });
       const metadata: NHomePhotoMetadata = {
         inspector: sessionData?.inspector_name || "NHome Inspector",
         company: "NHome Property Setup & Management",
@@ -79,7 +99,7 @@ export function NHomeCameraCapture({
         quality_standards:
           inspectionItem?.nhome_standard_notes || "NHome Professional Standards",
       };
-      onPhotoTaken(blob, photo, metadata);
+      onPhotoTaken(blob, URL.createObjectURL(blob), metadata);
       // Auto-close camera after successful capture
       onClose();
     } catch (err) {
@@ -105,8 +125,7 @@ export function NHomeCameraCapture({
       }
 
       // Validate file size (max 10MB before compression)
-      const maxSize = 10 * 1024 * 1024; // 10MB
-      if (file.size > maxSize) {
+      if (file.size > MAX_UPLOAD_IMAGE_BYTES) {
         setError("Image too large. Maximum size is 10MB.");
         return;
       }
@@ -117,17 +136,11 @@ export function NHomeCameraCapture({
       const exifData = await extractExifData(file);
       console.log('[EXIF] Extracted data:', exifData);
 
-      // Compress image if larger than 2MB
-      let blob: Blob;
-      const shouldCompress = file.size > 2 * 1024 * 1024; // 2MB threshold
-
-      if (shouldCompress) {
-        console.log('[Photo Upload] Compressing image...');
-        blob = await compressImage(file);
-      } else {
-        console.log('[Photo Upload] No compression needed');
-        blob = file as Blob;
-      }
+      console.log('[Photo Upload] Compressing image for storage...');
+      const blob = await compressImageBlob(file, {
+        maxDimension: MAX_STORAGE_IMAGE_DIMENSION,
+        quality: STORAGE_IMAGE_QUALITY,
+      });
 
       const url = URL.createObjectURL(blob);
 
@@ -175,32 +188,31 @@ export function NHomeCameraCapture({
   /**
    * Compress image if needed using Canvas API
    */
-  const compressImage = async (file: File): Promise<Blob> => {
+  const compressImageBlob = async (
+    source: Blob,
+    options: { maxDimension: number; quality: number }
+  ): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      const url = URL.createObjectURL(file);
+      const url = URL.createObjectURL(source);
 
       img.onload = () => {
         URL.revokeObjectURL(url);
 
-        // Determine if compression is needed
-        const MAX_WIDTH = 1920;
-        const MAX_HEIGHT = 1920;
-        const QUALITY = 0.85;
-
         let width = img.width;
         let height = img.height;
+        const { maxDimension, quality } = options;
 
         // Calculate new dimensions while maintaining aspect ratio
         if (width > height) {
-          if (width > MAX_WIDTH) {
-            height = Math.round((height * MAX_WIDTH) / width);
-            width = MAX_WIDTH;
+          if (width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
           }
         } else {
-          if (height > MAX_HEIGHT) {
-            width = Math.round((width * MAX_HEIGHT) / height);
-            height = MAX_HEIGHT;
+          if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
           }
         }
 
@@ -220,14 +232,16 @@ export function NHomeCameraCapture({
         canvas.toBlob(
           (blob) => {
             if (blob) {
-              console.log(`[Photo Compression] Original: ${(file.size / 1024 / 1024).toFixed(2)}MB -> Compressed: ${(blob.size / 1024 / 1024).toFixed(2)}MB`);
+              console.log(
+                `[Photo Compression] Original: ${(source.size / 1024 / 1024).toFixed(2)}MB -> Compressed: ${(blob.size / 1024 / 1024).toFixed(2)}MB`
+              );
               resolve(blob);
             } else {
               reject(new Error('Failed to compress image'));
             }
           },
           'image/jpeg',
-          QUALITY
+          quality
         );
       };
 
@@ -263,7 +277,6 @@ export function NHomeCameraCapture({
 
         if (marker === 0xFFE1) {
           // Found EXIF marker
-          const exifLength = view.getUint16(offset + 2, false);
           const exifString = String.fromCharCode(
             view.getUint8(offset + 4),
             view.getUint8(offset + 5),
@@ -304,15 +317,18 @@ export function NHomeCameraCapture({
     setZoom(newZoom);
     try {
       const track = cameraRef.current?.stream?.getVideoTracks?.()?.[0];
-      const capabilities = track?.getCapabilities?.();
+      if (!track) {
+        return;
+      }
+      const capabilities = track?.getCapabilities?.() as ZoomCapabilities | undefined;
       if (capabilities?.zoom) {
         track.applyConstraints({
-          advanced: [{ zoom: newZoom }]
+          advanced: [{ zoom: newZoom } as ZoomConstraintSet]
         }).catch(() => {
           console.warn("Zoom constraint failed");
         });
       }
-    } catch (err) {
+    } catch {
       // Silently fail - zoom not supported
     }
   };

@@ -137,11 +137,11 @@ export const NHomeReportTemplate = ({ data, language }: { data: any; language: "
                     hasPreviewPhotos: !!it.preview_photos?.length,
                   });
                   if (it.photo_urls?.length) {
-                    return it.photo_urls.slice(0, 2).map((url: string, j: number) => (
+                    return it.photo_urls.slice(0, 5).map((url: string, j: number) => (
                       <Image key={j} style={styles.photo} src={url} />
                     ));
                   } else if (it.preview_photos?.length) {
-                    return it.preview_photos.slice(0, 2).map((p: any, j: number) => (
+                    return it.preview_photos.slice(0, 5).map((p: any, j: number) => (
                       <Image key={j} style={styles.photo} src={p.url} />
                     ));
                   } else {

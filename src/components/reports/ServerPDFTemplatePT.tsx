@@ -107,7 +107,7 @@ export const ServerPDFTemplatePT = ({ data }: { data: ServerPDFData }) => {
                     {(it.pt_notes || it.notes) && (
                       <Text style={styles.text}>{`Observação: ${it.pt_notes || it.notes}`}</Text>
                     )}
-                    {it.photo_base64_urls?.slice(0, 2).map((base64Url: string, j: number) => (
+                    {it.photo_base64_urls?.slice(0, 5).map((base64Url: string, j: number) => (
                       <Image key={j} style={styles.photo} src={base64Url} />
                     ))}
                   </>

@@ -9,9 +9,12 @@ import React from 'react';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { ServerPDFTemplateEN } from '@/components/reports/ServerPDFTemplateEN';
 import { ServerPDFTemplatePT } from '@/components/reports/ServerPDFTemplatePT';
+import sharp from 'sharp';
 
 const BUCKET_ID = 'nhome_photos';
-const MAX_IMAGE_SIZE_BYTES = 500 * 1024; // 500KB max per image for PDF embedding
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // Allow typical phone photos in fallback PDF generation
+const REPORT_IMAGE_MAX_DIMENSION = 1280;
+const REPORT_IMAGE_QUALITY = 72;
 
 // Pre-fetch image and convert to base64 data URL
 // Note: This server-side route is a fallback - client-side PDF generation is preferred
@@ -25,17 +28,32 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
     const arrayBuffer = await response.arrayBuffer();
     const originalSize = arrayBuffer.byteLength;
 
-    // Skip images that are too large
-    if (originalSize > MAX_IMAGE_SIZE_BYTES * 2) {
+    // Skip only unusually large images that are likely to destabilize server-side PDF rendering.
+    if (originalSize > MAX_IMAGE_SIZE_BYTES) {
       console.warn(`[generate-pdf] Skipping very large image (${(originalSize / 1024).toFixed(0)}KB)`);
       return null;
     }
 
-    // Detect content type from response or default to jpeg
-    const contentType = response.headers.get('content-type') || 'image/jpeg';
-    const base64 = Buffer.from(arrayBuffer).toString('base64');
-    console.log(`[generate-pdf] Image loaded: ${(originalSize / 1024).toFixed(0)}KB, type: ${contentType}`);
-    return `data:${contentType};base64,${base64}`;
+    const optimizedBuffer = await sharp(Buffer.from(arrayBuffer))
+      .rotate()
+      .resize({
+        width: REPORT_IMAGE_MAX_DIMENSION,
+        height: REPORT_IMAGE_MAX_DIMENSION,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .jpeg({
+        quality: REPORT_IMAGE_QUALITY,
+        mozjpeg: true,
+      })
+      .toBuffer();
+
+    console.log(
+      `[generate-pdf] Image optimized: ${(originalSize / 1024).toFixed(0)}KB -> ${(optimizedBuffer.byteLength / 1024).toFixed(0)}KB`
+    );
+
+    const base64 = optimizedBuffer.toString('base64');
+    return `data:image/jpeg;base64,${base64}`;
   } catch (e) {
     console.warn('[generate-pdf] Failed to load image:', url, e);
     return null;

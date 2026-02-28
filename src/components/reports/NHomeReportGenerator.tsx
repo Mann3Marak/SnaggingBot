@@ -6,6 +6,10 @@ import { pdf } from '@react-pdf/renderer'
 import { NHomeReportTemplateEN } from '@/components/reports/NHomeReportTemplateEN'
 import { NHomeReportTemplatePT } from '@/components/reports/NHomeReportTemplatePT'
 
+const MAX_REPORT_IMAGE_BYTES = 5 * 1024 * 1024
+const REPORT_IMAGE_MAX_DIMENSION = 1280
+const REPORT_IMAGE_QUALITY = 0.72
+
 interface NHomeReportGeneratorProps {
   sessionId: string
   sessionData: any
@@ -18,17 +22,52 @@ async function fetchImageAsBase64(url: string): Promise<string | null> {
     if (!response.ok) return null
     const blob = await response.blob()
 
-    // Skip very large images (over 1MB)
-    if (blob.size > 1024 * 1024) {
+    // Allow typical phone photos in reports; only skip unusually large files.
+    if (blob.size > MAX_REPORT_IMAGE_BYTES) {
       console.warn(`[ReportGenerator] Skipping large image: ${(blob.size / 1024).toFixed(0)}KB`)
       return null
     }
 
     return new Promise((resolve) => {
-      const reader = new FileReader()
-      reader.onloadend = () => resolve(reader.result as string)
-      reader.onerror = () => resolve(null)
-      reader.readAsDataURL(blob)
+      const objectUrl = URL.createObjectURL(blob)
+      const image = new Image()
+
+      image.onload = () => {
+        const canvas = document.createElement('canvas')
+        let width = image.width
+        let height = image.height
+
+        if (width > height) {
+          if (width > REPORT_IMAGE_MAX_DIMENSION) {
+            height = Math.round((height * REPORT_IMAGE_MAX_DIMENSION) / width)
+            width = REPORT_IMAGE_MAX_DIMENSION
+          }
+        } else if (height > REPORT_IMAGE_MAX_DIMENSION) {
+          width = Math.round((width * REPORT_IMAGE_MAX_DIMENSION) / height)
+          height = REPORT_IMAGE_MAX_DIMENSION
+        }
+
+        canvas.width = width
+        canvas.height = height
+
+        const context = canvas.getContext('2d')
+        if (!context) {
+          URL.revokeObjectURL(objectUrl)
+          resolve(null)
+          return
+        }
+
+        context.drawImage(image, 0, 0, width, height)
+        URL.revokeObjectURL(objectUrl)
+        resolve(canvas.toDataURL('image/jpeg', REPORT_IMAGE_QUALITY))
+      }
+
+      image.onerror = () => {
+        URL.revokeObjectURL(objectUrl)
+        resolve(null)
+      }
+
+      image.src = objectUrl
     })
   } catch (e) {
     console.warn('[ReportGenerator] Failed to fetch image:', e)
