@@ -9,6 +9,8 @@ import { SignOutButton } from '@/components/auth/SignOutButton'
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard' },
+  { href: '/calendar', label: 'Calendar' },
+  { href: '/owners', label: 'Owners' },
 ]
 
 export function NHomeHeader() {

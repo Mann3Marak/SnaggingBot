@@ -5,6 +5,7 @@ import { getSupabase } from "@/lib/supabase";
 export default function AddApartmentCard() {
   const [showModal, setShowModal] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
+  const [owners, setOwners] = useState<any[]>([]);
   const [availableTypes, setAvailableTypes] = useState<string[]>([]);
   const [availableLotes, setAvailableLotes] = useState<string[]>([]);
   const [form, setForm] = useState({
@@ -14,43 +15,55 @@ export default function AddApartmentCard() {
     apartment_number: "",
     apartment_type: "",
     project_id: "",
+    owner_id: "",
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Fetch projects when modal opens to ensure fresh data
+  // Fetch projects + owners when modal opens to ensure fresh data
   useEffect(() => {
     if (!showModal) return;
 
     let active = true;
-    const loadProjects = async () => {
+    const loadData = async () => {
       try {
         const supabase = getSupabase();
         const { data } = await supabase.auth.getSession();
         const token = data.session?.access_token;
+        const authHeaders = token ? { Authorization: `Bearer ${token}` } : undefined;
 
-        const res = await fetch("/api/nhome/projects/list", {
+        const projectsRes = await fetch("/api/nhome/projects/list", {
           cache: "no-store",
           credentials: "include",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          headers: authHeaders,
         });
-
-        if (!res.ok) {
-          const detail = await res.text().catch(() => "");
-          throw new Error(detail || `Request failed (${res.status})`);
+        if (!projectsRes.ok) {
+          const detail = await projectsRes.text().catch(() => "");
+          throw new Error(detail || `Request failed (${projectsRes.status})`);
+        }
+        const projectsPayload = await projectsRes.json();
+        if (active && projectsPayload?.projects) {
+          setProjects(projectsPayload.projects);
         }
 
-        const payload = await res.json();
-        if (active && payload?.projects) {
-          setProjects(payload.projects);
+        const ownersRes = await fetch("/api/nhome/owners/list", {
+          cache: "no-store",
+          credentials: "include",
+          headers: authHeaders,
+        });
+        if (ownersRes.ok) {
+          const ownersPayload = await ownersRes.json();
+          if (active && ownersPayload?.owners) {
+            setOwners(ownersPayload.owners);
+          }
         }
       } catch (err) {
-        console.error("Error loading projects:", err);
+        console.error("Error loading apartment form data:", err);
         if (active) setProjects([]);
       }
     };
 
-    loadProjects();
+    loadData();
     return () => {
       active = false;
     };
@@ -76,6 +89,7 @@ export default function AddApartmentCard() {
         apartment_number: "",
         apartment_type: "",
         project_id: "",
+        owner_id: "",
       });
     } catch (err: any) {
       setMessage(`❌ ${err.message}`);
@@ -216,6 +230,22 @@ export default function AddApartmentCard() {
                 required
               />
 
+              {/* Owner (optional) */}
+              <select
+                value={form.owner_id}
+                onChange={(e) => setForm({ ...form, owner_id: e.target.value })}
+                className="border rounded-lg p-2 w-full"
+              >
+                <option value="">Link owner (optional)</option>
+                {owners.map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {[o.first_name, o.surname].filter(Boolean).join(" ") ||
+                      "Unnamed"}
+                    {o.tax_number ? ` — ${o.tax_number}` : ""}
+                  </option>
+                ))}
+              </select>
+
               <button
                 type="submit"
                 disabled={loading}
@@ -239,6 +269,7 @@ export default function AddApartmentCard() {
                   apartment_number: "",
                   apartment_type: "",
                   project_id: "",
+                  owner_id: "",
                 });
                 setMessage("");
                 setShowModal(false);

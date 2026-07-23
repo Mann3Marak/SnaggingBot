@@ -15,6 +15,7 @@ export async function POST(req: NextRequest) {
       apartment_number,
       apartment_type,
       project_id,
+      owner_id,
     } = body;
 
     // Validate required fields
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
           unit_number: normalizedApartmentNumber,
           apartment_type,
           project_id,
+          owner_id: owner_id || null,
         },
       ])
       .select()
